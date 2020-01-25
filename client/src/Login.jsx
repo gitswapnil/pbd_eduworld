@@ -50,15 +50,20 @@ const Login = () => {
     const classes = useStyles();
     const [phoneNum, setPhoneNum] = useState("");
     const [phoneNumErr, setPhoneNumErr] = useState(false);
+    const [triedToSubmit, setTriedToSubmit] = useState(false);
     
     const validatePhoneNumber = (phNumber) => {
         // console.log("validations.phoneNumber.test(phNumber): " + validations.phoneNumber.test(phNumber))
-        setPhoneNum(phNumber);
-        if(validations.phoneNumber.test(phNumber)) {
-            setPhoneNumErr(false);
-        } else {
+        setPhoneNumErr(false);
+        if(!validations.phoneNumber.test(phNumber) && triedToSubmit) {
             setPhoneNumErr(true);
         }
+    }
+
+    const signIn = (event) => {
+        event.preventDefault();
+        setTriedToSubmit(true);
+        console.log("signing in.")
     }
 
     return  <Container component="main" maxWidth="xs">
@@ -70,7 +75,7 @@ const Login = () => {
                     <Typography component="h1" variant="h5">
                         Sign in
                     </Typography>
-                    <form className={classes.form} noValidate>
+                    <form className={classes.form} noValidate onSubmit={signIn}>
                         <TextField  variant="outlined"
                                     margin="normal"
                                     required
@@ -83,7 +88,7 @@ const Login = () => {
                                     autoComplete="phone"
                                     helperText={phoneNumErr ? "Please enter proper 10 digit phone number" : false}
                                     value={phoneNum}
-                                    onChange={(e) => { validatePhoneNumber(e.target.value) }}
+                                    onChange={(e) => {validateAndChange("phone", e.target.value)}}
                                     autoFocus />
                         <TextField  variant="outlined"
                                     margin="normal"
@@ -99,7 +104,8 @@ const Login = () => {
                                 fullWidth
                                 variant="contained"
                                 color="primary"
-                                className={classes.submit}>
+                                className={classes.submit}
+                                type="submit">
                             Sign In
                         </Button>
                         <Grid container>
