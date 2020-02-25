@@ -24,5 +24,12 @@ namespace pbd_eduworld
         {
             InitializeComponent();
         }
+
+        private void Log_In(object sender, RoutedEventArgs e)
+        {
+            Console.WriteLine("Log in Button is Pressed");
+            Console.WriteLine($"Phone Number: {txtPhoneNum.Text}");
+            Console.WriteLine($"Password: {pwdPassword.Password}");
+        }
     }
 }
