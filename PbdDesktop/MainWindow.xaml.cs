@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -20,9 +21,11 @@ namespace PbdDesktop
     /// </summary>
     public partial class MainWindow : Window
     {
-        public MainWindow()
+        public MainWindow() => InitializeComponent();
+
+        private void Button_Click(object sender, RoutedEventArgs e)
         {
-            InitializeComponent();
+            Trace.WriteLine("Log In Button is pressed.");
         }
 
     }
