@@ -27,5 +27,6 @@ namespace PbdDesktop
         {
             Trace.WriteLine("Log In Button is pressed.");
         }
+
     }
 }
