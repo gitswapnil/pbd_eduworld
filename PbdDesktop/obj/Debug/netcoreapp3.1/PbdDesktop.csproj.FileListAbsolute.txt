@@ -1,0 +1,17 @@
+C:\Users\Swapnil\Source\Repos\gitswapnil\pbd_eduworld\PbdDesktop\bin\Debug\netcoreapp3.1\PbdDesktop.exe
+C:\Users\Swapnil\Source\Repos\gitswapnil\pbd_eduworld\PbdDesktop\bin\Debug\netcoreapp3.1\PbdDesktop.deps.json
+C:\Users\Swapnil\Source\Repos\gitswapnil\pbd_eduworld\PbdDesktop\bin\Debug\netcoreapp3.1\PbdDesktop.runtimeconfig.json
+C:\Users\Swapnil\Source\Repos\gitswapnil\pbd_eduworld\PbdDesktop\bin\Debug\netcoreapp3.1\PbdDesktop.runtimeconfig.dev.json
+C:\Users\Swapnil\Source\Repos\gitswapnil\pbd_eduworld\PbdDesktop\bin\Debug\netcoreapp3.1\PbdDesktop.dll
+C:\Users\Swapnil\Source\Repos\gitswapnil\pbd_eduworld\PbdDesktop\bin\Debug\netcoreapp3.1\PbdDesktop.pdb
+C:\Users\Swapnil\Source\Repos\gitswapnil\pbd_eduworld\PbdDesktop\obj\Debug\netcoreapp3.1\PbdDesktop.csprojAssemblyReference.cache
+C:\Users\Swapnil\Source\Repos\gitswapnil\pbd_eduworld\PbdDesktop\obj\Debug\netcoreapp3.1\MainWindow.g.cs
+C:\Users\Swapnil\Source\Repos\gitswapnil\pbd_eduworld\PbdDesktop\obj\Debug\netcoreapp3.1\App.g.cs
+C:\Users\Swapnil\Source\Repos\gitswapnil\pbd_eduworld\PbdDesktop\obj\Debug\netcoreapp3.1\PbdDesktop_MarkupCompile.cache
+C:\Users\Swapnil\Source\Repos\gitswapnil\pbd_eduworld\PbdDesktop\obj\Debug\netcoreapp3.1\PbdDesktop_MarkupCompile.lref
+C:\Users\Swapnil\Source\Repos\gitswapnil\pbd_eduworld\PbdDesktop\obj\Debug\netcoreapp3.1\MainWindow.baml
+C:\Users\Swapnil\Source\Repos\gitswapnil\pbd_eduworld\PbdDesktop\obj\Debug\netcoreapp3.1\PbdDesktop.g.resources
+C:\Users\Swapnil\Source\Repos\gitswapnil\pbd_eduworld\PbdDesktop\obj\Debug\netcoreapp3.1\PbdDesktop.AssemblyInfoInputs.cache
+C:\Users\Swapnil\Source\Repos\gitswapnil\pbd_eduworld\PbdDesktop\obj\Debug\netcoreapp3.1\PbdDesktop.AssemblyInfo.cs
+C:\Users\Swapnil\Source\Repos\gitswapnil\pbd_eduworld\PbdDesktop\obj\Debug\netcoreapp3.1\PbdDesktop.dll
+C:\Users\Swapnil\Source\Repos\gitswapnil\pbd_eduworld\PbdDesktop\obj\Debug\netcoreapp3.1\PbdDesktop.pdb

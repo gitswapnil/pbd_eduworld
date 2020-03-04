@@ -5,8 +5,23 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PbdDesktop"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
-
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        Title="PBD Eduworld" Height="220" Width="300">
+    <Grid ShowGridLines="false" Margin="20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition/>
+            <RowDefinition/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+        <Label Grid.Row="0" Grid.Column="0" HorizontalAlignment="Right" VerticalAlignment="Center" FontWeight="DemiBold">Phone Number :</Label>
+        <Label Grid.Row="1" Grid.Column="0" HorizontalAlignment="Right" VerticalAlignment="Center" FontWeight="DemiBold">Password :</Label>
+        <TextBox Grid.Row="0" Grid.Column="1" MaxHeight="20px"/>
+        <PasswordBox Grid.Row="1" Grid.Column="1" MaxHeight="20px"/>
+        <Button Content="Log In" Margin="0,10,0,10" Grid.Row="2" Grid.Column="1" Click="Button_Click"/>
     </Grid>
 </Window>
