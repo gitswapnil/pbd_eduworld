@@ -5,8 +5,51 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PbdDesktop"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        Title="PBD Eduworld" 
+        Height="190" 
+        Width="280">
+    <Grid ShowGridLines="False" Margin="20,20,20,20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition />
+            <ColumnDefinition />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition />
+            <RowDefinition />
+            <RowDefinition />
+        </Grid.RowDefinitions>
 
+        <StackPanel Grid.Column="1" 
+                    Grid.Row="0">
+            <TextBox Name="txtPhoneNum"/>
+        </StackPanel>
+
+        <Label FontWeight="Bold" 
+               Grid.Column="0" 
+               Grid.Row="0" 
+               HorizontalAlignment="Right" 
+               Padding="0,0,12,0"
+               Target="{Binding ElementName=txtPhoneNum}">
+            Phone Number:
+        </Label>
+
+        <StackPanel Grid.Column="1" 
+                    Grid.Row="1">
+            <PasswordBox Name="pwdPassword" MaxLength="50"/>
+        </StackPanel>
+        <Label FontWeight="Bold" 
+               Grid.Column="0" 
+               Grid.Row="1" 
+               HorizontalAlignment="Right" 
+               Padding="0,0,12,0"
+               Target="{Binding ElementName=pwdPassword}">
+            Password:
+        </Label>
+
+        <Button Grid.Column="1"
+                Grid.Row="2"
+                Click="Log_In">Log In</Button>
     </Grid>
 </Window>

@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\sales5\\Source\\Repos\\gitswapnil\\pbd_eduworld\\PbdDesktop\\PbdDesktop.csproj": {}
+    "C:\\Users\\sales5\\source\\repos\\gitswapnil\\pbd_eduworld\\PbdDesktop\\PbdDesktop.csproj": {}
   },
   "projects": {
-    "C:\\Users\\sales5\\Source\\Repos\\gitswapnil\\pbd_eduworld\\PbdDesktop\\PbdDesktop.csproj": {
+    "C:\\Users\\sales5\\source\\repos\\gitswapnil\\pbd_eduworld\\PbdDesktop\\PbdDesktop.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\sales5\\Source\\Repos\\gitswapnil\\pbd_eduworld\\PbdDesktop\\PbdDesktop.csproj",
+        "projectUniqueName": "C:\\Users\\sales5\\source\\repos\\gitswapnil\\pbd_eduworld\\PbdDesktop\\PbdDesktop.csproj",
         "projectName": "PbdDesktop",
-        "projectPath": "C:\\Users\\sales5\\Source\\Repos\\gitswapnil\\pbd_eduworld\\PbdDesktop\\PbdDesktop.csproj",
+        "projectPath": "C:\\Users\\sales5\\source\\repos\\gitswapnil\\pbd_eduworld\\PbdDesktop\\PbdDesktop.csproj",
         "packagesPath": "C:\\Users\\sales5\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\sales5\\Source\\Repos\\gitswapnil\\pbd_eduworld\\PbdDesktop\\obj\\",
+        "outputPath": "C:\\Users\\sales5\\source\\repos\\gitswapnil\\pbd_eduworld\\PbdDesktop\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\sales5\\AppData\\Roaming\\NuGet\\NuGet.Config",
