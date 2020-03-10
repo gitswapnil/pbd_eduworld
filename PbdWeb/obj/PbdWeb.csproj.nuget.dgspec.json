@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Swapnil\\Source\\Repos\\gitswapnil\\pbd_eduworld\\PbdWeb\\PbdWeb.csproj": {}
+    "C:\\Users\\Swapnil\\source\\repos\\gitswapnil\\pbd_eduworld\\PbdWeb\\PbdWeb.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Swapnil\\Source\\Repos\\gitswapnil\\pbd_eduworld\\PbdWeb\\PbdWeb.csproj": {
+    "C:\\Users\\Swapnil\\source\\repos\\gitswapnil\\pbd_eduworld\\PbdWeb\\PbdWeb.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Swapnil\\Source\\Repos\\gitswapnil\\pbd_eduworld\\PbdWeb\\PbdWeb.csproj",
+        "projectUniqueName": "C:\\Users\\Swapnil\\source\\repos\\gitswapnil\\pbd_eduworld\\PbdWeb\\PbdWeb.csproj",
         "projectName": "PbdWeb",
-        "projectPath": "C:\\Users\\Swapnil\\Source\\Repos\\gitswapnil\\pbd_eduworld\\PbdWeb\\PbdWeb.csproj",
+        "projectPath": "C:\\Users\\Swapnil\\source\\repos\\gitswapnil\\pbd_eduworld\\PbdWeb\\PbdWeb.csproj",
         "packagesPath": "C:\\Users\\Swapnil\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Swapnil\\Source\\Repos\\gitswapnil\\pbd_eduworld\\PbdWeb\\obj\\",
+        "outputPath": "C:\\Users\\Swapnil\\source\\repos\\gitswapnil\\pbd_eduworld\\PbdWeb\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Microsoft\\Xamarin\\NuGet\\"
@@ -59,6 +59,10 @@
               "version": "[3.1.1, )"
             },
             "Microsoft.EntityFrameworkCore.Tools": {
+              "target": "Package",
+              "version": "[3.1.1, )"
+            },
+            "Microsoft.VisualStudio.Web.CodeGeneration.Design": {
               "target": "Package",
               "version": "[3.1.1, )"
             }
