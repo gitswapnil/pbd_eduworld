@@ -1,0 +1,74 @@
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <meta http-equiv="content-security-policy" content="script-src 'self' 'unsafe-inline';"/> 
+    <title>Title Checker</title>
+</head>
+<body>
+    <div>
+        Reading Database....
+    </div>
+
+    <template id="TitlesGetter">
+        <form id="frm-TitleForm">
+            <table>
+                <tbody>
+                    <tr>
+                        <td>
+                            <label for="code">Code: </label>
+                        </td>
+                        <td>
+                            <input id="code" name="code" type="text" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label for="title">Title: </label>
+                        </td>
+                        <td>
+                            <input id="title" name="title" type="text" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label for="qty">Quantity: </label>
+                        </td>
+                        <td>
+                            <input id="qty" name="qty" type="text" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <input value="Add" type="submit" />
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </form>
+        <table>
+            <thead>
+                <tr>
+                    <th>SI</th>
+                    <th>Code</th>
+                    <th>Title</th>
+                    <th>Quantity</th>
+                </tr>
+            </thead>
+        </table>
+    </template>
+    <script type="text/javascript">
+        const { ipcRenderer } = require('electron');
+        window.addEventListener("load", function () {
+            ipcRenderer.on('take-excelJson', (event, arg) => {
+                console.log(arg) // prints "pong"
+            });
+
+            ipcRenderer.send('get-me-excel', 'ping');
+
+            //document.getElementById("frm-TitleForm").addEventListener("submit", (event, args) => {
+            //    event.preventDefault();
+            //});
+        });
+    </script>
+</body>
+</html>
