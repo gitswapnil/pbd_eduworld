@@ -45,10 +45,10 @@ ipcMain.on('search-for-book', (event, str) => {                 //main process l
     let retData = {};
 
     db.serialize(function () {
-        db.all(`SELECT catalouge.id, code, (sections.name || " " || title) AS title, price FROM catalouge 
+        db.all(`SELECT catalouge.id, code, (sections.name || " " || title) AS title, price, ("(" || code || ") " || sections.name || " " || title) AS uniqueName FROM catalouge 
                     LEFT JOIN sections ON catalouge.section_id = sections.id
                     LEFT JOIN series ON catalouge.series_id = series.id
-                    WHERE title LIKE "%${str}%" OR code LIKE "%${str}"`, function (err, rows) {
+                    WHERE uniqueName LIKE "%${str}%"`, function (err, rows) {
                 if (err) {
                     throw new Error(err);
                     return;
