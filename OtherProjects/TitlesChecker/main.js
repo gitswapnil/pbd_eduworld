@@ -1,13 +1,5 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const Excel = require('exceljs');
-//const sqlite3 = require('sqlite3').verbose();
-//const db = new sqlite3.Database('./data/titles_checker.db', sqlite3.OPEN_READWRITE, (err) => {
-//    if (err) {
-//        console.error(err.message);
-//        return;
-//    }
-//    console.log("Connected to the titles_checker database");
-//});
 
 function createWindow() {
     // Create the browser window.
@@ -50,14 +42,23 @@ ipcMain.on('search-for-book', (event, str) => {                 //main process l
     
     var sqlite3 = require('sqlite3');
     var db = new sqlite3.Database('./data/titles_checker.db');
+    let retData = {};
 
     db.serialize(function () {
-        db.all(`SELECT code, (sections.name || " " || title) AS title, price FROM catalouge 
+        db.all(`SELECT catalouge.id, code, (sections.name || " " || title) AS title, price FROM catalouge 
                     LEFT JOIN sections ON catalouge.section_id = sections.id
                     LEFT JOIN series ON catalouge.series_id = series.id
-                    WHERE title LIKE "%${str}%"`, function (err, rows) {
-                console.log(rows);
-                event.reply('get-books-list', rows);
+                    WHERE title LIKE "%${str}%" OR code LIKE "%${str}"`, function (err, rows) {
+                if (err) {
+                    throw new Error(err);
+                    return;
+                }
+                //console.log(rows);
+                rows.forEach(row => {
+                    retData[row.id] = { code: row.code, title: row.title, price: row.price };
+                });                
+
+                event.reply('get-books-list', retData);
         });
     });
 
