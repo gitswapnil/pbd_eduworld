@@ -1,5 +1,13 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const Excel = require('exceljs');
+//const sqlite3 = require('sqlite3').verbose();
+//const db = new sqlite3.Database('./data/titles_checker.db', sqlite3.OPEN_READWRITE, (err) => {
+//    if (err) {
+//        console.error(err.message);
+//        return;
+//    }
+//    console.log("Connected to the titles_checker database");
+//});
 
 function createWindow() {
     // Create the browser window.
@@ -35,4 +43,24 @@ ipcMain.once('get-me-excel', (event, filePath) => {                 //main proce
         });
         event.reply('take-excelJson', retData);
     });
+});
+
+ipcMain.on('search-for-book', (event, str) => {                 //main process listening to get request once from renderer process to search for books for a given string
+    console.log(str) // prints given string
+    
+    var sqlite3 = require('sqlite3');
+    var db = new sqlite3.Database('./data/titles_checker.db');
+
+    db.serialize(function () {
+        db.all(`SELECT code, (sections.name || " " || title) AS title, price FROM catalouge 
+                    LEFT JOIN sections ON catalouge.section_id = sections.id
+                    LEFT JOIN series ON catalouge.series_id = series.id
+                    WHERE title LIKE "%${str}%"`, function (err, rows) {
+                console.log(rows);
+                event.reply('get-books-list', rows);
+        });
+    });
+
+    db.close();
+    
 });

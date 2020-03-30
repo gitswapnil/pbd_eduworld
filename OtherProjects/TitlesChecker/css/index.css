@@ -32,3 +32,19 @@ label#SelectFileLabel:hover {
 .align-right {
     text-align: right;
 }
+
+.top-main-header {
+    height: 75px;
+}
+
+.top-main-header > button {
+    position: absolute;
+    margin-top: 20px;
+    z-index: 2;
+}
+
+.top-main-header > h1 {
+    text-align: center;
+    width: 100%;
+    position: absolute;
+}
