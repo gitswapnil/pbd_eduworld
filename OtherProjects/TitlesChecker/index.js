@@ -1,6 +1,5 @@
 const { ipcRenderer } = require('electron');
 let container = document.getElementById("container");
-let booksList = undefined;
 
 window.addEventListener("load", () => LoadTemplate("CheckType"));
 
@@ -29,8 +28,8 @@ class BooksList {
     #searchedIds;
     #seachedString;     //maintain what is being searched
 
-    constructor(contanerId) {
-        this.#containerNode = document.getElementById(contanerId);
+    constructor(containerId, inputId) {
+        this.#containerNode = document.getElementById(containerId);
         //event listner to listen for books list
         let self = this;
 
@@ -39,6 +38,14 @@ class BooksList {
             self.#booksList = list;
             self.#selectedBookId = 0;  //reset the selected book id;
             self.render();
+            //whenever the focus is removed, don't show the books list.
+            document.getElementById(inputId).addEventListener("blur", event => {
+                document.getElementById(containerId).innerHTML = "";
+            });
+        });
+
+        document.getElementById(inputId).addEventListener("keyup", event => {
+            self.searchForBooks(event);
         });
     }
 
