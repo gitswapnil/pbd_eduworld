@@ -24,7 +24,7 @@
                                        id="inPOFile"
                                        style="display:none;"
                                        accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                                       onchange="LoadTemplate('CheckPO', null, () => new BooksList('dvBooksList', 'inTitleSearch'))">
+                                       onchange="LoadTemplate('CheckPO', null, () => { BooksList.initialize('dvBooksList', 'inTitleSearch'); POTable.initialize('dvPOTableContainer') })">
                             </div>
                             <div class="col-4">
                                 <label for="inPriceList" id="SelectPriceList" class="main-selection price-list">
@@ -103,9 +103,9 @@
                             <div class="col-5">
                                 <div class="input-group">
                                     <input id="inTitleSearch" type="text" aria-label="Title" class="form-control col-10" placeholder="Title">
-                                    <input type="text" aria-label="Qty" class="form-control col-2" placeholder="Qty">
+                                    <input id="inTitleQty" type="number" aria-label="Qty" class="form-control col-2" placeholder="Qty">
                                     <div class="input-group-append pointer">
-                                        <button class="btn btn-outline-secondary" type="button" id="button-addon2">
+                                        <button class="btn btn-outline-secondary" type="button" id="button-addon2" onclick="addToTable('inTitleSearch', 'inTitleQty')">
                                             <svg class="bi bi-plus" width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                                                 <path fill-rule="evenodd" d="M8 3.5a.5.5 0 01.5.5v4a.5.5 0 01-.5.5H4a.5.5 0 010-1h3.5V4a.5.5 0 01.5-.5z" clip-rule="evenodd" />
                                                 <path fill-rule="evenodd" d="M7.5 8a.5.5 0 01.5-.5h4a.5.5 0 010 1H8.5V12a.5.5 0 01-1 0V8z" clip-rule="evenodd" />
@@ -141,102 +141,20 @@
             <br/>
             <div class="row">
                 <div class="col-12">
-                    <table class="table table-sm table-scrollable">
-                        <thead>
-                            <tr>
-                                <th scope="col">#</th>
-                                <th scope="col">Code</th>
-                                <th scope="col">Title</th>
-                                <th scope="col">Quantity</th>
-                                <th scope="col">Rate</th>
-                                <th scope="col">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <th scope="row">1</th>
-                                <td>Mark</td>
-                                <td>Otto</td>
-                                <td>@mdo</td>
-                            </tr>
-                            <tr>
-                                <th scope="row">2</th>
-                                <td>Jacob</td>
-                                <td>Thornton</td>
-                                <td>@fat</td>
-                            </tr>
-                            <tr>
-                                <th scope="row">3</th>
-                                <td colspan="2">Larry the Bird</td>
-                                <td>@twitter</td>
-                            </tr>
-                            <tr>
-                                <th scope="row">3</th>
-                                <td colspan="2">Larry the Bird</td>
-                                <td>@twitter</td>
-                            </tr>
-                            <tr>
-                                <th scope="row">3</th>
-                                <td colspan="2">Larry the Bird</td>
-                                <td>@twitter</td>
-                            </tr>
-                            <tr>
-                                <th scope="row">3</th>
-                                <td colspan="2">Larry the Bird</td>
-                                <td>@twitter</td>
-                            </tr>
-                            <tr>
-                                <th scope="row">3</th>
-                                <td colspan="2">Larry the Bird</td>
-                                <td>@twitter</td>
-                            </tr>
-                            <tr>
-                                <th scope="row">3</th>
-                                <td colspan="2">Larry the Bird</td>
-                                <td>@twitter</td>
-                            </tr>
-                            <tr>
-                                <th scope="row">3</th>
-                                <td colspan="2">Larry the Bird</td>
-                                <td>@twitter</td>
-                            </tr>
-                            <tr>
-                                <th scope="row">3</th>
-                                <td colspan="2">Larry the Bird</td>
-                                <td>@twitter</td>
-                            </tr>
-                            <tr>
-                                <th scope="row">3</th>
-                                <td colspan="2">Larry the Bird</td>
-                                <td>@twitter</td>
-                            </tr>
-                            <tr>
-                                <th scope="row">3</th>
-                                <td colspan="2">Larry the Bird</td>
-                                <td>@twitter</td>
-                            </tr>
-                            <tr>
-                                <th scope="row">3</th>
-                                <td colspan="2">Larry the Bird</td>
-                                <td>@twitter</td>
-                            </tr>
-                            <tr>
-                                <th scope="row">3</th>
-                                <td colspan="2">Larry the Bird</td>
-                                <td>@twitter</td>
-                            <tr>
-                                <th scope="row">3</th>
-                                <td colspan="2">Larry the Bird</td>
-                                <td>@twitter</td>
-                            </tr>
-                            <tr>
-                                <th scope="row">3</th>
-                                <td colspan="2">Larry the Bird</td>
-                                <td>@twitter</td>
-                            </tr>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div id="dvPOTableContainer"></div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 align-right">
+                    <button type="button"
+                            class="btn btn-lg btn-info"
+                            onclick="checkTitles()"
+                            id="btnCheckTitles"
+                            disabled>
+                        <svg class="bi bi-check" width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" d="M13.854 3.646a.5.5 0 010 .708l-7 7a.5.5 0 01-.708 0l-3.5-3.5a.5.5 0 11.708-.708L6.5 10.293l6.646-6.647a.5.5 0 01.708 0z" clip-rule="evenodd" />
+                        </svg> Check Titles
+                    </button>
                 </div>
             </div>
         </div>
