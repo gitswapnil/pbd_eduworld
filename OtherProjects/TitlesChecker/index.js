@@ -194,8 +194,18 @@ const addToTable = (dvTitleId, dvQtyId) => {
     titleInputNode.focus();
 };
 
-const checkTitles = () => {
-    //POTable.booksList;
+const checkTitles = (event) => {
+    const frm = event.target;
+    const inputs = {
+        POType: frm.elements["rdPO_type"].value,
+        ref: frm.elements["inReference"].value,
+        date: frm.elements["inRefDate"].value,
+        partyCode: frm.elements["inPartyCode"].value,
+        refPartyCode: frm.elements["inRefPartyCode"].value,
+        titles: POTable.booksList
+    };
+
+    
 };
 
 //function that takes us back to main window

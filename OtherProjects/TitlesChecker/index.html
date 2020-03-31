@@ -24,7 +24,14 @@
                                        id="inPOFile"
                                        style="display:none;"
                                        accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                                       onchange="LoadTemplate('CheckPO', null, () => { BooksList.initialize('dvBooksList', 'inTitleSearch'); POTable.initialize('dvPOTableContainer') })">
+                                       onchange="LoadTemplate('CheckPO', null, () => {
+                                            BooksList.initialize('dvBooksList', 'inTitleSearch');
+                                            POTable.initialize('dvPOTableContainer');
+                                            document.getElementById('frm-PODetails').addEventListener('submit', function (event) {
+                                                event.preventDefault();
+                                                checkTitles(event);
+                                            })
+                                       })">
                             </div>
                             <div class="col-4">
                                 <label for="inPriceList" id="SelectPriceList" class="main-selection price-list">
@@ -76,7 +83,7 @@
         <div class="container-fluid">
             <div class="row">
                 <div class="col-12">
-                    <form>
+                    <form class="needs-validation" id="frm-PODetails" novalidate>
                         <div class="form-group row">
                             <label for="rdPO_type" class="col-3 col-form-label align-right">Purchase Order Type:</label>
                             <div class="col-3" style="padding-top:8px;">
@@ -97,7 +104,7 @@
                         <div class="form-group row">
                             <label for="inReference" class="col-3 col-form-label col-form-label-sm align-right">Reference:</label>
                             <div class="col-3">
-                                <input type="text" class="form-control form-control-sm" id="inReference">
+                                <input type="text" class="form-control form-control-sm" name="inReference" id="inReference" required>
                             </div>
                             <label for="inTitle" class="col-1 col-form-label col-form-label-sm align-right">Add Title:</label>
                             <div class="col-5">
@@ -119,19 +126,19 @@
                         <div class="form-group row">
                             <label for="inRefDate" class="col-3 col-form-label col-form-label-sm align-right">Date:</label>
                             <div class="col-3">
-                                <input type="datetime-local" class="form-control form-control-sm" id="inRefDate">
+                                <input type="datetime-local" class="form-control form-control-sm" name="inRefDate" id="inRefDate" required>
                             </div>
                         </div>
                         <div class="form-group row">
                             <label for="inPartyCode" class="col-3 col-form-label col-form-label-sm align-right">Party Code:</label>
                             <div class="col-3">
-                                <input type="text" class="form-control form-control-sm" id="inPartyCode">
+                                <input type="text" class="form-control form-control-sm" name="inPartyCode" id="inPartyCode" required>
                             </div>
                         </div>
                         <div class="form-group row">
                             <label for="inRefPartyCode" class="col-3 col-form-label col-form-label-sm align-right">Reference Party Code:</label>
                             <div class="col-3">
-                                <input type="text" class="form-control form-control-sm" id="inRefPartyCode">
+                                <input type="text" class="form-control form-control-sm" name="inRefPartyCode" id="inRefPartyCode" required>
                             </div>
                         </div>
                     </form>
@@ -146,9 +153,9 @@
             </div>
             <div class="row">
                 <div class="col-12 align-right">
-                    <button type="button"
+                    <button type="submit"
                             class="btn btn-lg btn-info"
-                            onclick="checkTitles()"
+                            form="frm-PODetails"
                             id="btnCheckTitles"
                             disabled>
                         <svg class="bi bi-check" width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
