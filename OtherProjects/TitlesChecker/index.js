@@ -24,7 +24,7 @@ const LoadTemplate = (id, callbefore, callafter) => {
 class BooksList {
     #containerNode;
     #booksList;
-    #selectedBookId = 0;        // 0 means no id is selected
+    static selectedBookId = 0;        // 0 means no id is selected
     #searchedIds;
     #seachedString;     //maintain what is being searched
 
@@ -36,7 +36,7 @@ class BooksList {
         ipcRenderer.on('get-books-list', (event, list) => {
             //console.log(list) // prints "list of books"
             self.#booksList = list;
-            self.#selectedBookId = 0;  //reset the selected book id;
+            self.selectedBookId = 0;  //reset the selected book id;
             self.render();
             //whenever the focus is removed, don't show the books list.
             document.getElementById(inputId).addEventListener("blur", event => {
@@ -44,6 +44,7 @@ class BooksList {
             });
         });
 
+        //attach the event "keyup" to the input element
         document.getElementById(inputId).addEventListener("keyup", event => {
             self.searchForBooks(event);
         });
@@ -51,23 +52,23 @@ class BooksList {
 
     searchForBooks(e) {
         if (e.keyCode === 38) {               //up arrow
-            if ((this.#selectedBookId === 0) || (this.#selectedBookId === this.#searchedIds[0])) {  //if no title is active or first title is focused then select the last one
-                this.#selectedBookId = this.#searchedIds[this.#searchedIds.length - 1];     //go back to last index
+            if ((this.selectedBookId === 0) || (this.selectedBookId === this.#searchedIds[0])) {  //if no title is active or first title is focused then select the last one
+                this.selectedBookId = this.#searchedIds[this.#searchedIds.length - 1];     //go back to last index
             } else {        //if previous selected Id is at some other index
-                let prevIdIndex = this.#searchedIds.indexOf(this.#selectedBookId);      //get the previously selected id's index
-                this.#selectedBookId = this.#searchedIds[prevIdIndex - 1];      //go back by one index
+                let prevIdIndex = this.#searchedIds.indexOf(this.selectedBookId);      //get the previously selected id's index
+                this.selectedBookId = this.#searchedIds[prevIdIndex - 1];      //go back by one index
             }
-            e.target.value = this.#booksList[this.#selectedBookId].title;
+            e.target.value = this.#booksList[this.selectedBookId].title;
             this.render();
             return;
         } else if (e.keyCode === 40) {        //down arrow
-            if ((this.#selectedBookId === 0) || (this.#selectedBookId === this.#searchedIds[this.#searchedIds.length - 1])) {  //if no title is active or last title is focused then select the first one
-                this.#selectedBookId = this.#searchedIds[0];     //go back to last index
+            if ((this.selectedBookId === 0) || (this.selectedBookId === this.#searchedIds[this.#searchedIds.length - 1])) {  //if no title is active or last title is focused then select the first one
+                this.selectedBookId = this.#searchedIds[0];     //go back to last index
             } else {        //if previous selected Id is at some other index
-                let prevIdIndex = this.#searchedIds.indexOf(this.#selectedBookId);      //get the previously selected id's index
-                this.#selectedBookId = this.#searchedIds[prevIdIndex + 1];      //go back by one index
+                let prevIdIndex = this.#searchedIds.indexOf(this.selectedBookId);      //get the previously selected id's index
+                this.selectedBookId = this.#searchedIds[prevIdIndex + 1];      //go back by one index
             }
-            e.target.value = this.#booksList[this.#selectedBookId].title;
+            e.target.value = this.#booksList[this.selectedBookId].title;
             this.render();
             return;
         }
@@ -90,7 +91,7 @@ class BooksList {
             //console.log("ids: " + ids);
             this.#searchedIds.forEach(id => {
                 let book = this.#booksList[id];
-                html += `<li class="list-group-item d-flex justify-content-between align-items-center ${id === this.#selectedBookId ? "active" : ""}">
+                html += `<li class="list-group-item d-flex justify-content-between align-items-center ${id === this.selectedBookId ? "active" : ""}">
                             (${book.code}) ${book.title}
                             <span class="badge badge-primary badge-pill">${book.price}/-</span>
                          </li>`;
