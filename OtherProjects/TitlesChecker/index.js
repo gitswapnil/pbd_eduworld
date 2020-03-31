@@ -196,15 +196,31 @@ const addToTable = (dvTitleId, dvQtyId) => {
 
 const checkTitles = (event) => {
     const frm = event.target;
-    const inputs = {
-        POType: frm.elements["rdPO_type"].value,
-        ref: frm.elements["inReference"].value,
-        date: frm.elements["inRefDate"].value,
-        partyCode: frm.elements["inPartyCode"].value,
-        refPartyCode: frm.elements["inRefPartyCode"].value,
-        titles: POTable.booksList
-    };
+    const inputs = {};
+    //if (!frm.elements["rdPO_type"].validity.valid) return;
+    inputs.POType = frm.elements["rdPO_type"].value;
 
+    if (!frm.elements["inReference"].validity.valid) return;
+    inputs.ref = frm.elements["inReference"].value.trim();
+
+    if (!frm.elements["inRefDate"].validity.valid) return;
+    inputs.refDate = frm.elements["inRefDate"].value;
+
+    if (!frm.elements["inPartyCode"].validity.valid) return;
+    inputs.partyCode = frm.elements["inPartyCode"].value.trim();
+
+    if (!frm.elements["inRefPartyCode"].validity.valid) return;
+    inputs.refPartyCode = frm.elements["inRefPartyCode"].value.trim();
+
+    inputs.titles = POTable.booksList;
+
+    document.getElementById("dvGetDetails").hidden = true;      //hide the details component
+    document.getElementById("dvChecking").hidden = false;       //Show checking sign
+
+    //Checking Logic
+
+
+    document.getElementById("dvResults").hidden = false;        //Show results page
     
 };
 
