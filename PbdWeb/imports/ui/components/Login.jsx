@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import Footer from './Footer';
+import RememberMe from 'meteor/tprzytula:remember-me';
 
 const Login = () => {
 	const [phNo, setPhNo] = useState("");
 	const [pwd, setPwd] = useState("");
-	const [kli, setKli] = useState("");
+	const [kli, setKli] = useState(false);
 
-	function handleChange() {
-
+	function handleSubmit(event) {
+		event.preventDefault();
+		// console.log("phNo: " + phNo + ", pwd: " + pwd + ", kli: " + kli + ", typeof kli: " + typeof(kli));
+		RememberMe.loginWithPassword(phNo, pwd, kli);
 	}
 
 	return (
@@ -27,7 +30,7 @@ const Login = () => {
 							<p style={{"fontWeight": "lighter", "fontSize": "xxx-large", "marginTop": "40px"}}>Login</p>
 						</div>
 					</div>
-					<form>
+					<form onSubmit={handleSubmit}>
 					  	<div className="form-group row">
 					    	<label htmlFor="phNumber" className="col-5 col-form-label text-right" style={{"fontSize": "large"}}>Phone No.:</label>
 					    	<div className="col-sm-5">
