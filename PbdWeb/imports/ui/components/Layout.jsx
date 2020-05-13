@@ -1,12 +1,35 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Meteor } from 'meteor/meteor';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCog, faSignOutAlt, faUserCircle } from '@fortawesome/free-solid-svg-icons';
 
 import Footer from './Footer';
 
+const SectionTab = (props) => {
+	if(props.selected) {
+		return (
+			<div style={{"width": "112%"}}>
+				<div className="img-container-with-text">
+					<img src={`${Meteor.absoluteUrl('section_tab.png')}`} width="100%" height="65px"/>
+					<div className="centered-img-text section-tab-selected">
+						{props.tabName}
+					</div>
+				</div>
+			</div>
+		)
+	} else {
+		return (
+			<div className="section-tab text-center" onClick={props.onClick}>
+				{props.tabName}
+			</div>
+		)
+	}
+};
+
 
 const Layout = (props) => {
+	const [section, setSection] = useState("dashboard");
+
 	return (
 		<div className="container-fluid">
 			<div className="row">
@@ -14,10 +37,12 @@ const Layout = (props) => {
 					<div className="text-center">
 						<img src={`${Meteor.absoluteUrl('pbd_logo.png')}`} width="150px" style={{"margin": "8px 0"}}/>
 					</div>
-					<div className="img-container-with-text" style={{"width": "115%", "marginTop": "30px"}}>
-						<img src={`${Meteor.absoluteUrl('section_tab.png')}`} width="100%"/>
-						<div className="centered-img-text" style={{"fontWeight": "bold", "fontSize": "larger"}}>Dashboard</div>
+					<div style={{"marginTop": "30px"}}>
+						<SectionTab tabName="Dashboard" selected={(section === "dashboard")} onClick={() => setSection("dashboard")}/>
+						<SectionTab tabName="Manage Executives" selected={(section === "manageExecutives")} onClick={() => setSection("manageExecutives")}/>
+						<SectionTab tabName="School/Party Data" selected={(section === "schoolPartyData")} onClick={() => setSection("schoolPartyData")}/>
 					</div>
+					
 				</div>
 				<div className="col-10 text-right" >
 					<div className="btn-group">

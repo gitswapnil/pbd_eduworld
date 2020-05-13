@@ -2,11 +2,29 @@
 	position: relative;
   	text-align: center;
   	color: white;
+	margin: -3px 0px;
 }
 
 .centered-img-text {
   	position: absolute;
   	top: 50%;
   	left: 50%;
-  	transform: translate(-50%, -50%);
+  	transform: translate(-55%, -50%);
+  	width: 100%;
+}
+
+.section-tab-selected {
+	font-size: larger;
+	font-weight: bold;
+	color: white;
+}
+
+.section-tab {
+	color: white;
+	background: #85a6e1;
+	margin: 5px 0px;
+	padding: 10px;
+	cursor: pointer;
+	font-weight: lighter;
+
 }
