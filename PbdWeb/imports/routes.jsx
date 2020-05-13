@@ -6,6 +6,7 @@ if(Meteor.isClient) {
 	import { Router } from 'meteor/iron:router';
 
 	import Login from './ui/components/Login';
+	import Layout from './ui/components/Layout';
 	import Dashboard from './ui/components/Dashboard';
 	import NotFound from './ui/components/NotFound';
 
@@ -32,7 +33,27 @@ if(Meteor.isClient) {
 			if(!Meteor.userId()) {			//if the user is not logged in, take him to the Login route.
 				Router.go('/login');
 			} else {
-				renderComponent(<Dashboard selectedTab="currentstatus"/>);		//If he is logged in, then go the specified page.
+				renderComponent(		//If he is logged in, then go the specified page.
+					<Layout selectedSection="dashboard">
+						<Dashboard selectedTab="currentstatus"/>
+					</Layout>
+				);
+			}
+		});
+
+		Router.route('/profile/settings', () => {
+			if(!Meteor.userId()) {
+				Router.go('/login');		//if the user is not logged in, then take him to the Login route.
+			} else {
+				renderComponent(<div>This is Settings Page</div>);
+			}
+		});
+
+		Router.route('/logout', () => {
+			if(!Meteor.userId()) {
+				Router.go('/login');		//if the user is not logged in, then take him to the Login route.
+			} else {
+				Meteor.logout();
 			}
 		});
 

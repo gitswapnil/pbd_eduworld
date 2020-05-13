@@ -5,7 +5,7 @@ import RememberMe from 'meteor/tprzytula:remember-me';
 const Login = () => {
 	const [phNo, setPhNo] = useState("");
 	const [pwd, setPwd] = useState("");
-	const [kli, setKli] = useState(false);
+	const [kli, setKli] = useState(true);
 
 	function handleSubmit(event) {
 		event.preventDefault();
