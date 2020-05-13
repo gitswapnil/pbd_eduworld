@@ -28,3 +28,38 @@
 	font-weight: lighter;
 
 }
+
+.nav-tabs-container {
+	margin-left: 20px;
+	display: flex;
+	flex-flow: row nowrap;
+	align-items: flex-end;
+}
+
+.nav-tabs-container > div {
+	border: 1px solid #aaa;
+	border-bottom: none;
+	border-radius: 10px 10px 0 0;
+	padding: 6px 0;
+	text-align: center;
+	min-width: 200px;
+	margin-left: 10px;
+	color: #666;
+	background: white;
+	cursor: pointer;
+}
+
+.nav-tabs-container > div.selected {
+	padding-top: 13px;
+	font-weight: bold;
+	font-size: larger;
+	box-shadow: 0px -3px 4px #eaeaea;
+	color: black;
+	position: relative;
+	bottom: -1px;
+	cursor: auto;
+}
+
+.tabs-content-container {
+	border: 1px solid #ccc;
+}

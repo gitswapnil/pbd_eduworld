@@ -4,6 +4,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCog, faSignOutAlt, faUserCircle } from '@fortawesome/free-solid-svg-icons';
 
 import Footer from './Footer';
+import TabsArea from './TabsArea';
+import Tab from './Tab';
 
 const SectionTab = (props) => {
 	if(props.selected) {
@@ -33,6 +35,7 @@ const Layout = (props) => {
 	return (
 		<div className="container-fluid">
 			<div className="row">
+				{/*This is left side section*/}
 				<div className="col-2" style={{"padding": 0}}>
 					<div className="text-center">
 						<img src={`${Meteor.absoluteUrl('pbd_logo.png')}`} width="150px" style={{"margin": "8px 0"}}/>
@@ -44,25 +47,46 @@ const Layout = (props) => {
 					</div>
 					
 				</div>
-				<div className="col-10 text-right" >
-					<div className="btn-group">
-						<button type="button" className="btn btn-outline-secondary dropdown-toggle" style={{"borderRadius": "0 0 5px 5px", "boxShadow": "2px 0px 5px #b0b0b0"}} data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-							<FontAwesomeIcon icon={faUserCircle} size="lg"/>&nbsp;
-					    	{
-								(Meteor.user().profile.name || <i className="text-muted">No Name Found</i>)
-							}&nbsp;
-						</button>
-						<div className="dropdown-menu dropdown-menu-right">
-							<a className="dropdown-item" href={`${Meteor.absoluteUrl('profile/settings')}`}>
-								<FontAwesomeIcon icon={faCog}/>&nbsp;
-								Settings
-							</a>
-							<div className="dropdown-divider"></div>
-							<a className="dropdown-item" href={`${Meteor.absoluteUrl('logout')}`}>
-								<FontAwesomeIcon icon={faSignOutAlt}/>&nbsp;
-								Logout
-							</a>
+
+				{/*This is right side section*/}
+				<div className="col-10" >
+
+					{/*The profile view button*/}
+					<div className="text-right">
+						<div className="btn-group">
+							<button type="button" className="btn btn-outline-secondary dropdown-toggle" style={{"borderRadius": "0 0 5px 5px", "boxShadow": "2px 0px 5px #b0b0b0"}} data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+								<FontAwesomeIcon icon={faUserCircle} size="lg"/>&nbsp;
+						    	{
+									(Meteor.user().profile.name || <i className="text-muted">No Name Found</i>)
+								}&nbsp;
+							</button>
+							<div className="dropdown-menu dropdown-menu-right">
+								<a className="dropdown-item" href={`${Meteor.absoluteUrl('profile/settings')}`}>
+									<FontAwesomeIcon icon={faCog}/>&nbsp;
+									Settings
+								</a>
+								<div className="dropdown-divider"></div>
+								<a className="dropdown-item" href={`${Meteor.absoluteUrl('logout')}`}>
+									<FontAwesomeIcon icon={faSignOutAlt}/>&nbsp;
+									Logout
+								</a>
+							</div>
 						</div>
+					</div>
+
+					{/*The sub Tabs component goes here*/}
+					<div>
+						<TabsArea>
+							<Tab id="currentStatus" name="Current Status">
+								This is Tab 1
+							</Tab>
+							<Tab id="reports" name="Reports">
+								This is Tab 2
+							</Tab>
+							<Tab id="history" name="History">
+								This is Tab 3
+							</Tab>
+						</TabsArea>
 					</div>
 				</div>
 			</div>
