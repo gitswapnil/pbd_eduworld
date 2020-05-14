@@ -48,15 +48,15 @@ const Login = () => {
 					</div>
 					<form onSubmit={handleSubmit}>
 					  	<div className="form-group row">
-					    	<label htmlFor="phNumber" className="col-5 col-form-label text-right" style={{"fontSize": "large"}}>Phone No.:</label>
+					    	<label htmlFor="inPhNumber" className="col-5 col-form-label text-right" style={{"fontSize": "large"}}>Phone No.:</label>
 					    	<div className="col-sm-5">
-					      		<input type="text" className={`form-control ${(error === "") ? "" : "is-invalid"}`} id="phNumber" placeholder="Phone Number" value={phNo} onChange={e => setPhNo(e.target.value)}/>
+					      		<input type="text" className={`form-control ${(error === "") ? "" : "is-invalid"}`} id="inPhNumber" placeholder="Phone Number" value={phNo} onChange={e => setPhNo(e.target.value)}/>
 					    	</div>
 						</div>
 						<div className="form-group row">
-					    	<label htmlFor="pwd" className="col-5 col-form-label text-right" style={{"fontSize": "large"}}>Password:</label>
+					    	<label htmlFor="inPwd" className="col-5 col-form-label text-right" style={{"fontSize": "large"}}>Password:</label>
 					    	<div className="col-sm-5">
-					      		<input type="password" className={`form-control ${(error === "") ? "" : "is-invalid"}`} id="pwd" placeholder="Password" value={pwd} onChange={e => setPwd(e.target.value)}/>
+					      		<input type="password" className={`form-control ${(error === "") ? "" : "is-invalid"}`} id="inPwd" placeholder="Password" value={pwd} onChange={e => setPwd(e.target.value)}/>
 						    	<div className="invalid-feedback">
 						        	{error}
 						        </div>
