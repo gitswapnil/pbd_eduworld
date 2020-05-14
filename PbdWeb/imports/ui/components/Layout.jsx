@@ -4,8 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCog, faSignOutAlt, faUserCircle } from '@fortawesome/free-solid-svg-icons';
 
 import Footer from './Footer';
-import TabsArea from './TabsArea';
-import Tab from './Tab';
+import NavigationTabs from './NavigationTabs';
 
 const SectionTab = (props) => {
 	if(props.selected) {
@@ -30,8 +29,6 @@ const SectionTab = (props) => {
 
 
 const Layout = (props) => {
-	const [section, setSection] = useState("dashboard");
-
 	return (
 		<div className="container-fluid">
 			<div className="row">
@@ -41,9 +38,9 @@ const Layout = (props) => {
 						<img src={`${Meteor.absoluteUrl('pbd_logo.png')}`} width="150px" style={{"margin": "8px 0"}}/>
 					</div>
 					<div style={{"marginTop": "30px"}}>
-						<SectionTab tabName="Dashboard" selected={(section === "dashboard")} onClick={() => setSection("dashboard")}/>
-						<SectionTab tabName="Manage Executives" selected={(section === "manageExecutives")} onClick={() => setSection("manageExecutives")}/>
-						<SectionTab tabName="School/Party Data" selected={(section === "schoolPartyData")} onClick={() => setSection("schoolPartyData")}/>
+						<SectionTab tabName="Dashboard" selected={(props.selectedSection === "dashboard")} onClick={() => Router.go('/dashboard/currentstatus')}/>
+						<SectionTab tabName="Manage Executives" selected={(props.selectedSection === "manageExecutives")} onClick={() => Router.go('/manageexecutives/createexecutive')}/>
+						<SectionTab tabName="School/Party Data" selected={(props.selectedSection === "schoolPartyData")} onClick={() => Router.go('/schoolpartydata/definitions')}/>
 					</div>
 					
 				</div>
@@ -75,19 +72,7 @@ const Layout = (props) => {
 					</div>
 
 					{/*The sub Tabs component goes here*/}
-					<div>
-						<TabsArea>
-							<Tab id="currentStatus" name="Current Status">
-								This is Tab 1
-							</Tab>
-							<Tab id="reports" name="Reports">
-								This is Tab 2
-							</Tab>
-							<Tab id="history" name="History">
-								This is Tab 3
-							</Tab>
-						</TabsArea>
-					</div>
+					{props.children}
 				</div>
 			</div>
 			<div className="row">
