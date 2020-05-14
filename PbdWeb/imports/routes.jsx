@@ -10,6 +10,8 @@ if(Meteor.isClient) {
 	import NavigationTabs from './ui/components/NavigationTabs';
 	import NotFound from './ui/components/NotFound';
 
+	import CreateExecutives from './ui/components/CreateExecutives';
+
 	const renderComponent = (component) => {
 		const container = document.getElementById("react-target");
 		ReactDom.unmountComponentAtNode(container);
@@ -101,7 +103,7 @@ if(Meteor.isClient) {
 				renderComponent(		//If he is logged in, then go the specified page.
 					<Layout selectedSection="manageExecutives">
 						<NavigationTabs tabs={tabs}>
-							This is createexecutive Tab
+							<CreateExecutives/>
 						</NavigationTabs>
 					</Layout>
 				);

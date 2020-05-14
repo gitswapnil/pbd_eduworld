@@ -1,6 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const NavigationTabs = (props) => {
+	useEffect(() => {
+		const windowHeight = $(window).height();
+		const containerRequiredHeight = parseInt(windowHeight) - 130;
+		$('div.tabs-content-container').height(`${containerRequiredHeight}px`);
+	});
+
 	return (
 		<div>
 			<div className="nav-tabs-container">
@@ -14,7 +20,7 @@ const NavigationTabs = (props) => {
 					})
 				}
 			</div>
-			<div className="tabs-content-container">
+			<div className="tabs-content-container" style={{"padding": "0 20px"}}>
 				{props.children}
 			</div>
 		</div>

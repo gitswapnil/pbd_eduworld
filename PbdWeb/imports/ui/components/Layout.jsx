@@ -29,6 +29,17 @@ const SectionTab = (props) => {
 
 
 const Layout = (props) => {
+	let username = false;
+
+	try {
+		username = Meteor.user().profile.name;			//username should be a proper username
+		if(username == "") {
+			username = false;
+		}
+	} catch(e) {
+		username = false;
+	}
+
 	return (
 		<div className="container-fluid">
 			<div className="row">
@@ -46,16 +57,14 @@ const Layout = (props) => {
 				</div>
 
 				{/*This is right side section*/}
-				<div className="col-10" >
+				<div className="col-10" style={{"paddingLeft": 0}}>
 
 					{/*The profile view button*/}
 					<div className="text-right">
 						<div className="btn-group">
 							<button type="button" className="btn btn-outline-secondary dropdown-toggle profile-btn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
 								<FontAwesomeIcon icon={faUserCircle} size="lg"/>&nbsp;
-						    	{
-									(Meteor.user().profile.name || <i className="text-muted">No Name Found</i>)
-								}&nbsp;
+						    	{username || <i className="text-muted">No Name Found</i>}&nbsp;
 							</button>
 							<div className="dropdown-menu dropdown-menu-right">
 								<a className="dropdown-item" href={`${Meteor.absoluteUrl('profile/settings')}`}>
@@ -71,8 +80,10 @@ const Layout = (props) => {
 						</div>
 					</div>
 
-					{/*The sub Tabs component goes here*/}
-					{props.children}
+					{/*The Tab content goes here*/}
+					<div>
+						{props.children}
+					</div>
 				</div>
 			</div>
 			<div className="row">
