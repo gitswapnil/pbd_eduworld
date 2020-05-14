@@ -6,11 +6,27 @@ const Login = () => {
 	const [phNo, setPhNo] = useState("");
 	const [pwd, setPwd] = useState("");
 	const [kli, setKli] = useState(true);
+	const [error, setError] = useState("");
 
 	function handleSubmit(event) {
 		event.preventDefault();
 		// console.log("phNo: " + phNo + ", pwd: " + pwd + ", kli: " + kli + ", typeof kli: " + typeof(kli));
-		RememberMe.loginWithPassword(phNo, pwd, kli);
+		if(phNo === "") {
+			setError("Phone number cannot be empty.");
+			return;
+		}
+
+		if(pwd === "") {
+			setError("You need to enter the password.");
+			return;
+		}
+
+		RememberMe.loginWithPassword(phNo, pwd, (error) => {
+			if(error) {
+				setError(error.reason);
+				return;
+			}
+		}, kli);
 	}
 
 	return (
@@ -34,13 +50,16 @@ const Login = () => {
 					  	<div className="form-group row">
 					    	<label htmlFor="phNumber" className="col-5 col-form-label text-right" style={{"fontSize": "large"}}>Phone No.:</label>
 					    	<div className="col-sm-5">
-					      		<input type="text" className="form-control" id="phNumber" placeholder="Phone Number" value={phNo} onChange={e => setPhNo(e.target.value)}/>
+					      		<input type="text" className={`form-control ${(error === "") ? "" : "is-invalid"}`} id="phNumber" placeholder="Phone Number" value={phNo} onChange={e => setPhNo(e.target.value)}/>
 					    	</div>
 						</div>
 						<div className="form-group row">
 					    	<label htmlFor="pwd" className="col-5 col-form-label text-right" style={{"fontSize": "large"}}>Password:</label>
 					    	<div className="col-sm-5">
-					      		<input type="password" className="form-control" id="pwd" placeholder="Password" value={pwd} onChange={e => setPwd(e.target.value)}/>
+					      		<input type="password" className={`form-control ${(error === "") ? "" : "is-invalid"}`} id="pwd" placeholder="Password" value={pwd} onChange={e => setPwd(e.target.value)}/>
+						    	<div className="invalid-feedback">
+						        	{error}
+						        </div>
 					    	</div>
 						</div>
 						<div className="form-group row">

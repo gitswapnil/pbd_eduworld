@@ -51,7 +51,7 @@ const Layout = (props) => {
 					{/*The profile view button*/}
 					<div className="text-right">
 						<div className="btn-group">
-							<button type="button" className="btn btn-outline-secondary dropdown-toggle" style={{"borderRadius": "0 0 5px 5px", "boxShadow": "2px 0px 5px #b0b0b0"}} data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+							<button type="button" className="btn btn-outline-secondary dropdown-toggle profile-btn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
 								<FontAwesomeIcon icon={faUserCircle} size="lg"/>&nbsp;
 						    	{
 									(Meteor.user().profile.name || <i className="text-muted">No Name Found</i>)

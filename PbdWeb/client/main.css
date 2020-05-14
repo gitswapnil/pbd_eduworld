@@ -63,3 +63,10 @@
 .tabs-content-container {
 	border: 1px solid #ccc;
 }
+
+.profile-btn {
+	border: 1px solid #ccc;
+	border-top: none;
+	border-radius: 0 0 5px 5px;
+	box-shadow: 1px 1px 2px #eee;
+}

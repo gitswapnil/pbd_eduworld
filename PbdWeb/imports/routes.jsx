@@ -18,7 +18,7 @@ if(Meteor.isClient) {
 
 	const checkAuthenticationAndExecute = (func) => {
 		if(!Meteor.userId()) {
-			renderComponent(<Login/>);		//if the user is not logged in, then take him to the Login route.
+			Router.go('/login');		//if the user is not logged in, then take him to the Login route.
 		} else {			//if he is logged in then execute the given function
 			func();
 		}
@@ -30,9 +30,11 @@ if(Meteor.isClient) {
 		});
 		
 		Router.route('/login', () => {
-			checkAuthenticationAndExecute(() => {
+			if(Meteor.userId()) {
 				Router.go('/dashboard/currentstatus');
-			});
+			} else {
+				renderComponent(<Login/>);
+			}
 		});
 
 		Router.route('/dashboard/currentstatus', () => {
