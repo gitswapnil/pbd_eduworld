@@ -22,5 +22,6 @@ accounts-password
 alexwine:bootstrap-4
 iron:router
 tprzytula:remember-me
-mdg:validation-error
 aldeed:collection2
+alanning:roles
+collections

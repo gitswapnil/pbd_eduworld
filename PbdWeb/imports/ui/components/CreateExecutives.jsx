@@ -1,22 +1,78 @@
 import { Meteor } from 'meteor/meteor';
 import SimpleSchema from 'simpl-schema';
+import { ReactiveVar } from 'meteor/reactive-var';
+
+let reactiveError = new ReactiveVar("{}");
 
 Meteor.methods({
-	'executives.create'(args) {
+	'executives.create'(inputs) {
 		console.log("creating a new executive");
-		console.log("args: ", args.userImg, args.name);
+		console.log("args: ", inputs);
 
-		new SimpleSchema({
-			userImg: { type: String },
-			name: { type: String },
-		}).validate(args);
+		const validationContext = new SimpleSchema({
+			userImg: { 
+				type: String, 
+				optional: true,
+				label: "User Image"
+			},
+			cPhNo: { 
+				type: String,
+				regEx: SimpleSchema.RegEx.Phone,
+				label: "Company's Phone number"
+			},
+			name: { 
+				type: String,
+				min: 1,
+				max: 100,
+				label: "Name",
+			},
+			pPhNo: { 
+				type: String,
+				regEx: SimpleSchema.RegEx.Phone,
+				label: "Personal Phone number",
+			},
+			email: { 
+				type: String,
+				regEx: SimpleSchema.RegEx.Email,
+			},
+			resAddress: { 
+				type: String,
+				min: 1,
+				max: 1000,
+				label: "Residential Address",
+			},
+			pwd: { 
+				type: String,
+				min: 4,
+				max: 10,
+				label: "Password",
+			}
+		}).newContext();
 
-		if(this.isSimulation) {
-			console.log("This is in the simulation mode.");
-			return "This is from stub";
+		validationContext.validate(inputs);
+
+		if(!validationContext.isValid()) {
+			let errorObj = {};
+			validationContext.validationErrors().map(field => {
+				if(validationContext.keyIsInvalid(field.name)){
+					errorObj[field.name] = validationContext.keyErrorMessage(field.name);
+				}
+			});
+			const errorObjStr = JSON.stringify(errorObj);
+
+			if(!this.isSimulation) {
+				throw new Meteor.Error(400, "validation-error", errorObjStr);
+			} else {
+				reactiveError.set(errorObjStr);
+				throw new Error("Validation failed.");
+			}
 		}
 
-		// return "This is from actual method";
+		if(Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
+			// console.warn("Came inside the admin previlege");
+
+		}
+
 	}
 });
 
@@ -24,7 +80,8 @@ if(Meteor.isClient) {
 	import React, { useState } from 'react';
 	import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 	import { faUserPlus, faUserEdit, faPencilAlt } from '@fortawesome/free-solid-svg-icons';
-
+	import { Tracker } from 'meteor/tracker';
+ 
 	const CreateExecutives = () => {
 		const [userImg, setUserImg] = useState("");
 		const [userImgError, setUserImgError] = useState("");
@@ -47,22 +104,43 @@ if(Meteor.isClient) {
 		const [pwd, setPwd] = useState("");
 		const [pwdError, setPwdError] = useState("");
 
-		function createNewExecutive() {
-			console.log("In the method call");
+		function removeAllErrors() {
+			setUserImgError("");
+			setCPhNoError("");
+			setNameError("");
+			setPPhNoError("");
+			setEmailError("");
+			setResAddressError("");
+			setPwdError("");
+		}
 
-			Meteor.apply('executives.create', 
-			[{
-				userImg: "42354rfsd",
-				name: "this is a name"
-			}], 
-			{returnStubValues: true, throwStubExceptions: true}, 
-			(err, res) => {
-				if(err) {
-					alert(err);
-				} else {
-					console.log("res: " + res);
+		function createNewExecutive() {
+			Tracker.autorun(() => {
+				removeAllErrors();			//remove all the errors before setting the new messages.
+				const errorObj = JSON.parse(reactiveError.get());
+				for(let [key, value] of Object.entries(errorObj)) {
+					switch(key) {
+						case "userImg": setUserImgError(value); break;
+						case "cPhNo": setCPhNoError(value); break;
+						case "name": setNameError(value); break;
+						case "pPhNo": setPPhNoError(value); break;
+						case "email": setEmailError(value); break;
+						case "resAddress": setResAddressError(value); break;
+						case "pwd": setPwdError(value); break;
+					}
 				}
 			});
+
+			Meteor.apply('executives.create', 
+				[{ userImg, cPhNo, name, pPhNo, email, resAddress, pwd }], 
+				{returnStubValues: true, throwStubExceptions: true}, 
+				(err, res) => {
+					if(err && err.reason == "validation-error") {
+						reactiveError.set(err.details);
+					} else {
+						console.log("res: " + res);
+					}
+				});
 
 		}
 
@@ -103,7 +181,7 @@ if(Meteor.isClient) {
 												      		<small id="companysPhNoHelperBlock" className="form-text text-info text-left">
 																This cannot be changed after save
 															</small>
-												      		<div className="invalid-feedback">
+												      		<div className="invalid-feedback text-left">
 													        	{cPhNoError}
 													        </div>
 												    	</div>
@@ -117,7 +195,7 @@ if(Meteor.isClient) {
 												      				value={name} 
 												      				onChange={e => setName(e.target.value)}
 												      				required/>
-												      		<div className="invalid-feedback">
+												      		<div className="invalid-feedback text-left">
 													        	{nameError}
 													        </div>
 												    	</div>
@@ -131,7 +209,7 @@ if(Meteor.isClient) {
 												      				value={pPhNo} 
 												      				onChange={e => setPPhNo(e.target.value)}
 												      				required/>
-												      		<div className="invalid-feedback">
+												      		<div className="invalid-feedback text-left">
 													        	{pPhNoError}
 													        </div>
 												    	</div>
@@ -145,7 +223,7 @@ if(Meteor.isClient) {
 												      				value={email} 
 												      				onChange={e => setEmail(e.target.value)}
 												      				required/>
-												      		<div className="invalid-feedback">
+												      		<div className="invalid-feedback text-left">
 													        	{emailError}
 													        </div>
 												    	</div>
@@ -159,7 +237,7 @@ if(Meteor.isClient) {
 													      				value={resAddress} 
 													      				onChange={e => setResAddress(e.target.value)}
 													      				required/>
-												      		<div className="invalid-feedback">
+												      		<div className="invalid-feedback text-left">
 													        	{resAddressError}
 													        </div>
 												    	</div>
@@ -176,7 +254,7 @@ if(Meteor.isClient) {
 										      				<small id="companysPhNoHelperBlock" className="form-text text-info text-left">
 																The executive will use this password while signing-in in the Mobile app
 															</small>
-													    	<div className="invalid-feedback">
+													    	<div className="invalid-feedback text-left">
 													        	{pwdError}
 													        </div>
 												    	</div>
