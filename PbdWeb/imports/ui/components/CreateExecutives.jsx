@@ -1,6 +1,42 @@
 import { Meteor } from 'meteor/meteor';
 import SimpleSchema from 'simpl-schema';
 import { ReactiveVar } from 'meteor/reactive-var';
+import Collections from 'meteor/collections';
+import { Accounts } from 'meteor/accounts-base';
+
+if(Meteor.isServer) {
+	Meteor.publish('executives.getAll', function(){
+		console.log("Publishing the executives.getAll.");
+		//authorization
+		if(this.userId && Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
+			let initializing = true;
+
+			const handle = Meteor.users.find({}, {fields: {services: 0}}).observeChanges({
+				changed: (_id, fields) => {
+					if(!initializing) {
+						this.added('users', _id, fields);
+					}
+				},
+			});
+
+			Meteor.users.find({}, {fields: {services: 0}}).map(user => {
+				console.log("userObj: " + JSON.stringify(user));
+				const _id = user._id;
+				delete user._id;
+				// this.added('users', _id, user);
+			});
+
+
+			initializing = false;
+
+			this.ready();
+			this.onStop(() => {
+				handle.stop();
+				console.log("executives.getAll is being stopped.");
+			});
+		}
+	});
+}
 
 let reactiveError = new ReactiveVar("{}");
 
@@ -47,9 +83,17 @@ Meteor.methods({
 				max: 10,
 				label: "Password",
 			}
+		}, {
+			clean: {
+				filter: true,
+				removeEmptyStrings: true,
+				trimStrings: true,
+			},
 		}).newContext();
 
-		validationContext.validate(inputs);
+		const cleanedInputs = validationContext.clean(inputs);
+		// console.log("cleanedInputs: " + JSON.stringify(cleanedInputs));
+		validationContext.validate(cleanedInputs);
 
 		if(!validationContext.isValid()) {
 			let errorObj = {};
@@ -62,6 +106,7 @@ Meteor.methods({
 
 			if(!this.isSimulation) {
 				throw new Meteor.Error(400, "validation-error", errorObjStr);
+				return;
 			} else {
 				reactiveError.set(errorObjStr);
 				throw new Error("Validation failed.");
@@ -69,18 +114,35 @@ Meteor.methods({
 		}
 
 		if(Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
-			// console.warn("Came inside the admin previlege");
-
+			console.log("Creating a new executive...");
+			const newUserId = Accounts.createUser({
+				username: cleanedInputs.cPhNo,
+				email: cleanedInputs.email,
+				password: cleanedInputs.pwd,
+				profile: {
+					name: cleanedInputs.name,
+					img: cleanedInputs.userImg,
+					phoneNumber: cleanedInputs.pPhNo,
+					resAddress: cleanedInputs.resAddress,
+				}
+			});
+			console.log(`An executive with username: ${cleanedInputs.cPhNo} is created.`);
+			console.log("Now adding user the previlege of an executive...");
+			Roles.addUsersToRoles(newUserId, "executive", Roles.GLOBAL_GROUP);
+			console.log("The user has been assigned the executive Role.");
 		}
 
+		return "Executive created successfully";
 	}
 });
 
 if(Meteor.isClient) {
-	import React, { useState } from 'react';
+	import React, { useState, useEffect } from 'react';
 	import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 	import { faUserPlus, faUserEdit, faPencilAlt } from '@fortawesome/free-solid-svg-icons';
 	import { Tracker } from 'meteor/tracker';
+	import Table from './Table.jsx';
+	import Modal from './Modal.jsx';
  
 	const CreateExecutives = () => {
 		const [userImg, setUserImg] = useState("");
@@ -104,6 +166,16 @@ if(Meteor.isClient) {
 		const [pwd, setPwd] = useState("");
 		const [pwdError, setPwdError] = useState("");
 
+		function resetAllInputs() {
+			setUserImg("");
+			setCPhNo("");
+			setName("");
+			setPPhNo("");
+			setEmail("");
+			setResAddress("");
+			setPwd("");
+		}
+
 		function removeAllErrors() {
 			setUserImgError("");
 			setCPhNoError("");
@@ -112,6 +184,11 @@ if(Meteor.isClient) {
 			setEmailError("");
 			setResAddressError("");
 			setPwdError("");
+		}
+
+		function clearModal() {
+			removeAllErrors();
+			resetAllInputs();
 		}
 
 		function createNewExecutive() {
@@ -135,241 +212,199 @@ if(Meteor.isClient) {
 				[{ userImg, cPhNo, name, pPhNo, email, resAddress, pwd }], 
 				{returnStubValues: true, throwStubExceptions: true}, 
 				(err, res) => {
-					if(err && err.reason == "validation-error") {
-						reactiveError.set(err.details);
+					if(err){
+						if(err.reason == "validation-error") {		//if validation error occurs
+							reactiveError.set(err.details);
+						} else if(err.error == 403) {
+							if(err.reason.toLowerCase().indexOf("username") != -1) {		//if company's phone number is not unique
+								setCPhNoError("Company's phone number exists. Please check and try again.");
+							} else if(err.reason.toLowerCase().indexOf("email") != -1) {	//if executive's email is not unique
+								setEmailError("This Email exists in the database for other user. Please check and try again.");
+							}
+						}
 					} else {
-						console.log("res: " + res);
+						// console.log("res: " + res);
+						$('#mdlCreateExecutive').modal('hide');
 					}
 				});
 
 		}
+
+		//subscribe for the list here.
+		useEffect(() => {
+			const handle = Meteor.subscribe('executives.getAll', "testArgs", {
+				onStop(error) {
+					console.log("executives.getAll is stopped.");
+					if(error) {
+						console.log(error);
+					}
+				},
+
+				onReady() {
+					console.log("executives.getAll is ready to get the data.");
+				}
+			});
+
+			return function() {
+				handle.stop();
+			}
+		}, []);
 
 		return(
 			<div className="container">
 				<br/>
 				<div className="row">
 					<div className="col-12 text-right">
-						<button type="button" className="btn btn-primary" data-toggle="modal" data-target="#mdlCreateExecutive" style={{"boxShadow": "1px 2px 3px #999"}}>
-							<FontAwesomeIcon icon={faUserPlus} size="sm"/>&nbsp;Create New Executive&nbsp;&nbsp;
-						</button>
 					{/*----------- Modal Data goes here --------------*/}
-						<div className="modal fade" id="mdlCreateExecutive" tabIndex="-1" role="dialog" aria-labelledby="createNewExecutive" aria-hidden="true">
-							<div className="modal-dialog modal-lg" role="document">
-								<div className="modal-content">
-									<div className="modal-header">
-										<h5 className="modal-title" id="createNewExecutive">
-											<FontAwesomeIcon icon={faUserPlus} size="lg"/> Create New Executive
-										</h5>
-										<button type="button" className="close" data-dismiss="modal" aria-label="Close">
-											<span aria-hidden="true">&times;</span>
-										</button>
-									</div>
-									<div className="modal-body">
-										<form>
-											<div className="row">
-												<div className="col-8">
-													<div className="form-group row">
-												    	<label htmlFor="inPhNumber" className="col-5 col-form-label-sm text-right">Company's Phone Number:</label>
-												    	<div className="col-7">
-												      		<input 	type="text" 
-												      				className={`form-control form-control-sm ${(cPhNoError === "") ? "" : "is-invalid"}`} 
-												      				id="inPhNumber" 
-												      				aria-describedby="companysPhNoHelperBlock"
-												      				value={cPhNo} 
-												      				onChange={e => setCPhNo(e.target.value)}
-												      				required/>
-												      		<small id="companysPhNoHelperBlock" className="form-text text-info text-left">
-																This cannot be changed after save
-															</small>
-												      		<div className="invalid-feedback text-left">
-													        	{cPhNoError}
-													        </div>
-												    	</div>
-													</div>
-													<div className="form-group row">
-												    	<label htmlFor="inName" className="col-5 col-form-label-sm text-right">Name:</label>
-												    	<div className="col-7">
-												      		<input 	type="text" 
-												      				className={`form-control form-control-sm ${(nameError === "") ? "" : "is-invalid"}`} 
-												      				id="inName" 
-												      				value={name} 
-												      				onChange={e => setName(e.target.value)}
-												      				required/>
-												      		<div className="invalid-feedback text-left">
-													        	{nameError}
-													        </div>
-												    	</div>
-													</div>
-													<div className="form-group row">
-												    	<label htmlFor="inPersonalPhNo" className="col-5 col-form-label-sm text-right">Personal Phone Number:</label>
-												    	<div className="col-7">
-												      		<input 	type="text" 
-												      				className={`form-control form-control-sm ${(pPhNoError === "") ? "" : "is-invalid"}`} 
-												      				id="inPersonalPhNo" 
-												      				value={pPhNo} 
-												      				onChange={e => setPPhNo(e.target.value)}
-												      				required/>
-												      		<div className="invalid-feedback text-left">
-													        	{pPhNoError}
-													        </div>
-												    	</div>
-													</div>
-													<div className="form-group row">
-												    	<label htmlFor="inEmail" className="col-5 col-form-label-sm text-right">Email Address:</label>
-												    	<div className="col-7">
-												      		<input 	type="email" 
-												      				className={`form-control form-control-sm ${(emailError === "") ? "" : "is-invalid"}`} 
-												      				id="inEmail" 
-												      				value={email} 
-												      				onChange={e => setEmail(e.target.value)}
-												      				required/>
-												      		<div className="invalid-feedback text-left">
-													        	{emailError}
-													        </div>
-												    	</div>
-													</div>
-													<div className="form-group row">
-												    	<label htmlFor="txtAreaResAddress" className="col-5 col-form-label-sm text-right">Residential Address:</label>
-												    	<div className="col-7">
-												      		<textarea 	type="text" 
-												      					className={`form-control form-control-sm ${(resAddressError === "") ? "" : "is-invalid"}`} 
-													      				id="txtAreaResAddress" 
-													      				value={resAddress} 
-													      				onChange={e => setResAddress(e.target.value)}
-													      				required/>
-												      		<div className="invalid-feedback text-left">
-													        	{resAddressError}
-													        </div>
-												    	</div>
-													</div>
-													<div className="form-group row">
-												    	<label htmlFor="pwd" className="col-5 col-form-label-sm text-right">Password for this executive:</label>
-												    	<div className="col-7">
-												      		<input 	type="password" 
-												      				className={`form-control form-control-sm ${(pwdError === "") ? "" : "is-invalid"}`} 
-												      				id="pwd" 
-												      				value={pwd} 
-												      				onChange={e => setPwd(e.target.value)}
-												      				required/>
-										      				<small id="companysPhNoHelperBlock" className="form-text text-info text-left">
-																The executive will use this password while signing-in in the Mobile app
-															</small>
-													    	<div className="invalid-feedback text-left">
-													        	{pwdError}
-													        </div>
-												    	</div>
-													</div>
-												</div>
-												<div className="col-4">
-													<div className="text-center">
-														{
-															userImg != "" ? 
-															<img src={userImg} className="img-thumbnail"/> : 
-															<div style={{"border": "1px solid #ccc", "borderRadius": "3px", "padding": "20px"}}>
-																<FontAwesomeIcon icon={faUserEdit} size="7x" style={{"color": "#aaa"}}/>
-															</div>
-														}
-														<small className="text-danger">
-												        	{userImgError == "" ? "" : userImgError} 
-												        </small>
-													</div>
-													<div className="text-right">
-														<input 	type="file" 
-																className="custom-file-input" 
-																id="inFileUserImg" 
-																required 
-																hidden={true} 
-																accept="image/*" 
-																onChange={(event) => {
-																	const file = event.target.files[0];
-																	const reader = new FileReader();
+						<Modal onHide={clearModal} onSave={createNewExecutive}>
+							<Modal.Button color="primary">
+								<FontAwesomeIcon icon={faUserPlus} size="sm"/>&nbsp;&nbsp;Create New Executive&nbsp;&nbsp;
+							</Modal.Button>
 
-																	reader.readAsDataURL(file);
-																	reader.onload = () => {
-																		// console.log(reader.result);
-																		setUserImg(reader.result);
-																	}
+							<Modal.Header>
+								<FontAwesomeIcon icon={faUserPlus} size="lg"/> Create New Executive
+							</Modal.Header>
 
-																	reader.onerror = () => {
-																		// console.log(reader.error);
-																		setUserImgError(reader.error);
-																	}
-																}}/>
-														<button type="button" className="btn btn-light btn-sm" onClick={() => { $('#inFileUserImg').click() }}>
-															<FontAwesomeIcon icon={faPencilAlt} size="sm"/>&nbsp;Edit
-														</button>
-													</div>
-												</div>
+							<Modal.Body>
+								<form>
+									<div className="row">
+										<div className="col-8">
+											<div className="form-group row">
+										    	<label htmlFor="inPhNumber" className="col-5 col-form-label-sm text-right">Company's Phone Number:</label>
+										    	<div className="col-7">
+										      		<input 	type="text" 
+										      				className={`form-control form-control-sm ${(cPhNoError === "") ? "" : "is-invalid"}`} 
+										      				id="inPhNumber" 
+										      				aria-describedby="companysPhNoHelperBlock"
+										      				value={cPhNo} 
+										      				onChange={e => setCPhNo(e.target.value)}/>
+										      		<small id="companysPhNoHelperBlock" className="form-text text-info text-left">
+														This cannot be changed after save
+													</small>
+										      		<div className="invalid-feedback text-left">
+											        	{cPhNoError}
+											        </div>
+										    	</div>
 											</div>
-										</form>
+											<div className="form-group row">
+										    	<label htmlFor="inName" className="col-5 col-form-label-sm text-right">Name:</label>
+										    	<div className="col-7">
+										      		<input 	type="text" 
+										      				className={`form-control form-control-sm ${(nameError === "") ? "" : "is-invalid"}`} 
+										      				id="inName" 
+										      				value={name} 
+										      				onChange={e => setName(e.target.value)}/>
+										      		<div className="invalid-feedback text-left">
+											        	{nameError}
+											        </div>
+										    	</div>
+											</div>
+											<div className="form-group row">
+										    	<label htmlFor="inPersonalPhNo" className="col-5 col-form-label-sm text-right">Personal Phone Number:</label>
+										    	<div className="col-7">
+										      		<input 	type="text" 
+										      				className={`form-control form-control-sm ${(pPhNoError === "") ? "" : "is-invalid"}`} 
+										      				id="inPersonalPhNo" 
+										      				value={pPhNo} 
+										      				onChange={e => setPPhNo(e.target.value)}/>
+										      		<div className="invalid-feedback text-left">
+											        	{pPhNoError}
+											        </div>
+										    	</div>
+											</div>
+											<div className="form-group row">
+										    	<label htmlFor="inEmail" className="col-5 col-form-label-sm text-right">Email Address:</label>
+										    	<div className="col-7">
+										      		<input 	type="email" 
+										      				className={`form-control form-control-sm ${(emailError === "") ? "" : "is-invalid"}`} 
+										      				id="inEmail" 
+										      				value={email} 
+										      				onChange={e => setEmail(e.target.value)}/>
+										      		<div className="invalid-feedback text-left">
+											        	{emailError}
+											        </div>
+										    	</div>
+											</div>
+											<div className="form-group row">
+										    	<label htmlFor="txtAreaResAddress" className="col-5 col-form-label-sm text-right">Residential Address:</label>
+										    	<div className="col-7">
+										      		<textarea 	type="text" 
+										      					className={`form-control form-control-sm ${(resAddressError === "") ? "" : "is-invalid"}`} 
+											      				id="txtAreaResAddress" 
+											      				value={resAddress} 
+											      				onChange={e => setResAddress(e.target.value)}/>
+										      		<div className="invalid-feedback text-left">
+											        	{resAddressError}
+											        </div>
+										    	</div>
+											</div>
+											<div className="form-group row">
+										    	<label htmlFor="pwd" className="col-5 col-form-label-sm text-right">Password for this executive:</label>
+										    	<div className="col-7">
+										      		<input 	type="password" 
+										      				className={`form-control form-control-sm ${(pwdError === "") ? "" : "is-invalid"}`} 
+										      				id="pwd" 
+										      				value={pwd} 
+										      				onChange={e => setPwd(e.target.value)}/>
+								      				<small id="companysPhNoHelperBlock" className="form-text text-info text-left">
+														The executive will use this password while signing-in in the Mobile app
+													</small>
+											    	<div className="invalid-feedback text-left">
+											        	{pwdError}
+											        </div>
+										    	</div>
+											</div>
+										</div>
+										<div className="col-4">
+											<div className="text-center">
+												{
+													userImg != "" ? 
+													<img src={userImg} className="img-thumbnail"/> : 
+													<div style={{"border": "1px solid #ccc", "borderRadius": "3px", "padding": "20px"}}>
+														<FontAwesomeIcon icon={faUserEdit} size="7x" style={{"color": "#aaa"}}/>
+													</div>
+												}
+												<small className="text-danger">
+										        	{userImgError == "" ? "" : userImgError} 
+										        </small>
+											</div>
+											<div className="text-right">
+												<input 	type="file" 
+														className="custom-file-input" 
+														id="inFileUserImg" 
+														hidden={true} 
+														accept="image/*" 
+														onChange={(event) => {
+															const file = event.target.files[0];
+															const reader = new FileReader();
+
+															reader.readAsDataURL(file);
+															reader.onload = () => {
+																// console.log(reader.result);
+																setUserImg(reader.result);
+															}
+
+															reader.onerror = () => {
+																// console.log(reader.error);
+																setUserImgError(reader.error);
+															}
+														}}/>
+												<button type="button" className="btn btn-light btn-sm" onClick={() => { $('#inFileUserImg').click() }}>
+													<FontAwesomeIcon icon={faPencilAlt} size="sm"/>&nbsp;Edit
+												</button>
+											</div>
+										</div>
 									</div>
-									<div className="modal-footer">
-										<button type="button" className="btn btn-secondary" data-dismiss="modal">Close</button>
-										<button type="button" className="btn btn-primary" onClick={createNewExecutive}>Save changes</button>
-									</div>
-								</div>
-							</div>
-						</div>
+								</form>
+							</Modal.Body>
+						</Modal>
 					</div>
 				</div>
 				<br/>
 				<div className="row">
 					<div className="col-12">
-						<table className="tbl">
-							<thead>
-								<tr>
-									<th className="text-right">Sl. No.</th>
-									<th>Name</th>
-									<th>Phone No.</th>
-									<th>Updated on</th>
-								</tr>
-							</thead>
-							<tbody>
-								<tr className="row-selectable">
-									<td className="text-right">1</td>
-									<td>Swapnil Bandiwadekar</td>
-									<td>9686059262</td>
-									<td>12-May-2020</td>
-								</tr>
-								<tr>
-									<td className="text-right">2</td>
-									<td>Jacob</td>
-									<td>tdornton</td>
-									<td>@fat</td>
-								</tr>
-								<tr>
-									<td className="text-right">3</td>
-									<td colSpan="2">Larry tde Bird</td>
-									<td>@twitter</td>
-								</tr>
-								<tr>
-									<td className="text-right">3</td>
-									<td colSpan="2">Larry tde Bird</td>
-									<td>@twitter</td>
-								</tr>
-								<tr>
-									<td className="text-right">3</td>
-									<td colSpan="2">Larry tde Bird</td>
-									<td>@twitter</td>
-								</tr>
-								<tr>
-									<td className="text-right">3</td>
-									<td colSpan="2">Larry tde Bird</td>
-									<td>@twitter</td>
-								</tr>
-								<tr>
-									<td className="text-right">3</td>
-									<td colSpan="2">Larry tde Bird</td>
-									<td>@twitter</td>
-								</tr>
-								<tr>
-									<td className="text-right">3</td>
-									<td colSpan="2">Larry the Bird</td>
-									<td>@twitter</td>
-								</tr>
-								
-							</tbody>
-						</table>
+						<Table>
+						</Table>
 					</div>
 				</div>
 			</div>

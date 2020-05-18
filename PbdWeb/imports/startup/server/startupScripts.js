@@ -1,18 +1,10 @@
 //Script for creating roles.
 export const createRoles = () => {
 	console.log("Creating Roles...");
-	if(!Meteor.roles.findOne({"_id": "webmaster"})) {
-		Roles.createRole('webmaster');
-	}
-
-	if(!Meteor.roles.findOne({"_id": "admin"})) {
-		Roles.createRole('admin');
-	}	
-
-	if(!Meteor.roles.findOne({"_id": "executive"})) {
-		Roles.createRole('executive');
-	}
-
+	
+	Roles.createRole('webmaster', { unlessExists: true });
+	Roles.createRole('admin', { unlessExists: true });
+	Roles.createRole('executive', { unlessExists: true });
 	Roles.addRolesToParent('executive', 'admin');
 	Roles.addRolesToParent('admin', 'webmaster');
 
