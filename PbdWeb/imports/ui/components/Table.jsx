@@ -22,7 +22,7 @@ class Table extends React.Component {
 				<tr>
 					{
 						header.props.dataArray.map(obj => 
-							<th key={obj.data} style={obj.style}>{obj.data}</th>
+							<th key={obj.content} style={obj.style}>{obj.content}</th>
 						)
 					}
 				</tr>
@@ -41,15 +41,19 @@ class Table extends React.Component {
 		return (
 			<tbody>
 				{
-					body.props.dataArray.map((subArr, index) => 
-						<tr key={index} className="row-selectable">
+					body.props.dataArray.map(rowObj => {
+						// console.log("rowObj: " + JSON.stringify(rowObj));
+						return !rowObj ? null : !rowObj.rowAttributes ? null :
+						<tr {...rowObj.rowAttributes}>
 							{
-								subArr.map(obj => 
-									<td key={obj.data} style={obj.style}>{obj.data}</td>
+								!rowObj.cells ? null :
+								rowObj.cells.map(cellObj => 
+									<td key={cellObj.content} style={cellObj.style}>{cellObj.content}</td>
 								)
 							}
 						</tr>
-					)
+
+					})
 				}
 				
 			</tbody>

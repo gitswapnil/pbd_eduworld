@@ -47,7 +47,7 @@ if(Meteor.isServer) {
 			this.ready();
 			this.onStop(() => {
 				handle.stop();
-				console.log("Publication, \"executives.getAll\" is being stopped.");
+				console.log("Publication, \"executives.getAll\" is stopped.");
 			});
 		}
 	});
@@ -56,10 +56,10 @@ if(Meteor.isServer) {
 let reactiveError = new ReactiveVar("{}");
 
 Meteor.methods({
-	'executives.create'(inputs) {
-		console.log("executive.create method with args: ", inputs);
+	'executives.saveExecutive'(inputs, editId) {		//if editId is given, then it is a method to edit the executive's details.
+		console.log("executive.saveExecutive method with inputs: " + JSON.stringify(inputs) + " and editId: " + editId);
 
-		const validationContext = new SimpleSchema({
+		let schemaObj = {
 			userImg: { 
 				type: String, 
 				optional: true,
@@ -97,13 +97,14 @@ Meteor.methods({
 				max: 10,
 				label: "Password",
 			}
-		}, {
-			clean: {
-				filter: true,
-				removeEmptyStrings: true,
-				trimStrings: true,
-			},
-		}).newContext();
+		};
+
+		if(editId && editId !== "") {		//if edit Id is defined and not an empty string, then its an edit method
+			delete schemaObj.cPhNo;
+			schemaObj.pwd.optional = true;		//make password optional
+		}
+
+		const validationContext = new SimpleSchema(schemaObj, {clean: {filter: true, removeEmptyStrings: true, trimStrings: true}}).newContext();
 
 		const cleanedInputs = validationContext.clean(inputs);
 		// console.log("cleanedInputs: " + JSON.stringify(cleanedInputs));
@@ -127,28 +128,49 @@ Meteor.methods({
 			}
 		}
 
-		if(Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
-			console.log("Creating a new executive...");
-			const newUserId = Accounts.createUser({
-				username: cleanedInputs.cPhNo,
-				email: cleanedInputs.email,
-				password: cleanedInputs.pwd,
-				profile: {
-					name: cleanedInputs.name,
-					img: cleanedInputs.userImg,
-					phoneNumber: cleanedInputs.pPhNo,
-					resAddress: cleanedInputs.resAddress,
+		if(Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {		//authorization
+			if(editId || editId !== "") {		//if edit method
+				if(!Meteor.users.findOne({"_id": editId})){			//check if the edit Id is genuine or not.
+					throw new Meteor.Error(400, "validation-error", "{\"generalError\":\"Attempt to change invalid User\"}");
+					return;
+				};
+
+				console.log("Saving the changes for executive with _id: " + editId + "...");
+				let modifier = {
+					"profile.name": cleanedInputs.name,
+					"profile.img": cleanedInputs.userImg,
+					"profile.phoneNumber": cleanedInputs.pPhNo,
+					"profile.resAddress": cleanedInputs.resAddress
+				};
+				Meteor.users.update({"_id": editId}, {$set: modifier}, {multi: false, upsert: false});
+				Accounts.addEmail(editId, cleanedInputs.email);
+				if(cleanedInputs.pwd) {		//if password is given then only set the password.
+					Accounts.setPassword(editId, cleanedInputs.pwd);
 				}
-			});
-			console.log(`An executive with username: ${cleanedInputs.cPhNo} is created.`);
-			console.log("Now adding user the previlege of an executive...");
-			Roles.addUsersToRoles(newUserId, "executive", Roles.GLOBAL_GROUP);
-			console.log("The user has been assigned the executive Role.");
-			console.log("executive.create method is completed successfully.");
+				console.log("new changes have been saved for the given executive with the id: " + editId);
+			} else {
+				console.log("Creating a new executive...");
+				const newUserId = Accounts.createUser({
+					username: cleanedInputs.cPhNo,
+					email: cleanedInputs.email,
+					password: cleanedInputs.pwd,
+					profile: {
+						name: cleanedInputs.name,
+						img: cleanedInputs.userImg,
+						phoneNumber: cleanedInputs.pPhNo,
+						resAddress: cleanedInputs.resAddress,
+					}
+				});
+				console.log(`An executive with username: ${cleanedInputs.cPhNo} is created.`);
+				console.log("Now adding user the previlege of an executive...");
+				Roles.addUsersToRoles(newUserId, "executive", Roles.GLOBAL_GROUP);
+				console.log("The user has been assigned the executive Role.");
+			}
 		}
 
+		console.log("executive.saveExecutive method is completed successfully.");
 		return "Executive created successfully";
-	}
+	},
 });
 
 if(Meteor.isClient) {
@@ -160,6 +182,8 @@ if(Meteor.isClient) {
 	import Modal from './Modal.jsx';
  
 	const CreateExecutives = () => {
+		const [showModal, setShowModal] = useState(false);
+
 		const [userImg, setUserImg] = useState("");
 		const [userImgError, setUserImgError] = useState("");
 
@@ -182,6 +206,8 @@ if(Meteor.isClient) {
 		const [pwdError, setPwdError] = useState("");
 
 		const [executives, setExecutives] = useState([]);
+
+		const [editId, setEditId] = useState("");
 
 		const modalRef = React.createRef();			//this is to attach modal when needed to close the modal
 
@@ -206,11 +232,26 @@ if(Meteor.isClient) {
 		}
 
 		function clearModal() {
+			setShowModal(false);
 			removeAllErrors();
 			resetAllInputs();
+			setEditId("");
 		}
 
-		function createNewExecutive() {
+		function fillModal(editId) {
+			const executive = Meteor.users.findOne({"_id": editId});
+			setCPhNo(executive.username);
+			setUserImg(executive.profile.img || "");
+			setName(executive.profile.name || "");
+			setPPhNo(executive.profile.phoneNumber || "");
+			setEmail((executive.emails && executive.emails[0] && executive.emails[0].address) || "");
+			setResAddress(executive.profile.resAddress);
+
+			setEditId(editId);
+			setShowModal(true);
+		}
+
+		function saveExecutiveInfo() {
 			Tracker.autorun(() => {
 				removeAllErrors();			//remove all the errors before setting the new messages.
 				const errorObj = JSON.parse(reactiveError.get());
@@ -227,8 +268,8 @@ if(Meteor.isClient) {
 				}
 			});
 
-			Meteor.apply('executives.create', 
-				[{ userImg, cPhNo, name, pPhNo, email, resAddress, pwd }], 
+			Meteor.apply('executives.saveExecutive', 
+				[{ userImg, cPhNo, name, pPhNo, email, resAddress, pwd }, editId], 
 				{returnStubValues: true, throwStubExceptions: true}, 
 				(err, res) => {
 					// console.log("err: " + err);
@@ -244,8 +285,7 @@ if(Meteor.isClient) {
 						}
 					} else {		//when success, 
 						// console.log("res: " + res);
-						// $(modalRef.current).modal('hide');		//hide the modal.
-						$('#mdlDialog').modal('hide');
+						clearModal();
 					}
 				});
 
@@ -268,12 +308,21 @@ if(Meteor.isClient) {
 
 			Tracker.autorun(() => {
 				if(handle.ready()) {
-					let arr = Meteor.users.find({"isExecutive": true}).map((doc, index) => [
-						{ style: {"textAlign": "right"}, data: (index + 1)}, 
-						{ data: doc.profile.name}, 
-						{ data: doc.profile.phoneNumber}, 
-						{ data: moment(doc.createdAt).format("Do MMM YYYY h:mm:ss a")}
-					]);
+					let arr = Meteor.users.find({"isExecutive": true}).map((doc, index) => {
+						return {
+							cells: [
+								{ style: {"textAlign": "right"}, content: (index + 1)}, 
+								{ content: doc.profile.name}, 
+								{ content: doc.username}, 
+								{ content: moment(doc.createdAt).format("Do MMM YYYY h:mm:ss a")}
+							],
+							rowAttributes: {
+								key: doc._id,
+								className: "row-selectable",
+								onClick: fillModal.bind(this, doc._id)
+							}
+						}
+					});
 					setExecutives(arr);	
 				}
 			})
@@ -289,13 +338,22 @@ if(Meteor.isClient) {
 				<div className="row">
 					<div className="col-12 text-right">
 					{/*----------- Modal Data goes here --------------*/}
-						<Modal forwardRef={modalRef} onHide={clearModal} onSave={createNewExecutive}>
-							<Modal.Button color="primary">
-								<FontAwesomeIcon icon={faUserPlus} size="sm"/>&nbsp;&nbsp;Create New Executive&nbsp;&nbsp;
-							</Modal.Button>
+						<button type="button" className="btn btn-primary" style={{"boxShadow": "1px 2px 3px #999"}} onClick={() => setShowModal(true)}>
+							<FontAwesomeIcon icon={faUserPlus} size="sm"/>&nbsp;&nbsp;Create New Executive&nbsp;&nbsp;
+						</button>
 
+						<Modal show={showModal} onHide={clearModal} onSave={saveExecutiveInfo}>
 							<Modal.Title>
-								<FontAwesomeIcon icon={faUserPlus} size="lg"/> Create New Executive
+								{
+									(editId === "") ? 
+									<div>
+										<FontAwesomeIcon icon={faUserPlus} size="lg"/> Create New Executive
+									</div>
+									:
+									<div>
+										<FontAwesomeIcon icon={faUserEdit} size="lg"/> Edit Executive
+									</div>
+								}
 							</Modal.Title>
 
 							<Modal.Body>
@@ -304,20 +362,32 @@ if(Meteor.isClient) {
 										<div className="col-8">
 											<div className="form-group row">
 										    	<label htmlFor="inPhNumber" className="col-5 col-form-label-sm text-right">Company's Phone Number:</label>
-										    	<div className="col-7">
-										      		<input 	type="text" 
-										      				className={`form-control form-control-sm ${(cPhNoError === "") ? "" : "is-invalid"}`} 
-										      				id="inPhNumber" 
-										      				aria-describedby="companysPhNoHelperBlock"
-										      				value={cPhNo} 
-										      				onChange={e => setCPhNo(e.target.value)}/>
-										      		<small id="companysPhNoHelperBlock" className="form-text text-info text-left">
-														This cannot be changed after save
-													</small>
-										      		<div className="invalid-feedback text-left">
-											        	{cPhNoError}
-											        </div>
-										    	</div>
+							      				{
+										      		(editId === "") ?
+										      		<div className="col-7">
+											      		<input 	type="text" 
+											      				className={`form-control form-control-sm ${(cPhNoError === "") ? "" : "is-invalid"}`} 
+											      				id="inPhNumber" 
+											      				aria-describedby="companysPhNoHelperBlock"
+											      				value={cPhNo} 
+											      				onChange={e => setCPhNo(e.target.value)}/>
+											      		<small id="companysPhNoHelperBlock" className="form-text text-info text-left">
+															This cannot be changed after save
+														</small>
+											      		<div className="invalid-feedback text-left">
+												        	{cPhNoError}
+												        </div>
+										      		</div>
+								      				: 
+								      				<div className="col-7">
+											      		<input 	type="text" 
+											      				className="form-control form-control-sm" 
+											      				id="inPhNumber" 
+											      				aria-describedby="companysPhNoHelperBlock"
+											      				value={cPhNo}
+											      				disabled />
+											      	</div>
+							      				}
 											</div>
 											<div className="form-group row">
 										    	<label htmlFor="inName" className="col-5 col-form-label-sm text-right">Name:</label>
@@ -438,10 +508,10 @@ if(Meteor.isClient) {
 					<div className="col-12">
 						<Table>
 							<Table.Header dataArray={[
-								{ "data": "SI. No." },
-								{ "data": "Name" },
-								{ "data": "Phone No."}, 
-								{ "data": "Updated on"}
+								{ "content": "SI. No." },
+								{ "content": "Name" },
+								{ "content": "Company Phone No."}, 
+								{ "content": "Updated on"}
 							]}/>
 							<Table.Body dataArray={executives}/>
 						</Table>
