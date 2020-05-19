@@ -3,6 +3,7 @@ import SimpleSchema from 'simpl-schema';
 import { ReactiveVar } from 'meteor/reactive-var';
 import Collections from 'meteor/collections';
 import { Accounts } from 'meteor/accounts-base';
+// import moment from 
 
 if(Meteor.isServer) {
 	Meteor.publish('executives.getAll', function(){
@@ -11,20 +12,34 @@ if(Meteor.isServer) {
 		if(this.userId && Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
 			let initializing = true;
 
-			const handle = Meteor.users.find({}, {fields: {services: 0}}).observeChanges({
-				changed: (_id, fields) => {
-					if(!initializing) {
-						this.added('users', _id, fields);
-					}
+			// userIds = Meteor.roleAssignment.find({"role._id": "executive"}, {fields: {"user._id": 1}}).map(doc => doc.user._id);
+			// console.log("userId: " +JSON.stringify(userIds));
+			// const handle = Meteor.users.find({"_id": {"$in": userIds}, "username": {$ne: "9686059262"}}, {fields: {services: 0}}).observeChanges({
+			const handle = Meteor.users.find({"username": {$ne: "9686059262"}}, {fields: {services: 0}}).observeChanges({
+				added: (_id, doc) => {
+					// console.log("Fields added: " + JSON.stringify(fields));
+					// if(!initializing) {
+						doc.isExecutive = true;
+						this.added('users', _id, doc);
+					// }
 				},
+
+				changed: (_id, doc) => {
+					doc.isExecutive = true;
+					this.changed('users', _id, doc);
+				},
+
+				removed: (_id) => {
+					this.removed('users', _id);
+				}
 			});
 
-			Meteor.users.find({}, {fields: {services: 0}}).map(user => {
-				console.log("userObj: " + JSON.stringify(user));
-				const _id = user._id;
-				delete user._id;
-				// this.added('users', _id, user);
-			});
+			// Meteor.users.find({}, {fields: {services: 0}}).map(user => {
+			// 	console.log("userObj: " + JSON.stringify(user));
+			// 	const _id = user._id;
+			// 	delete user._id;
+			// 	// this.added('users', _id, user);
+			// });
 
 
 			initializing = false;
@@ -32,7 +47,7 @@ if(Meteor.isServer) {
 			this.ready();
 			this.onStop(() => {
 				handle.stop();
-				console.log("executives.getAll is being stopped.");
+				console.log("Publication, \"executives.getAll\" is being stopped.");
 			});
 		}
 	});
@@ -42,8 +57,7 @@ let reactiveError = new ReactiveVar("{}");
 
 Meteor.methods({
 	'executives.create'(inputs) {
-		console.log("creating a new executive");
-		console.log("args: ", inputs);
+		console.log("executive.create method with args: ", inputs);
 
 		const validationContext = new SimpleSchema({
 			userImg: { 
@@ -130,6 +144,7 @@ Meteor.methods({
 			console.log("Now adding user the previlege of an executive...");
 			Roles.addUsersToRoles(newUserId, "executive", Roles.GLOBAL_GROUP);
 			console.log("The user has been assigned the executive Role.");
+			console.log("executive.create method is completed successfully.");
 		}
 
 		return "Executive created successfully";
@@ -165,6 +180,10 @@ if(Meteor.isClient) {
 
 		const [pwd, setPwd] = useState("");
 		const [pwdError, setPwdError] = useState("");
+
+		const [executives, setExecutives] = useState([]);
+
+		const modalRef = React.createRef();			//this is to attach modal when needed to close the modal
 
 		function resetAllInputs() {
 			setUserImg("");
@@ -212,6 +231,7 @@ if(Meteor.isClient) {
 				[{ userImg, cPhNo, name, pPhNo, email, resAddress, pwd }], 
 				{returnStubValues: true, throwStubExceptions: true}, 
 				(err, res) => {
+					// console.log("err: " + err);
 					if(err){
 						if(err.reason == "validation-error") {		//if validation error occurs
 							reactiveError.set(err.details);
@@ -222,9 +242,10 @@ if(Meteor.isClient) {
 								setEmailError("This Email exists in the database for other user. Please check and try again.");
 							}
 						}
-					} else {
+					} else {		//when success, 
 						// console.log("res: " + res);
-						$('#mdlCreateExecutive').modal('hide');
+						// $(modalRef.current).modal('hide');		//hide the modal.
+						$('#mdlDialog').modal('hide');
 					}
 				});
 
@@ -245,10 +266,22 @@ if(Meteor.isClient) {
 				}
 			});
 
+			Tracker.autorun(() => {
+				if(handle.ready()) {
+					let arr = Meteor.users.find({"isExecutive": true}).map((doc, index) => [
+						{ style: {"textAlign": "right"}, data: (index + 1)}, 
+						{ data: doc.profile.name}, 
+						{ data: doc.profile.phoneNumber}, 
+						{ data: moment(doc.createdAt).format("Do MMM YYYY h:mm:ss a")}
+					]);
+					setExecutives(arr);	
+				}
+			})
+
 			return function() {
 				handle.stop();
 			}
-		}, []);
+		}, []);		//empty array means it will run only at mounting and unmounting.
 
 		return(
 			<div className="container">
@@ -256,14 +289,14 @@ if(Meteor.isClient) {
 				<div className="row">
 					<div className="col-12 text-right">
 					{/*----------- Modal Data goes here --------------*/}
-						<Modal onHide={clearModal} onSave={createNewExecutive}>
+						<Modal forwardRef={modalRef} onHide={clearModal} onSave={createNewExecutive}>
 							<Modal.Button color="primary">
 								<FontAwesomeIcon icon={faUserPlus} size="sm"/>&nbsp;&nbsp;Create New Executive&nbsp;&nbsp;
 							</Modal.Button>
 
-							<Modal.Header>
+							<Modal.Title>
 								<FontAwesomeIcon icon={faUserPlus} size="lg"/> Create New Executive
-							</Modal.Header>
+							</Modal.Title>
 
 							<Modal.Body>
 								<form>
@@ -404,6 +437,13 @@ if(Meteor.isClient) {
 				<div className="row">
 					<div className="col-12">
 						<Table>
+							<Table.Header dataArray={[
+								{ "data": "SI. No." },
+								{ "data": "Name" },
+								{ "data": "Phone No."}, 
+								{ "data": "Updated on"}
+							]}/>
+							<Table.Body dataArray={executives}/>
 						</Table>
 					</div>
 				</div>

@@ -5,8 +5,8 @@ import { findByType } from 'meteor/pbd-apis';
 const Button = () => null;
 Button.displayName = "Button";
 
-const Header = () => null;
-Header.displayName = "Header";
+const Title = () => null;
+Title.displayName = "Title";
 
 const Body = () => null;
 Body.displayName = "Body";
@@ -42,14 +42,14 @@ class Modal extends React.Component {
 		);
 	}
 
-	renderHeader() {
+	renderTitle() {
 		const { children } = this.props;
-		const header = findByType(children, Header);
-		if(!header) {
+		const title = findByType(children, Title);
+		if(!title) {
 			return null;
 		}
 
-		return <div>{header.props.children}</div>
+		return <div>{title.props.children}</div>
 	}
 
 	renderBody() {
@@ -66,12 +66,12 @@ class Modal extends React.Component {
 		return (
 			<div>
 				{this.renderButton()}
-				<div className="modal fade" id="mdlDialog" tabIndex="-1" role="dialog" aria-labelledby="hModalHeader" aria-hidden="true">
+				<div ref={this.props.forwardRef} className="modal fade" id="mdlDialog" tabIndex="-1" role="dialog" aria-labelledby="hModalHeader" aria-hidden="true">
 					<div className="modal-dialog modal-lg" role="document">
 						<div className="modal-content">
 							<div className="modal-header">
 								<h5 className="modal-title" id="hModalHeader">
-									{this.renderHeader()}
+									{this.renderTitle()}
 								</h5>
 								<button type="button" className="close" data-dismiss="modal" aria-label="Close">
 									<span aria-hidden="true">&times;</span>
@@ -93,7 +93,7 @@ class Modal extends React.Component {
 }
 
 Modal.Button = Button;
-Modal.Header = Header;
+Modal.Title = Title;
 Modal.Body = Body;
 
 Modal.propTypes = {

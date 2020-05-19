@@ -1,65 +1,75 @@
 import React from 'react';
+import PropTypes from 'prop-types';
+import { findByType } from 'meteor/pbd-apis';
 
-const Table = (props) => {
-	return (
-		<div>
-			<table className="tbl">
-				<thead>
-					<tr>
-						<th className="text-right">Sl. No.</th>
-						<th>Name</th>
-						<th>Phone No.</th>
-						<th>Updated on</th>
-					</tr>
-				</thead>
-				<tbody>
-					<tr className="row-selectable">
-						<td className="text-right">1</td>
-						<td>Swapnil Bandiwadekar</td>
-						<td>9686059262</td>
-						<td>12-May-2020</td>
-					</tr>
-					<tr>
-						<td className="text-right">2</td>
-						<td>Jacob</td>
-						<td>tdornton</td>
-						<td>@fat</td>
-					</tr>
-					<tr>
-						<td className="text-right">3</td>
-						<td colSpan="2">Larry tde Bird</td>
-						<td>@twitter</td>
-					</tr>
-					<tr>
-						<td className="text-right">3</td>
-						<td colSpan="2">Larry tde Bird</td>
-						<td>@twitter</td>
-					</tr>
-					<tr>
-						<td className="text-right">3</td>
-						<td colSpan="2">Larry tde Bird</td>
-						<td>@twitter</td>
-					</tr>
-					<tr>
-						<td className="text-right">3</td>
-						<td colSpan="2">Larry tde Bird</td>
-						<td>@twitter</td>
-					</tr>
-					<tr>
-						<td className="text-right">3</td>
-						<td colSpan="2">Larry tde Bird</td>
-						<td>@twitter</td>
-					</tr>
-					<tr>
-						<td className="text-right">3</td>
-						<td colSpan="2">Larry the Bird</td>
-						<td>@twitter</td>
-					</tr>
-					
-				</tbody>
-			</table>
-		</div>
-	)
+const Header = () => null;
+Header.displayName = "Header";
+
+const Body = () => null;
+Body.displayName = "Body";
+
+class Table extends React.Component {
+	renderHeader() {
+		const { children } = this.props;
+		const header = findByType(children, Header);
+
+		if(!header) {
+			return null;
+		}
+
+		return (
+			<thead>
+				<tr>
+					{
+						header.props.dataArray.map(obj => 
+							<th key={obj.data} style={obj.style}>{obj.data}</th>
+						)
+					}
+				</tr>
+			</thead>
+		);
+	}
+
+	renderBody() {
+		const { children } = this.props;
+		const body = findByType(children, Body);
+
+		if(!body) {
+			return null;
+		}
+
+		return (
+			<tbody>
+				{
+					body.props.dataArray.map((subArr, index) => 
+						<tr key={index} className="row-selectable">
+							{
+								subArr.map(obj => 
+									<td key={obj.data} style={obj.style}>{obj.data}</td>
+								)
+							}
+						</tr>
+					)
+				}
+				
+			</tbody>
+		);
+	}
+
+	render() {
+		return (
+			<div>
+				<table className="tbl">
+					{this.renderHeader()}
+					{this.renderBody()}
+				</table>
+			</div>
+		)
+
+	}
 }
+
+Table.Header = Header;
+Table.Body = Body;
 
 export default Table;
