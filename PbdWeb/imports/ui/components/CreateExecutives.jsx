@@ -3,25 +3,22 @@ import SimpleSchema from 'simpl-schema';
 import { ReactiveVar } from 'meteor/reactive-var';
 import Collections from 'meteor/collections';
 import { Accounts } from 'meteor/accounts-base';
-// import moment from 
 
 if(Meteor.isServer) {
 	Meteor.publish('executives.getAll', function(){
-		console.log("Publishing the executives.getAll.");
+		console.log("Publishing the executives.getAll...");
 		//authorization
 		if(this.userId && Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
-			let initializing = true;
 
-			// userIds = Meteor.roleAssignment.find({"role._id": "executive"}, {fields: {"user._id": 1}}).map(doc => doc.user._id);
 			// console.log("userId: " +JSON.stringify(userIds));
-			// const handle = Meteor.users.find({"_id": {"$in": userIds}, "username": {$ne: "9686059262"}}, {fields: {services: 0}}).observeChanges({
-			const handle = Meteor.users.find({"username": {$ne: "9686059262"}}, {fields: {services: 0}}).observeChanges({
+			const handle = Meteor.users.find({}, {fields: {services: 0}}).observeChanges({
 				added: (_id, doc) => {
 					// console.log("Fields added: " + JSON.stringify(fields));
-					// if(!initializing) {
+					const userRole = Meteor.roleAssignment.findOne({"user._id": _id, "role._id": "executive"});
+					if(userRole) {		//if user is executive only then show it in the list.
 						doc.isExecutive = true;
 						this.added('users', _id, doc);
-					// }
+					}
 				},
 
 				changed: (_id, doc) => {
@@ -34,16 +31,7 @@ if(Meteor.isServer) {
 				}
 			});
 
-			// Meteor.users.find({}, {fields: {services: 0}}).map(user => {
-			// 	console.log("userObj: " + JSON.stringify(user));
-			// 	const _id = user._id;
-			// 	delete user._id;
-			// 	// this.added('users', _id, user);
-			// });
-
-
-			initializing = false;
-
+			console.log("data publication for \"executives.getAll is complete.\"");
 			this.ready();
 			this.onStop(() => {
 				handle.stop();
@@ -57,7 +45,7 @@ let reactiveError = new ReactiveVar("{}");
 
 Meteor.methods({
 	'executives.saveExecutive'(inputs, editId) {		//if editId is given, then it is a method to edit the executive's details.
-		console.log("executive.saveExecutive method with inputs: " + JSON.stringify(inputs) + " and editId: " + editId);
+		console.log("executive.saveExecutive method with inputs: " + JSON.stringify(inputs) + " and editId: " + (editId || "undefined"));
 
 		let schemaObj = {
 			userImg: { 
@@ -68,7 +56,7 @@ Meteor.methods({
 			cPhNo: { 
 				type: String,
 				regEx: SimpleSchema.RegEx.Phone,
-				label: "Company's Phone number"
+				label: "Company's phone number"
 			},
 			name: { 
 				type: String,
@@ -79,7 +67,7 @@ Meteor.methods({
 			pPhNo: { 
 				type: String,
 				regEx: SimpleSchema.RegEx.Phone,
-				label: "Personal Phone number",
+				label: "Personal phone number",
 			},
 			email: { 
 				type: String,
@@ -89,7 +77,7 @@ Meteor.methods({
 				type: String,
 				min: 1,
 				max: 1000,
-				label: "Residential Address",
+				label: "Residential address",
 			},
 			pwd: { 
 				type: String,
@@ -119,7 +107,7 @@ Meteor.methods({
 			});
 			const errorObjStr = JSON.stringify(errorObj);
 
-			if(!this.isSimulation) {
+			if(!this.isSimulation) {		//if running on the server.
 				throw new Meteor.Error(400, "validation-error", errorObjStr);
 				return;
 			} else {
@@ -140,7 +128,7 @@ Meteor.methods({
 					"profile.name": cleanedInputs.name,
 					"profile.img": cleanedInputs.userImg,
 					"profile.phoneNumber": cleanedInputs.pPhNo,
-					"profile.resAddress": cleanedInputs.resAddress
+					"profile.address": cleanedInputs.resAddress
 				};
 				Meteor.users.update({"_id": editId}, {$set: modifier}, {multi: false, upsert: false});
 				Accounts.addEmail(editId, cleanedInputs.email);
@@ -158,7 +146,7 @@ Meteor.methods({
 						name: cleanedInputs.name,
 						img: cleanedInputs.userImg,
 						phoneNumber: cleanedInputs.pPhNo,
-						resAddress: cleanedInputs.resAddress,
+						address: cleanedInputs.resAddress,
 					}
 				});
 				console.log(`An executive with username: ${cleanedInputs.cPhNo} is created.`);
@@ -169,7 +157,7 @@ Meteor.methods({
 		}
 
 		console.log("executive.saveExecutive method is completed successfully.");
-		return "Executive created successfully";
+		return "Executive saved successfully";
 	},
 });
 
@@ -248,7 +236,7 @@ if(Meteor.isClient) {
 			setName(executive.profile.name || "");
 			setPPhNo(executive.profile.phoneNumber || "");
 			setEmail((executive.emails && executive.emails[0] && executive.emails[0].address) || "");
-			setResAddress(executive.profile.resAddress);
+			setResAddress(executive.profile.address);
 
 			setEditId(editId);
 			setShowModal(true);
@@ -299,7 +287,7 @@ if(Meteor.isClient) {
 
 		//subscribe for the list here.
 		useEffect(() => {
-			const handle = Meteor.subscribe('executives.getAll', "testArgs", {
+			const handle = Meteor.subscribe('executives.getAll', {
 				onStop(error) {
 					console.log("executives.getAll is stopped.");
 					if(error) {

@@ -48,7 +48,7 @@ class Table extends React.Component {
 							{
 								!rowObj.cells ? null :
 								rowObj.cells.map(cellObj => 
-									<td key={cellObj.content} style={cellObj.style}>{cellObj.content}</td>
+									<td key={cellObj.key || cellObj.content} style={cellObj.style}>{cellObj.content}</td>
 								)
 							}
 						</tr>
