@@ -181,7 +181,7 @@ if(Meteor.isClient) {
 	import Table from './Table.jsx';
 	import Modal from './Modal.jsx';
  
-	const CreateExecutives = () => {
+	const CreateExecutives = (props) => {
 		const [showModal, setShowModal] = useState(false);
 
 		const [userImg, setUserImg] = useState("");
@@ -367,7 +367,7 @@ if(Meteor.isClient) {
 									<div className="row">
 										<div className="col-8">
 											<div className="form-group row">
-										    	<label htmlFor="inPhNumber" className="col-5 col-form-label-sm text-right">Company's Phone Number:</label>
+										    	<label htmlFor="inPhNumber" className="col-5 col-form-label-sm text-right">Company's Phone Number<b className="text-danger">*</b>:</label>
 							      				{
 										      		(editId === "") ?
 										      		<div className="col-7">
@@ -396,7 +396,7 @@ if(Meteor.isClient) {
 							      				}
 											</div>
 											<div className="form-group row">
-										    	<label htmlFor="inName" className="col-5 col-form-label-sm text-right">Name:</label>
+										    	<label htmlFor="inName" className="col-5 col-form-label-sm text-right">Name<b className="text-danger">*</b>:</label>
 										    	<div className="col-7">
 										      		<input 	type="text" 
 										      				className={`form-control form-control-sm ${(nameError === "") ? "" : "is-invalid"}`} 
@@ -409,7 +409,7 @@ if(Meteor.isClient) {
 										    	</div>
 											</div>
 											<div className="form-group row">
-										    	<label htmlFor="inPersonalPhNo" className="col-5 col-form-label-sm text-right">Personal Phone Number:</label>
+										    	<label htmlFor="inPersonalPhNo" className="col-5 col-form-label-sm text-right">Personal Phone Number<b className="text-danger">*</b>:</label>
 										    	<div className="col-7">
 										      		<input 	type="text" 
 										      				className={`form-control form-control-sm ${(pPhNoError === "") ? "" : "is-invalid"}`} 
@@ -422,7 +422,7 @@ if(Meteor.isClient) {
 										    	</div>
 											</div>
 											<div className="form-group row">
-										    	<label htmlFor="inEmail" className="col-5 col-form-label-sm text-right">Email Address:</label>
+										    	<label htmlFor="inEmail" className="col-5 col-form-label-sm text-right">Email Address<b className="text-danger">*</b>:</label>
 										    	<div className="col-7">
 										      		<input 	type="email" 
 										      				className={`form-control form-control-sm ${(emailError === "") ? "" : "is-invalid"}`} 
@@ -435,7 +435,7 @@ if(Meteor.isClient) {
 										    	</div>
 											</div>
 											<div className="form-group row">
-										    	<label htmlFor="txtAreaResAddress" className="col-5 col-form-label-sm text-right">Residential Address:</label>
+										    	<label htmlFor="txtAreaResAddress" className="col-5 col-form-label-sm text-right">Residential Address<b className="text-danger">*</b>:</label>
 										    	<div className="col-7">
 										      		<textarea 	type="text" 
 										      					className={`form-control form-control-sm ${(resAddressError === "") ? "" : "is-invalid"}`} 
@@ -448,7 +448,12 @@ if(Meteor.isClient) {
 										    	</div>
 											</div>
 											<div className="form-group row">
-										    	<label htmlFor="pwd" className="col-5 col-form-label-sm text-right">Password for this executive:</label>
+												{
+													(editId === "") ?
+											    	<label htmlFor="pwd" className="col-5 col-form-label-sm text-right">Password for this executive<b className="text-danger">*</b>:</label>
+											    	:
+											    	<label htmlFor="pwd" className="col-5 col-form-label-sm text-right">Password for this executive:</label>
+												}
 										    	<div className="col-7">
 										      		<input 	type="password" 
 										      				className={`form-control form-control-sm ${(pwdError === "") ? "" : "is-invalid"}`} 

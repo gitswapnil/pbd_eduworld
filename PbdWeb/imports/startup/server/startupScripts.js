@@ -5,6 +5,7 @@ export const createRoles = () => {
 	Roles.createRole('webmaster', { unlessExists: true });
 	Roles.createRole('admin', { unlessExists: true });
 	Roles.createRole('executive', { unlessExists: true });
+	Roles.createRole('party', { unlessExists: true });
 	Roles.addRolesToParent('executive', 'admin');
 	Roles.addRolesToParent('admin', 'webmaster');
 

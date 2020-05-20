@@ -11,6 +11,7 @@ if(Meteor.isClient) {
 	import NotFound from './ui/components/NotFound';
 
 	import CreateExecutives from './ui/components/CreateExecutives';
+	import PartyDefinitions from './ui/components/PartyDefinitions';
 
 	const renderComponent = (component) => {
 		const container = document.getElementById("react-target");
@@ -136,7 +137,7 @@ if(Meteor.isClient) {
 				renderComponent(		//If he is logged in, then go the specified page.
 					<Layout selectedSection="schoolPartyData">
 						<NavigationTabs tabs={tabs}>
-							This is schoolpartydata Tab
+							<PartyDefinitions/>
 						</NavigationTabs>
 					</Layout>
 				);
