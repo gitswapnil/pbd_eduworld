@@ -205,6 +205,8 @@ if(Meteor.isClient) {
 		const [pwd, setPwd] = useState("");
 		const [pwdError, setPwdError] = useState("");
 
+		const [generalError, setGeneralError] = useState("");
+
 		const [executives, setExecutives] = useState([]);
 
 		const [editId, setEditId] = useState("");
@@ -229,6 +231,7 @@ if(Meteor.isClient) {
 			setEmailError("");
 			setResAddressError("");
 			setPwdError("");
+			setGeneralError("");
 		}
 
 		function clearModal() {
@@ -255,6 +258,7 @@ if(Meteor.isClient) {
 			Tracker.autorun(() => {
 				removeAllErrors();			//remove all the errors before setting the new messages.
 				const errorObj = JSON.parse(reactiveError.get());
+				// console.log("errorObj: " + JSON.stringify(errorObj));
 				for(let [key, value] of Object.entries(errorObj)) {
 					switch(key) {
 						case "userImg": setUserImgError(value); break;
@@ -264,6 +268,7 @@ if(Meteor.isClient) {
 						case "email": setEmailError(value); break;
 						case "resAddress": setResAddressError(value); break;
 						case "pwd": setPwdError(value); break;
+						case "generalError": setGeneralError(value); break;
 					}
 				}
 			});
@@ -275,6 +280,7 @@ if(Meteor.isClient) {
 					// console.log("err: " + err);
 					if(err){
 						if(err.reason == "validation-error") {		//if validation error occurs
+							// console.log("err.details: " + err.details);
 							reactiveError.set(err.details);
 						} else if(err.error == 403) {
 							if(err.reason.toLowerCase().indexOf("username") != -1) {		//if company's phone number is not unique
@@ -499,6 +505,9 @@ if(Meteor.isClient) {
 										</div>
 									</div>
 								</form>
+								<small className="form-text text-danger text-center">
+									{generalError}
+								</small>
 							</Modal.Body>
 						</Modal>
 					</div>
