@@ -9,10 +9,17 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.8.4",
+    "@fortawesome/fontawesome-svg-core": "^1.2.28",
+    "@fortawesome/free-brands-svg-icons": "^5.13.0",
+    "@fortawesome/free-regular-svg-icons": "^5.13.0",
+    "@fortawesome/free-solid-svg-icons": "^5.13.0",
+    "@fortawesome/react-fontawesome": "^0.1.9",
     "bcrypt": "^4.0.1",
+    "eslint": "^6.8.0",
     "meteor-node-stubs": "^1.0.0",
     "react": "^16.13.0",
-    "react-dom": "^16.13.0"
+    "react-dom": "^16.13.0",
+    "simpl-schema": "^1.7.1"
   },
   "meteor": {
     "mainModule": {

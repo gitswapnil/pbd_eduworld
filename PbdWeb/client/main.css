@@ -1,0 +1,108 @@
+.img-container-with-text {
+	position: relative;
+  	text-align: center;
+  	color: white;
+	margin: -3px 0px;
+}
+
+.img-container-with-text > img {
+	position: relative;
+	z-index: 5;
+}
+
+.centered-img-text {
+  	position: absolute;
+  	z-index: 5;
+  	top: 50%;
+  	left: 50%;
+  	transform: translate(-55%, -50%);
+  	width: 100%;
+}
+
+.section-tab-selected {
+	font-size: larger;
+	font-weight: bold;
+	color: white;
+}
+
+.section-tab {
+	color: white;
+	background: #85a6e1;
+	margin: 5px 0px;
+	padding: 10px;
+	cursor: pointer;
+	font-weight: lighter;
+
+}
+
+.nav-tabs-container {
+	margin-left: 20px;
+	display: flex;
+	flex-flow: row nowrap;
+	align-items: flex-end;
+}
+
+.nav-tabs-container > div {
+	border: 1px solid #999;
+	border-bottom: none;
+	border-radius: 10px 10px 0 0;
+	padding: 6px 0;
+	text-align: center;
+	min-width: 200px;
+	margin-left: 10px;
+	color: #666;
+	background: white;
+	cursor: pointer;
+}
+
+.nav-tabs-container > div.selected {
+	padding-top: 13px;
+	font-weight: bold;
+	font-size: larger;
+	box-shadow: 0px -3px 4px #eaeaea;
+	color: black;
+	position: relative;
+	bottom: -1px;
+	cursor: auto;
+}
+
+.tabs-content-container {
+	border: 1px solid #999;
+	box-shadow: 0px 2px 3px #aaa;
+	overflow-y: auto;
+}
+
+.profile-btn {
+	border: 1px solid #ccc;
+	border-top: none;
+	border-radius: 0 0 5px 5px;
+	box-shadow: 1px 1px 2px #eee;
+}
+
+/*Tbl class developed for table element*/
+table.tbl {
+	border: 1px solid #bbb;
+	width: 100%;
+}
+
+table.tbl > thead > tr > th, table.tbl > tbody > tr > td {
+	border: 1px solid #bbb;
+	padding: 5px 8px;
+}
+
+table.tbl > thead > tr > th {
+	/* Permalink - use to edit and share this gradient: https://colorzilla.com/gradient-editor/#f8f8f8+0,e3e4e9+21,e5e6e9+80,c8c9d2+100,f8f8f8+100,c8c9d2+100 */
+	background: #f8f8f8; /* Old browsers */
+	background: -moz-linear-gradient(top,  #f8f8f8 0%, #e3e4e9 21%, #e5e6e9 80%, #c8c9d2 100%, #f8f8f8 100%, #c8c9d2 100%); /* FF3.6-15 */
+	background: -webkit-linear-gradient(top,  #f8f8f8 0%,#e3e4e9 21%,#e5e6e9 80%,#c8c9d2 100%,#f8f8f8 100%,#c8c9d2 100%); /* Chrome10-25,Safari5.1-6 */
+	background: linear-gradient(to bottom,  #f8f8f8 0%,#e3e4e9 21%,#e5e6e9 80%,#c8c9d2 100%,#f8f8f8 100%,#c8c9d2 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#f8f8f8', endColorstr='#c8c9d2',GradientType=0 ); /* IE6-9 */
+}
+
+table.tbl > tbody > tr.row-selectable {
+	cursor: pointer;
+}
+
+table.tbl > tbody > tr.row-selectable:hover {
+	background: #efefef;
+}

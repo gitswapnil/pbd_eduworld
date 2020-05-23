@@ -1,2 +1,4 @@
-node_modules/
-.meteor/
+/node_modules/
+/.meteor/
+!/.meteor/packages
+!/.meteor/versions
