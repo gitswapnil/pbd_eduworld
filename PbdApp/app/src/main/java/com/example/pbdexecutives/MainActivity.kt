@@ -14,7 +14,7 @@ class MainActivity : AppCompatActivity() {
         val handler = Handler();
         handler.postDelayed({
             var loggedIn: Boolean = false;
-            if(loggedIn) {
+            if(!loggedIn) {
                 val intent = Intent(this, LoginActivity::class.java)
                 startActivity(intent);
             }
