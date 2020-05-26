@@ -119,9 +119,8 @@ Meteor.methods({
 				console.log("Saving the changes for party with _id: " + editId + "...");
 				Accounts.setUsername(editId, cleanedInputs.partyCode);		//change the party code.
 				let modifier = {
-					"profile.name": cleanedInputs.name,
-					"profile.img": cleanedInputs.userImg,
-					"profile.phoneNumber": cleanedInputs.pPhNo,
+					"profile.name": cleanedInputs.partyName,
+					"profile.phoneNumber": cleanedInputs.partyPhoneNo,
 					"profile.address": cleanedInputs.partyAddress
 				};
 				Meteor.users.update({"_id": editId}, {$set: modifier}, {multi: false, upsert: false});
@@ -215,10 +214,10 @@ if(Meteor.isClient) {
 		function fillModal(editId) {
 			const party = Meteor.users.findOne({"_id": editId});
 			setPartyCode(party.username);
-			setPartyName(party.profile.name || "");
-			setPartyPhoneNo(party.profile.phoneNumber || "");
+			setPartyName((party.profile && party.profile.name) || "");
+			setPartyPhoneNo((party.profile && party.profile.phoneNumber) || "");
 			setPartyEmail((party.emails && party.emails[0] && party.emails[0].address) || "");
-			setPartyAddress(party.profile.address);
+			setPartyAddress(party.profile && party.profile.address);
 
 			setEditId(editId);
 			setShowModal(true);
@@ -287,8 +286,8 @@ if(Meteor.isClient) {
 							cells: [
 								{ style: {"textAlign": "right"}, content: (index + 1)}, 
 								{ content: doc.username}, 
-								{ key: (doc.profile.name + doc.profile.address), content: <div>{doc.profile.name}<br/>{doc.profile.address}</div>},
-								{ content: doc.profile.phoneNumber},
+								{ key: ((doc.profile && doc.profile.name) + (doc.profile && doc.profile.address)), content: <div>{doc.profile && doc.profile.name}<br/>{doc.profile && doc.profile.address}</div>},
+								{ content: (doc.profile && doc.profile.phoneNumber)},
 								{ content: moment(doc.createdAt).format("Do MMM YYYY h:mm:ss a")}
 							],
 							rowAttributes: {
