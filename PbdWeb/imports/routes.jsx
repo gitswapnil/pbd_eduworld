@@ -164,6 +164,8 @@ if(Meteor.isClient) {
 
 	export default routes;
 } else if(Meteor.isServer) {
+	import { Accounts } from 'meteor/accounts-base';
+
 	Router.route('/api/testroute', {where: 'server'}).get(function(req, res, next) {
 		console.log("This is testroute.");
 		res.end("response from testroute. It is a get method.");
@@ -198,14 +200,32 @@ if(Meteor.isClient) {
 		// console.log("cleanedInputs: " + JSON.stringify(cleanedInputs));
 		validationContext.validate(cleanedInputs);
 
-		if(validationContext.keyIsInvalid("phNo")) {
-			res.end(validationContext.keyErrorMessage("phNo"));
+		if(validationContext.keyIsInvalid("phNo")) {		//the phone number should be properly given
+			res.end(JSON.stringify({error: true, message: validationContext.keyErrorMessage("phNo")}));
 		}
 
-		if(validationContext.keyIsInvalid("pwd")) {
-			res.end(validationContext.keyErrorMessage("pwd"));
+		if(validationContext.keyIsInvalid("pwd")) {			//the password should be properly given
+			res.end(JSON.stringify({error: true, message: validationContext.keyErrorMessage("pwd")}));
+		}
+
+		let user = Accounts.findUserByUsername(reqBody.phNo);
+		if(!user) {				//if the user exists
+			res.end(JSON.stringify({error: true, message: "Invalid phone number. Please check again."}));
+		}
+
+		if(!Roles.userIsInRole(user._id, "executive", Roles.GLOBAL_GROUP)){		//if the user does not have administrative rights.
+			res.end(JSON.stringify({error: true, message: "User does not have the rights to access mobile app."}));
+		}
+
+		const passwordValid = Accounts._checkPassword(user, reqBody.pwd);
+		if(passwordValid.error) {		//if the password is invalid
+			res.end(JSON.stringify({error: true, message: "Incorrect Password."}));
+		}
+
+		if(!user.apiKey) {
+			res.end(JSON.stringify({error: true, message: "User does not have an apiKey."}));
 		}
 		
-		res.end("response ended.");
+		res.end(JSON.stringify({error: false, message: user.apiKey}));
 	});
 }
