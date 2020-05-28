@@ -5,6 +5,9 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
 import android.widget.EditText
+import androidx.appcompat.widget.Toolbar
+import kotlinx.android.synthetic.*
+import kotlinx.android.synthetic.main.activity_login.*
 
 class LoginActivity : AppCompatActivity() {
 
@@ -14,8 +17,8 @@ class LoginActivity : AppCompatActivity() {
     }
 
     fun login(view: View) {
-//        val phoneNo = findViewById<EditText>(R.id.editText2);
-//        val password = findViewById<EditText>(R.id.editText3);
+        val phNo = findViewById<EditText>(R.id.editText);
+        val pwd = findViewById<EditText>(R.id.editText2);
 
 
 

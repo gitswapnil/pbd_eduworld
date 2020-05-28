@@ -18,6 +18,6 @@ class MainActivity : AppCompatActivity() {
                 val intent = Intent(this, LoginActivity::class.java)
                 startActivity(intent);
             }
-        }, 2000);
+        }, 1000);
     }
 }

@@ -14,11 +14,8 @@
 
         <activity android:name=".HomeActivity"></activity>
         <activity
-            android:name=".LoginActivity"
-            android:label="PBD Executives"></activity>
-        <activity
-            android:name=".MainActivity"
-            android:theme="@style/AppTheme.NoActionBar">
+            android:name=".LoginActivity"></activity>
+        <activity android:name=".MainActivity" android:theme="@style/AppTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

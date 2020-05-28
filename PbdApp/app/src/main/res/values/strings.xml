@@ -1,13 +1,13 @@
 <resources>
     <string name="app_name">PBD Executives</string>
-    <string name="welcome_text">PBD Executives</string>
+    <string name="executives">Executives</string>
     <string name="login_to_continue">Please Login to continue</string>
     <string name="phone_number">Phone Number</string>
     <string name="password">Password</string>
-    <string name="forgot_password">Forgot your password?</string>
+    <string name="forgot_password">Forgot your password?\u0020</string>
     <string name="click_here">Click here</string>
     <string name="login">Login</string>
-    <string name="dont_have_account">Don\'t have an account? Please contact your </string>
+    <string name="dont_have_account">Don\'t have an account? Please contact your\u0020</string>
     <string name="administrator">administrator</string>
     <string name="copyright_statements">© 2020 PBD Eduworld Private Limited, India. All Rights Reserved.</string>
 

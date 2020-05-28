@@ -7,6 +7,18 @@
     android:background="@drawable/hiclipart"
     tools:context=".LoginActivity">
 
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/colorPrimary"
+        android:elevation="4dp"
+        android:minHeight="?attr/actionBarSize"
+        android:theme="?attr/actionBarTheme"
+        app:layout_constraintTop_toTopOf="parent"
+        app:title="@string/app_name"
+        app:titleTextColor="#FFFFFF" />
+
     <ScrollView
         android:id="@+id/scrollView2"
         android:layout_width="fill_parent"
@@ -23,7 +35,7 @@
                 android:id="@+id/imageView3"
                 android:layout_width="162dp"
                 android:layout_height="135dp"
-                android:layout_marginTop="32dp"
+                android:layout_marginTop="64dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="0.497"
                 app:layout_constraintStart_toStartOf="parent"
@@ -36,7 +48,6 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="@string/login_to_continue"
-                android:textColor="@android:color/black"
                 android:textSize="18sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -103,7 +114,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:background="?attr/colorPrimaryDark"
+                android:background="@color/colorPrimaryDark"
                 android:text="@string/login"
                 android:textColor="@android:color/background_light"
                 app:layout_constraintEnd_toEndOf="parent"
