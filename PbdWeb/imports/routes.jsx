@@ -1,9 +1,10 @@
 import { Meteor } from 'meteor/meteor';
+import { Router } from 'meteor/iron:router';
+import SimpleSchema from 'simpl-schema';
 
 if(Meteor.isClient) {
 	import React from 'react';
 	import ReactDom from 'react-dom';
-	import { Router } from 'meteor/iron:router';
 
 	import Login from './ui/components/Login';
 	import Layout from './ui/components/Layout';
@@ -163,5 +164,68 @@ if(Meteor.isClient) {
 
 	export default routes;
 } else if(Meteor.isServer) {
+	import { Accounts } from 'meteor/accounts-base';
 
+	Router.route('/api/testroute', {where: 'server'}).get(function(req, res, next) {
+		console.log("This is testroute.");
+		res.end("response from testroute. It is a get method.");
+	});
+
+	/*
+		params: {phNo: String, pwd: String}
+		return: {error: Boolean, message: String}	if error is false then message is the apiKey for that user.
+	*/
+	Router.route('/api/executivelogin', {where: 'server'}).post(function(req, res, next) {
+		console.log("API: executivelogin invoked.");
+		const reqBody = req.body;
+		console.log("phNo.: " + reqBody.phNo);
+		console.log("pwd.: " + reqBody.pwd);
+
+		//validate teh phone number and password in the beginning
+		let schemaObj = {
+			phNo: { 
+				type: String,
+				regEx: SimpleSchema.RegEx.Phone,
+				label: "Phone Number"
+			},
+			pwd: { 
+				type: String,
+				label: "Password",
+			}
+		};
+
+		const validationContext = new SimpleSchema(schemaObj, {clean: {filter: true, removeEmptyStrings: true, trimStrings: true}}).newContext();
+
+		const cleanedInputs = validationContext.clean(reqBody);
+		// console.log("cleanedInputs: " + JSON.stringify(cleanedInputs));
+		validationContext.validate(cleanedInputs);
+
+		if(validationContext.keyIsInvalid("phNo")) {		//the phone number should be properly given
+			res.end(JSON.stringify({error: true, message: validationContext.keyErrorMessage("phNo")}));
+		}
+
+		if(validationContext.keyIsInvalid("pwd")) {			//the password should be properly given
+			res.end(JSON.stringify({error: true, message: validationContext.keyErrorMessage("pwd")}));
+		}
+
+		let user = Accounts.findUserByUsername(reqBody.phNo);
+		if(!user) {				//if the user exists
+			res.end(JSON.stringify({error: true, message: "Invalid phone number. Please check again."}));
+		}
+
+		if(!Roles.userIsInRole(user._id, "executive", Roles.GLOBAL_GROUP)){		//if the user does not have administrative rights.
+			res.end(JSON.stringify({error: true, message: "User does not have the rights to access mobile app."}));
+		}
+
+		const passwordValid = Accounts._checkPassword(user, reqBody.pwd);
+		if(passwordValid.error) {		//if the password is invalid
+			res.end(JSON.stringify({error: true, message: "Incorrect Password."}));
+		}
+
+		if(!user.apiKey) {
+			res.end(JSON.stringify({error: true, message: "User does not have an apiKey."}));
+		}
+		
+		res.end(JSON.stringify({error: false, message: user.apiKey}));
+	});
 }

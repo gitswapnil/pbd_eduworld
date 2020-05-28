@@ -147,7 +147,8 @@ Meteor.methods({
 						img: cleanedInputs.userImg,
 						phoneNumber: cleanedInputs.pPhNo,
 						address: cleanedInputs.resAddress,
-					}
+					},
+					role: "executive",
 				});
 				console.log(`An executive with username: ${cleanedInputs.cPhNo} is created.`);
 				console.log("Now adding user the previlege of an executive...");
@@ -232,11 +233,11 @@ if(Meteor.isClient) {
 		function fillModal(editId) {
 			const executive = Meteor.users.findOne({"_id": editId});
 			setCPhNo(executive.username);
-			setUserImg(executive.profile.img || "");
-			setName(executive.profile.name || "");
-			setPPhNo(executive.profile.phoneNumber || "");
+			setUserImg((executive.profile && executive.profile.img) || "");
+			setName((executive.profile && executive.profile.name) || "");
+			setPPhNo((executive.profile && executive.profile.phoneNumber) || "");
 			setEmail((executive.emails && executive.emails[0] && executive.emails[0].address) || "");
-			setResAddress(executive.profile.address);
+			setResAddress(executive.profile && executive.profile.address);
 
 			setEditId(editId);
 			setShowModal(true);
@@ -306,7 +307,7 @@ if(Meteor.isClient) {
 						return {
 							cells: [
 								{ style: {"textAlign": "right"}, content: (index + 1)}, 
-								{ content: doc.profile.name}, 
+								{ content: (doc.profile && doc.profile.name)}, 
 								{ content: doc.username}, 
 								{ content: moment(doc.createdAt).format("Do MMM YYYY h:mm:ss a")}
 							],
