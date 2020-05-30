@@ -115,6 +115,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:background="@color/colorPrimaryDark"
+                android:onClick="login"
                 android:text="@string/login"
                 android:textColor="@android:color/background_light"
                 app:layout_constraintEnd_toEndOf="parent"

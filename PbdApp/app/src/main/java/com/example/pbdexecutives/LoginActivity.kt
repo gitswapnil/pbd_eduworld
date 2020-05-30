@@ -5,9 +5,14 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
 import android.widget.EditText
-import androidx.appcompat.widget.Toolbar
-import kotlinx.android.synthetic.*
-import kotlinx.android.synthetic.main.activity_login.*
+import android.widget.Toast
+import com.android.volley.DefaultRetryPolicy
+import com.android.volley.Request
+import com.android.volley.Response
+import com.android.volley.toolbox.JsonObjectRequest
+import com.android.volley.toolbox.Volley
+import org.json.JSONObject
+
 
 class LoginActivity : AppCompatActivity() {
 
@@ -17,12 +22,38 @@ class LoginActivity : AppCompatActivity() {
     }
 
     fun login(view: View) {
-        val phNo = findViewById<EditText>(R.id.editText);
-        val pwd = findViewById<EditText>(R.id.editText2);
+        val phNo = findViewById<EditText>(R.id.editText).text.toString();
+        val pwd = findViewById<EditText>(R.id.editText2).text.toString();
 
+        val queue = Volley.newRequestQueue(this);       //create a request
+        val url = "${PbdExecutives().serverAddress}/executivelogin";             //url for the request
+        val jsonString:JSONObject = JSONObject("{\"phNo\": \"${phNo}\", \"pwd\": \"${pwd}\"}");     //convert the string to JSON object
 
+        val request = JsonObjectRequest(
+            Request.Method.POST, url, jsonString,
+            Response.Listener { response ->
+                val responseJSON:JSONObject = JSONObject(response.toString());      //convert the response back into JSON Object from the response string
+                if(responseJSON.get("error") == false) {            //If it has no errors, then go to HomeActivity
+                    val intent = Intent(this, HomeActivity::class.java);
+                    startActivity(intent);
+                } else {            //otherwise keep showing the error
+                    Toast.makeText(this, responseJSON.get("message").toString(), Toast.LENGTH_LONG).show();
+                }
+            },
+            Response.ErrorListener {
+                val res:String = "That didn't work!";
+                Toast.makeText(this, res, Toast.LENGTH_LONG).show();
+            })
 
-        val intent = Intent(this, HomeActivity::class.java)
-        startActivity(intent);
+        // Volley request policy, only one time request to avoid duplicate transaction
+        request.retryPolicy = DefaultRetryPolicy(
+            DefaultRetryPolicy.DEFAULT_TIMEOUT_MS,
+            // 0 means no retry
+            0, // DefaultRetryPolicy.DEFAULT_MAX_RETRIES = 2
+            1f // DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
+        )
+
+        // Add the volley post request to the request queue
+        VolleySingleton.getInstance(this).addToRequestQueue(request);
     }
 }
