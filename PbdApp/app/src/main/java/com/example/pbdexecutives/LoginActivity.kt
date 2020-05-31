@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.EditText
 import android.widget.Toast
+import androidx.room.Room
 import com.android.volley.DefaultRetryPolicy
 import com.android.volley.Request
 import com.android.volley.Response
@@ -33,15 +34,21 @@ class LoginActivity : AppCompatActivity() {
             Request.Method.POST, url, jsonString,
             Response.Listener { response ->
                 val responseJSON:JSONObject = JSONObject(response.toString());      //convert the response back into JSON Object from the response string
-                if(responseJSON.get("error") == false) {            //If it has no errors, then go to HomeActivity
-                    val intent = Intent(this, HomeActivity::class.java);
-                    startActivity(intent);
+                if(responseJSON.get("error") == false) {            //If it has no errors, then store the apiKey and go to HomeActivity
+                    val db = Room.databaseBuilder(applicationContext, AppDB::class.java, "PbdDB").build();
+                    Thread {
+                        val userDetail = UserDetails(id = 1, apiKey = responseJSON.get("message").toString());
+                        db.userDetailsDao().saveUserDetails(userDetail);        //store the apiKey in local database.
+
+                        val intent = Intent(this, HomeActivity::class.java);        //go to home activity after save
+                        startActivity(intent);
+                    }.start();
                 } else {            //otherwise keep showing the error
                     Toast.makeText(this, responseJSON.get("message").toString(), Toast.LENGTH_LONG).show();
                 }
             },
             Response.ErrorListener {
-                val res:String = "That didn't work!";
+                val res:String = "Unable to connect to server...";
                 Toast.makeText(this, res, Toast.LENGTH_LONG).show();
             })
 

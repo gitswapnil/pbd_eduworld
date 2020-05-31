@@ -202,30 +202,37 @@ if(Meteor.isClient) {
 
 		if(validationContext.keyIsInvalid("phNo")) {		//the phone number should be properly given
 			res.end(JSON.stringify({error: true, message: validationContext.keyErrorMessage("phNo")}));
+			return;
 		}
 
 		if(validationContext.keyIsInvalid("pwd")) {			//the password should be properly given
 			res.end(JSON.stringify({error: true, message: validationContext.keyErrorMessage("pwd")}));
+			return;
 		}
 
 		let user = Accounts.findUserByUsername(reqBody.phNo);
 		if(!user) {				//if the user exists
 			res.end(JSON.stringify({error: true, message: "Invalid phone number. Please check again."}));
+			return;
 		}
 
 		if(!Roles.userIsInRole(user._id, "executive", Roles.GLOBAL_GROUP)){		//if the user does not have administrative rights.
 			res.end(JSON.stringify({error: true, message: "User does not have the rights to access mobile app."}));
+			return;
 		}
 
 		const passwordValid = Accounts._checkPassword(user, reqBody.pwd);
 		if(passwordValid.error) {		//if the password is invalid
 			res.end(JSON.stringify({error: true, message: "Incorrect Password."}));
+			return;
 		}
 
 		if(!user.apiKey) {
 			res.end(JSON.stringify({error: true, message: "User does not have an apiKey."}));
+			return;
 		}
 		
 		res.end(JSON.stringify({error: false, message: user.apiKey}));
+		return;
 	});
 }
