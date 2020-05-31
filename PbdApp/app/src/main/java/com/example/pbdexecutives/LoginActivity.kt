@@ -40,8 +40,9 @@ class LoginActivity : AppCompatActivity() {
                         val userDetail = UserDetails(id = 1, apiKey = responseJSON.get("message").toString());
                         db.userDetailsDao().saveUserDetails(userDetail);        //store the apiKey in local database.
 
-                        val intent = Intent(this, HomeActivity::class.java);        //go to home activity after save
+                        val intent = Intent(applicationContext, HomeActivity::class.java);        //go to home activity after save
                         startActivity(intent);
+                        finishAffinity();
                     }.start();
                 } else {            //otherwise keep showing the error
                     Toast.makeText(this, responseJSON.get("message").toString(), Toast.LENGTH_LONG).show();
