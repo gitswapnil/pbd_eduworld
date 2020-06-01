@@ -37,6 +37,7 @@ class LoginActivity : AppCompatActivity() {
                 if(responseJSON.get("error") == false) {            //If it has no errors, then store the apiKey and go to HomeActivity
                     val db = Room.databaseBuilder(applicationContext, AppDB::class.java, "PbdDB").build();
                     Thread {
+                        db.userDetailsDao().clearUserDetails();     //clear the user details before inserting a new value
                         val userDetail = UserDetails(id = 1, apiKey = responseJSON.get("message").toString());
                         db.userDetailsDao().saveUserDetails(userDetail);        //store the apiKey in local database.
 

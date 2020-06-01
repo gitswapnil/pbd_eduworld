@@ -13,6 +13,9 @@ interface UserDetailsDAO {
     @Query("SELECT apiKey FROM UserDetails ORDER BY ID DESC LIMIT 1")
     fun getApiKey(): Array<String>;
 
+    @Query("DELETE FROM UserDetails")
+    fun clearUserDetails()
+
     @Insert
     fun saveUserDetails(user: UserDetails)
 }
