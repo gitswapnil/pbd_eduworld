@@ -34,9 +34,10 @@
                 android:textStyle="bold" />
 
             <Switch
-                android:id="@+id/switch1"
+                android:id="@+id/duty_switch"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content"
+                android:onClick="changeDuty" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -93,9 +94,9 @@
     </androidx.core.widget.NestedScrollView>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:layout_height="wrap_content"
         android:layout_width="wrap_content"
-        android:src="@android:drawable/ic_input_add"
+        android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
-        android:layout_margin="16dp" />"
+        android:layout_margin="16dp"
+        android:src="@drawable/plus_white" />"
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

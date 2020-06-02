@@ -1,19 +1,27 @@
 package com.example.pbdexecutives
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.Location
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
+import android.view.View
+import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toolbar
+import androidx.core.app.ActivityCompat
 import androidx.room.Room
 import com.android.volley.Request
 import com.android.volley.Response
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 
 class HomeActivity : AppCompatActivity() {
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -23,11 +31,23 @@ class HomeActivity : AppCompatActivity() {
         return true
     }
 
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
 
         setSupportActionBar(findViewById(R.id.main_toolbar));
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+    }
+
+    fun changeDuty (view: View) {
+        val duty: Boolean = findViewById<Switch>(R.id.duty_switch).isChecked;
+        if(duty) {          //if the duty is ON
+
+        } else {            //if the duty is OFF
+
+        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
