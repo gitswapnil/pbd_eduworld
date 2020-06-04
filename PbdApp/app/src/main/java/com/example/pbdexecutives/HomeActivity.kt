@@ -1,9 +1,11 @@
 package com.example.pbdexecutives
 
 import android.Manifest
+import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
+import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
@@ -12,18 +14,15 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.widget.Switch
-import android.widget.TextView
-import android.widget.Toolbar
+import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.room.Room
-import com.android.volley.Request
-import com.android.volley.Response
-import com.android.volley.toolbox.StringRequest
-import com.android.volley.toolbox.Volley
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
 
-class HomeActivity : AppCompatActivity() {
+
+
+class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsResultCallback {
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         Log.i("pbdLog", "onCreateOptionsMenu called.")
         val inflater: MenuInflater = menuInflater;
@@ -31,20 +30,80 @@ class HomeActivity : AppCompatActivity() {
         return true
     }
 
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
 
         setSupportActionBar(findViewById(R.id.main_toolbar));
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+    }
+
+    private fun startTracking() {
+        
+    }
+
+
+    override fun onRequestPermissionsResult(        //On getting the request permission's result from the user
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        if (requestCode == PbdExecutives().PERMISSION_REQUEST_FINE_ACCESS) {
+            // Request for camera permission.
+            if (grantResults.size == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission has been granted. Start camera preview Activity.
+                Log.i("pbdLog", "Permission is granted, you can start tracking services now.");
+                startTracking();
+            } else {
+                // Permission request was denied.
+                Log.i("pbdLog", "Location Permission is denied. To reactivate go to settings and change the location permission.");
+            }
+        }
+    }
+
+    private fun checkLocationPermission(): Boolean {
+        Log.i("pbdLog", "Checking Location Permission.");
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            //if location access was previously granted.
+            startTracking();
+        } else {
+            //if location access is not yet granted.
+            if(ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
+                //if location access is not yet granted and you need to show the reason as to why it is important.
+                val alertDialog: AlertDialog? = this.let {
+                    val builder = AlertDialog.Builder(it)
+                    builder.apply {
+                        setPositiveButton(R.string.ok,
+                            DialogInterface.OnClickListener { dialog, id ->
+                                // User clicked OK button
+                                ActivityCompat.requestPermissions(it, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PbdExecutives().PERMISSION_REQUEST_FINE_ACCESS);
+                            })
+                        setNegativeButton(R.string.cancel,
+                            DialogInterface.OnClickListener { dialog, id ->
+                                // User cancelled the dialog
+
+                            })
+                    }
+                    // Set other dialog properties
+                    builder?.setMessage(R.string.location_permission_message)
+                            .setTitle(R.string.attention)
+
+                    // Create the AlertDialog
+                    builder.create()
+                }
+                alertDialog?.show();        //show user the reason for the need of location access.
+            } else {
+                //if requesting for the very first time.
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PbdExecutives().PERMISSION_REQUEST_FINE_ACCESS)
+            }
+        }
+        return true;
     }
 
     fun changeDuty (view: View) {
         val duty: Boolean = findViewById<Switch>(R.id.duty_switch).isChecked;
         if(duty) {          //if the duty is ON
-
+            findViewById<Switch>(R.id.duty_switch).isChecked = false;   //unless all the things are clear, dont turn ON the switch.
+            checkLocationPermission();      //check for the permissions.
         } else {            //if the duty is OFF
 
         }
