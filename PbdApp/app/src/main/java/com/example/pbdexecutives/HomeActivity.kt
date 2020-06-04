@@ -1,12 +1,13 @@
 package com.example.pbdexecutives
 
 import android.Manifest
+import android.app.Activity
+import android.app.ActivityManager
+import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
+import android.content.IntentSender
 import android.content.pm.PackageManager
-import android.location.Location
-import android.os.Build
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
@@ -14,12 +15,15 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.widget.Switch
-import androidx.annotation.RequiresApi
+import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.room.Room
-
+import com.google.android.gms.common.api.ResolvableApiException
+import com.google.android.gms.location.*
+import com.google.android.gms.tasks.Task
 
 
 class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsResultCallback {
@@ -30,15 +34,94 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         return true
     }
 
+    protected override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        when (requestCode) {
+            PbdExecutives().REQUEST_CHECK_LOCATION_SETTINGS ->
+                when(resultCode) {
+                    Activity.RESULT_OK -> {
+                        Log.i("pbdLog", "Settings are changed successfully.");
+                        findViewById<TextView>(R.id.textView2).text = "";
+                        startTrackingService();
+                    }
+                    Activity.RESULT_CANCELED -> {
+                        Log.i("pbdLog", "Settings are not changed. Hence cannot assign on duty.");
+                        findViewById<TextView>(R.id.textView2).setText(R.string.location_not_enabled);
+                    }
+                    else -> "Nothing"
+                }
+            else -> "Nothing"
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
 
         setSupportActionBar(findViewById(R.id.main_toolbar));
+
+        dutySwitch(isMyServiceRunning(TrackingService::class.java)); //check if the service is running or not.
     }
 
-    private fun startTracking() {
-        
+    private fun dutySwitch(input: Boolean) {
+        findViewById<Switch>(R.id.duty_switch).isChecked = input;
+    }
+
+    //This method gives whether a service is running or not.
+    private fun isMyServiceRunning(serviceClass: Class<*>): Boolean {
+        val manager: ActivityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        for (service: ActivityManager.RunningServiceInfo in manager.getRunningServices(Int.MAX_VALUE)) {
+            if (serviceClass.name == service.service.className) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun startTrackingService() {
+        val serviceIntent = Intent(this, TrackingService::class.java)
+        ContextCompat.startForegroundService(this, serviceIntent);
+        dutySwitch(true);
+    }
+
+    private fun stopTracking() {
+        val serviceIntent = Intent(this, TrackingService::class.java)
+        stopService(serviceIntent);
+        dutySwitch(false);
+    }
+
+
+    private fun checkSettings() {
+        val locationRequest = LocationRequest.create()?.apply {
+            interval = 10000
+            fastestInterval = 5000
+            priority = LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY
+        }
+
+        val builder = locationRequest?.let { LocationSettingsRequest.Builder().addLocationRequest(it) };
+        val client: SettingsClient = LocationServices.getSettingsClient(this)
+        val task: Task<LocationSettingsResponse> = client.checkLocationSettings(builder?.build())
+
+        task.addOnSuccessListener { locationSettingsResponse ->
+            // All location settings are satisfied. The client can initialize
+            // location requests here.
+            startTrackingService();
+        }
+
+        task.addOnFailureListener { exception ->
+            if (exception is ResolvableApiException){
+                // Location settings are not satisfied, but this can be fixed
+                // by showing the user a dialog.
+                try {
+                    // Show the dialog by calling startResolutionForResult(),
+                    // and check the result in onActivityResult().
+                    exception.startResolutionForResult(this, PbdExecutives().REQUEST_CHECK_LOCATION_SETTINGS)
+                } catch (sendEx: IntentSender.SendIntentException) {
+                    // Ignore the error.
+                }
+            }
+        }
+
     }
 
 
@@ -52,19 +135,20 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             if (grantResults.size == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 // Permission has been granted. Start camera preview Activity.
                 Log.i("pbdLog", "Permission is granted, you can start tracking services now.");
-                startTracking();
+                checkSettings();
             } else {
                 // Permission request was denied.
                 Log.i("pbdLog", "Location Permission is denied. To reactivate go to settings and change the location permission.");
+                findViewById<TextView>(R.id.textView2).setText(R.string.location_permission_denied);
             }
         }
     }
 
-    private fun checkLocationPermission(): Boolean {
+    private fun checkLocationPermissionAndSettings(): Boolean {
         Log.i("pbdLog", "Checking Location Permission.");
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             //if location access was previously granted.
-            startTracking();
+            checkSettings();
         } else {
             //if location access is not yet granted.
             if(ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
@@ -80,7 +164,8 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         setNegativeButton(R.string.cancel,
                             DialogInterface.OnClickListener { dialog, id ->
                                 // User cancelled the dialog
-
+                                Log.i("pbdLog", "Location Permission is denied. To reactivate go to settings and change the location permission.");
+                                findViewById<TextView>(R.id.textView2).setText(R.string.location_permission_denied);
                             })
                     }
                     // Set other dialog properties
@@ -102,10 +187,11 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     fun changeDuty (view: View) {
         val duty: Boolean = findViewById<Switch>(R.id.duty_switch).isChecked;
         if(duty) {          //if the duty is ON
-            findViewById<Switch>(R.id.duty_switch).isChecked = false;   //unless all the things are clear, dont turn ON the switch.
-            checkLocationPermission();      //check for the permissions.
+            dutySwitch(false);   //unless all the things are clear, dont turn ON the switch.
+            findViewById<TextView>(R.id.textView2).text = "";
+            checkLocationPermissionAndSettings();      //check for the permissions.
         } else {            //if the duty is OFF
-
+            stopTracking();
         }
     }
 
