@@ -3,11 +3,10 @@ package com.example.pbdexecutives
 import android.Manifest
 import android.app.Activity
 import android.app.ActivityManager
-import android.content.Context
-import android.content.DialogInterface
-import android.content.Intent
-import android.content.IntentSender
+import android.content.*
 import android.content.pm.PackageManager
+import android.location.GnssStatus
+import android.location.LocationManager
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
@@ -20,13 +19,19 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.location.LocationManagerCompat
 import androidx.room.Room
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.Task
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 
 class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsResultCallback {
+    lateinit var gpsSwitchStateReceiver: BroadcastReceiver;
+
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         Log.i("pbdLog", "onCreateOptionsMenu called.")
         val inflater: MenuInflater = menuInflater;
@@ -59,6 +64,36 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         setContentView(R.layout.activity_home)
 
         setSupportActionBar(findViewById(R.id.main_toolbar));
+        gpsSwitchHandlerAttach();
+    }
+
+    private fun gpsSwitchHandlerAttach() {
+        val filter = IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION)
+        filter.addAction(Intent.ACTION_PROVIDER_CHANGED)
+
+        gpsSwitchStateReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                if (LocationManager.PROVIDERS_CHANGED_ACTION == intent.action) {
+                    val locationManager: LocationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                    val isGpsEnabled: Boolean = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+                    val isNetworkEnabled: Boolean = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+                    if (isGpsEnabled || isNetworkEnabled) {
+                        // Handle Location turned ON
+                        findViewById<TextView>(R.id.textView2).text = "";
+                    } else {
+                        // Handle Location turned OFF
+                        Log.i("pbdLog", "GPS is turned off. changing the button state to OFF.");
+                        dutySwitch(false); //check if the service is running or not.
+                    }
+                }
+            }
+        }
+
+        this.registerReceiver(gpsSwitchStateReceiver, filter);
+    }
+
+    override fun onResume() {
+        super.onResume();
 
         dutySwitch(isMyServiceRunning(TrackingService::class.java)); //check if the service is running or not.
     }
@@ -87,7 +122,6 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     private fun stopTracking() {
         val serviceIntent = Intent(this, TrackingService::class.java)
         stopService(serviceIntent);
-        dutySwitch(false);
     }
 
 
@@ -191,6 +225,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             findViewById<TextView>(R.id.textView2).text = "";
             checkLocationPermissionAndSettings();      //check for the permissions.
         } else {            //if the duty is OFF
+            dutySwitch(false);
             stopTracking();
         }
     }
@@ -203,6 +238,9 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
         R.id.action_logout -> {     //when logs out, just clear the user information and jump to the login activity.
             Thread {
+                if(isMyServiceRunning(TrackingService::class.java)){
+                    stopTracking();     //Stop tracking service if the service is alive.
+                };
                 val db = Room.databaseBuilder(applicationContext, AppDB::class.java, "PbdDB").build();
                 db.userDetailsDao().clearUserDetails();
                 val intent = Intent(applicationContext, LoginActivity::class.java);        //go to home activity after save
@@ -219,4 +257,9 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy();
+
+        this.unregisterReceiver(gpsSwitchStateReceiver);
+    }
 }
