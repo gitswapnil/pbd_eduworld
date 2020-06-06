@@ -152,7 +152,7 @@ class TrackingService : Service() {
     private fun onNewLocation(newLocation: Location) {
         Log.i("pbdLog", "New location, Lattitude: ${newLocation.latitude}, Longitude: ${newLocation.longitude}");
 
-        
+
     }
 
     override fun onDestroy() {
