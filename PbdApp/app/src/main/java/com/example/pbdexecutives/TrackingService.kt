@@ -1,5 +1,6 @@
 package com.example.pbdexecutives
 
+import android.Manifest
 import android.app.Notification
 import android.app.PendingIntent
 import android.app.Service
@@ -7,19 +8,35 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
+import android.location.Location
 import android.location.LocationManager
 import android.os.Build
 import android.os.IBinder
+import android.provider.ContactsContract.Directory.PACKAGE_NAME
 import android.util.Log
-import java.util.*
+import androidx.core.app.ActivityCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 
 
 class TrackingService : Service() {
     lateinit var gpsSwitchStateReceiver: BroadcastReceiver;
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    val actionBroadcast: String = "$PACKAGE_NAME.broadcastSwitchState";
+
+    val extraSwitchInfo: String = "$PACKAGE_NAME.switchInfo";
 
     override fun onCreate() {
         super.onCreate()
+        gpsSwitchHandlerAttach();
 
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        startTracking();
+    }
+
+    private fun gpsSwitchHandlerAttach() {
         val filter = IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION)
         filter.addAction(Intent.ACTION_PROVIDER_CHANGED)
 
@@ -34,6 +51,13 @@ class TrackingService : Service() {
                     } else {
                         // Handle Location turned OFF
                         Log.i("pbdLog", "GPS is turned off. stopping the service.");
+                        // Notify anyone listening for broadcasts about the new location.
+
+                        // Notify anyone listening for broadcasts about the new switch State.
+                        val intent = Intent(actionBroadcast);
+                        intent.putExtra(extraSwitchInfo, false);
+                        LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent);
+
                         stopSelf();
                     }
                 }
@@ -43,10 +67,13 @@ class TrackingService : Service() {
         this.registerReceiver(gpsSwitchStateReceiver, filter);
     }
 
+    private fun gpsSwitchHandlerDettach() {
+        this.unregisterReceiver(gpsSwitchStateReceiver);
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId);
         Log.i("pbdLog", "Starting the Tracker Service");
-//        monitorLocationSwitch();
 
         val pendingIntent: PendingIntent = Intent(this, HomeActivity::class.java).let { notificationIntent ->
             PendingIntent.getActivity(this, 0, notificationIntent, 0)
@@ -70,11 +97,22 @@ class TrackingService : Service() {
         return START_STICKY;
     }
 
+    private fun startTracking() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this,Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            Log.i("pbdLog", "Location Permission is not granted.");
+            return
+        }
+
+        fusedLocationClient.lastLocation.addOnSuccessListener { location : Location? ->
+                // Got last known location. In some rare situations this can be null.
+            Log.i("pbdLog", "Longitude: ${location?.longitude}, and Lattitude: ${location?.latitude}");
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         Log.i("pbdLog", "Tracker Service closed.");
-
-        this.unregisterReceiver(gpsSwitchStateReceiver);
+        gpsSwitchHandlerDettach();
     }
 
     override fun onBind(intent: Intent): IBinder {
