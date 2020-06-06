@@ -4,39 +4,53 @@ import android.Manifest
 import android.app.Notification
 import android.app.PendingIntent
 import android.app.Service
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
+import android.content.*
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
 import android.os.Build
 import android.os.IBinder
+import android.os.Looper
 import android.provider.ContactsContract.Directory.PACKAGE_NAME
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.*
 
 
 class TrackingService : Service() {
-    lateinit var gpsSwitchStateReceiver: BroadcastReceiver;
+    private lateinit var gpsSwitchStateReceiver: BroadcastReceiver;
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     val actionBroadcast: String = "$PACKAGE_NAME.broadcastSwitchState";
-
     val switchInfo: String = "$PACKAGE_NAME.switchInfo";
+    private lateinit var locationRequest: LocationRequest;
+    private val updateIntervalMilliseconds: Long = 1000 * 60;       //in milliseconds
+    private val fastestUpdateIntervalMilliseconds: Long = updateIntervalMilliseconds / 2;
+    private lateinit var locationCallback: LocationCallback;
 
     override fun onCreate() {
         super.onCreate()
         gpsSwitchHandlerAttach();
+        createLocationRequest();
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-        startTracking();
+
+        locationCallback = object : LocationCallback() {
+            override fun onLocationResult(locationResult: LocationResult) {
+                super.onLocationResult(locationResult)
+                onNewLocation(locationResult.lastLocation)
+            }
+        }
     }
 
-    fun broadcastSwitchState(state: Boolean) {
+    private fun createLocationRequest() {
+        locationRequest = LocationRequest();
+        locationRequest.interval = updateIntervalMilliseconds
+        locationRequest.fastestInterval = fastestUpdateIntervalMilliseconds
+        locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+    }
+
+    private fun broadcastSwitchState(state: Boolean) {
         val intent = Intent(actionBroadcast);
         intent.putExtra(switchInfo, state);
         Log.i("pbdLog", "Sending the broadcast value: $state");
@@ -74,10 +88,7 @@ class TrackingService : Service() {
         this.unregisterReceiver(gpsSwitchStateReceiver);
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        super.onStartCommand(intent, flags, startId);
-        Log.i("pbdLog", "Starting the Tracker Service");
-
+    private fun createNotification(): Notification {
         val pendingIntent: PendingIntent = Intent(this, HomeActivity::class.java).let { notificationIntent ->
             PendingIntent.getActivity(this, 0, notificationIntent, 0)
         }
@@ -93,29 +104,61 @@ class TrackingService : Service() {
         val notification: Notification = notificationBuider.setContentTitle(getText(R.string.navigation_notification_message))
             .setSmallIcon(R.drawable.pbd_notification_icon)
             .setContentIntent(pendingIntent)
-            .build()
+            .build();
+
+        return notification;
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId);
+        Log.i("pbdLog", "Starting the Tracker Service");
+        val notification = createNotification();
 
         startForeground(64, notification);      //start the service in the foreground
         broadcastSwitchState(true);
+        startTracking();
 
         return START_STICKY;
     }
 
     private fun startTracking() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this,Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            Log.i("pbdLog", "Location Permission is not granted.");
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return
         }
+        fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
+    }
 
-        fusedLocationClient.lastLocation.addOnSuccessListener { location : Location? ->
-                // Got last known location. In some rare situations this can be null.
-            Log.i("pbdLog", "Longitude: ${location?.longitude}, and Lattitude: ${location?.latitude}");
+    private fun stopTracking() {
+        getLastLocation();
+        fusedLocationClient.removeLocationUpdates(locationCallback)
+    }
+
+    private fun getLastLocation() {
+        try {
+            val lastLocation = fusedLocationClient.lastLocation;
+            lastLocation.addOnSuccessListener { lastLocation ->
+                Log.i("pbdLog","Location is obtained Lattitude: ${lastLocation?.latitude}, Longitude: ${lastLocation?.longitude}")
+                lastLocation;
+            }
+
+            lastLocation.addOnFailureListener { exception ->
+                Log.i("pbdLog", "Failed to get Last Location, error: $exception.");
+            }
+        } catch (unlikely: SecurityException) {
+            Log.e("pbdLog","Lost location permission.$unlikely");
         }
+    }
+
+    private fun onNewLocation(newLocation: Location) {
+        Log.i("pbdLog", "New location, Lattitude: ${newLocation.latitude}, Longitude: ${newLocation.longitude}");
+
+        
     }
 
     override fun onDestroy() {
         super.onDestroy()
         Log.i("pbdLog", "Tracker Service closed.");
+        stopTracking();
         gpsSwitchHandlerDettach();
         broadcastSwitchState(false);
     }

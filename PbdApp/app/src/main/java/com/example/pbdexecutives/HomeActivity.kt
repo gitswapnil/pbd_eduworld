@@ -118,6 +118,24 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         stopService(serviceIntent);
     }
 
+    override fun onRequestPermissionsResult(        //On getting the request permission's result from the user
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        if (requestCode == PbdExecutives().PERMISSION_REQUEST_FINE_ACCESS) {
+            // Request for camera permission.
+            if (grantResults.size == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission has been granted. Start camera preview Activity.
+                Log.i("pbdLog", "Permission is granted, you can start tracking services now.");
+                checkSettings();
+            } else {
+                // Permission request was denied.
+                Log.i("pbdLog", "Location Permission is denied. To reactivate go to settings and change the location permission.");
+                findViewById<TextView>(R.id.textView2).setText(R.string.location_permission_denied);
+            }
+        }
+    }
 
     private fun checkSettings() {
         val locationRequest = LocationRequest.create()?.apply {
@@ -150,26 +168,6 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             }
         }
 
-    }
-
-
-    override fun onRequestPermissionsResult(        //On getting the request permission's result from the user
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
-    ) {
-        if (requestCode == PbdExecutives().PERMISSION_REQUEST_FINE_ACCESS) {
-            // Request for camera permission.
-            if (grantResults.size == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission has been granted. Start camera preview Activity.
-                Log.i("pbdLog", "Permission is granted, you can start tracking services now.");
-                checkSettings();
-            } else {
-                // Permission request was denied.
-                Log.i("pbdLog", "Location Permission is denied. To reactivate go to settings and change the location permission.");
-                findViewById<TextView>(R.id.textView2).setText(R.string.location_permission_denied);
-            }
-        }
     }
 
     private fun checkLocationPermissionAndSettings(): Boolean {
