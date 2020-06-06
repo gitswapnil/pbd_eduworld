@@ -26,7 +26,7 @@ class TrackingService : Service() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     val actionBroadcast: String = "$PACKAGE_NAME.broadcastSwitchState";
 
-    val extraSwitchInfo: String = "$PACKAGE_NAME.switchInfo";
+    val switchInfo: String = "$PACKAGE_NAME.switchInfo";
 
     override fun onCreate() {
         super.onCreate()
@@ -34,6 +34,13 @@ class TrackingService : Service() {
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         startTracking();
+    }
+
+    fun broadcastSwitchState(state: Boolean) {
+        val intent = Intent(actionBroadcast);
+        intent.putExtra(switchInfo, state);
+        Log.i("pbdLog", "Sending the broadcast value: $state");
+        LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent);
     }
 
     private fun gpsSwitchHandlerAttach() {
@@ -48,16 +55,12 @@ class TrackingService : Service() {
                     val isNetworkEnabled: Boolean = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
                     if (isGpsEnabled || isNetworkEnabled) {
                         // Handle Location turned ON
+                        //Do not send broadcast even if the switch is turned ON.
                     } else {
                         // Handle Location turned OFF
                         Log.i("pbdLog", "GPS is turned off. stopping the service.");
-                        // Notify anyone listening for broadcasts about the new location.
-
                         // Notify anyone listening for broadcasts about the new switch State.
-                        val intent = Intent(actionBroadcast);
-                        intent.putExtra(extraSwitchInfo, false);
-                        LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent);
-
+                        broadcastSwitchState(false);
                         stopSelf();
                     }
                 }
@@ -93,6 +96,7 @@ class TrackingService : Service() {
             .build()
 
         startForeground(64, notification);      //start the service in the foreground
+        broadcastSwitchState(true);
 
         return START_STICKY;
     }
@@ -113,6 +117,7 @@ class TrackingService : Service() {
         super.onDestroy()
         Log.i("pbdLog", "Tracker Service closed.");
         gpsSwitchHandlerDettach();
+        broadcastSwitchState(false);
     }
 
     override fun onBind(intent: Intent): IBinder {

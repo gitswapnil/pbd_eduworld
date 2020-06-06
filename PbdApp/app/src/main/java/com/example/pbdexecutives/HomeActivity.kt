@@ -27,6 +27,7 @@ import com.google.android.gms.tasks.Task
 
 
 class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsResultCallback {
+    private lateinit var gpsSwitchStateReceiver: BroadcastReceiver;
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         Log.i("pbdLog", "onCreateOptionsMenu called.")
         val inflater: MenuInflater = menuInflater;
@@ -34,7 +35,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         return true
     }
 
-    protected override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         when (requestCode) {
             PbdExecutives().REQUEST_CHECK_LOCATION_SETTINGS ->
@@ -61,28 +62,35 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         setSupportActionBar(findViewById(R.id.main_toolbar));
     }
 
+    //This function monitors the state of the switch. It listens to the broadcast from the service
     private fun gpsSwitchMonitor() {
         val filter = IntentFilter(TrackingService().actionBroadcast)
 
-        this.gpsSwitchStateReceiver = object : BroadcastReceiver() {
+        gpsSwitchStateReceiver = object : BroadcastReceiver() {         //receiver always called only when the duty switch is OFF.
             override fun onReceive(context: Context, intent: Intent) {
-                val switchStatus = intent.getParcelableExtra<Parcelable>(TrackingService().extraSwitchInfo);
-                Log.i("pbdLog", "switchStatus: $switchStatus");
+                val switchState = intent.getBooleanExtra(TrackingService().switchInfo, false);
+                dutySwitch(switchState);
             }
         }
 
         LocalBroadcastManager.getInstance(this).registerReceiver(gpsSwitchStateReceiver, filter);
     }
 
-    private fun gpsSwitchHandlerDettach() {
-        this.unregisterReceiver(gpsSwitchStateReceiver);
+    private fun gpsSwitchUnmonitor() {
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(gpsSwitchStateReceiver);
     }
 
     override fun onResume() {
         super.onResume();
 
         dutySwitch(isMyServiceRunning(TrackingService::class.java)); //check if the service is running or not.
-        gpsSwitchMonitor();
+        gpsSwitchMonitor();         //Keep monitoring the switch state.
+    }
+
+    override fun onPause() {
+        super.onPause();
+
+        gpsSwitchUnmonitor();       //Leave the resources.
     }
 
     private fun dutySwitch(input: Boolean) {
@@ -103,7 +111,6 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     private fun startTrackingService() {
         val serviceIntent = Intent(this, TrackingService::class.java)
         ContextCompat.startForegroundService(this, serviceIntent);
-        dutySwitch(true);
     }
 
     private fun stopTrackingService() {
@@ -207,12 +214,11 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
     fun changeDuty (view: View) {
         val duty: Boolean = findViewById<Switch>(R.id.duty_switch).isChecked;
+        dutySwitch(false);      //reset the duty switch first;
         if(duty) {          //if the duty is ON
-            dutySwitch(false);   //unless all the things are clear, dont turn ON the switch.
             findViewById<TextView>(R.id.textView2).text = "";
             checkLocationPermissionAndSettings();      //check for the permissions.
         } else {            //if the duty is OFF
-            dutySwitch(false);
             stopTrackingService();
         }
     }
@@ -246,6 +252,5 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
     override fun onDestroy() {
         super.onDestroy();
-        gpsSwitchHandlerDettach();
     }
 }
