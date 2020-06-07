@@ -5,9 +5,7 @@ import android.app.Activity
 import android.app.ActivityManager
 import android.content.*
 import android.content.pm.PackageManager
-import android.location.LocationManager
 import android.os.Bundle
-import android.os.Parcelable
 import android.util.Log
 import android.view.Menu
 import android.view.MenuInflater
@@ -19,14 +17,20 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.room.Room
+import androidx.sqlite.db.SimpleSQLiteQuery
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.Task
+import kotlinx.coroutines.launch
+import java.util.*
+import java.util.concurrent.TimeUnit
 
 
-class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsResultCallback {
+class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsResultCallback, LifecycleOwner {
     private lateinit var gpsSwitchStateReceiver: BroadcastReceiver;
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         Log.i("pbdLog", "onCreateOptionsMenu called.")
@@ -38,7 +42,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         when (requestCode) {
-            PbdExecutives().REQUEST_CHECK_LOCATION_SETTINGS ->
+            PbdExecutivesUtils().REQUEST_CHECK_LOCATION_SETTINGS ->
                 when(resultCode) {
                     Activity.RESULT_OK -> {
                         Log.i("pbdLog", "Settings are changed successfully.");
@@ -80,11 +84,53 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         LocalBroadcastManager.getInstance(this).unregisterReceiver(gpsSwitchStateReceiver);
     }
 
+    private fun calculateDutyTime() {
+        val calendarInstance: Calendar = Calendar.getInstance();
+        val hours: Int = calendarInstance.get(Calendar.HOUR_OF_DAY);
+        val minutes: Int = calendarInstance.get(Calendar.MINUTE);
+        val seconds: Int = calendarInstance.get(Calendar.SECOND);
+        val milliseconds: Int = calendarInstance.get(Calendar.MILLISECOND);
+        val todaysCurrentMilliSeconds = (hours * 3600000) + (minutes * 60000) + (seconds * 1000) + milliseconds;
+        val startOfToday:Long = calendarInstance.timeInMillis - todaysCurrentMilliSeconds;
+        val endOfToday:Long = startOfToday + 86399999;
+
+//        Log.i("pbdLog", "currTS: $calendarInstance.timeInMillis");
+//        Log.i("pbdLog", "todaysMilliSeconds: $todaysCurrentMilliSeconds");
+//        Log.i("pbdLog", "startOfToday: $startOfToday");
+//        Log.i("pbdLog", "startOfToday: $endOfToday");
+
+        val self = this;
+        this.lifecycleScope.launch {
+            val db = Room.databaseBuilder(self, AppDB::class.java, "PbdDB").build();
+            val result = db.locationsDao().getTodaysTimestamps(start = startOfToday, end = endOfToday);     //result contains timestamp strings.
+            var todaysMilliseconds: Long = 0;
+            result.forEach { tsString ->        //split those strings into arrays.
+                val timestamps = tsString.split(",");
+                var previousTS = timestamps[0].toLong();
+                timestamps.forEach {
+                    val currentTS = it.toLong();
+                    todaysMilliseconds += previousTS - currentTS;       //add the difference everytime.
+                    previousTS = currentTS
+                }
+            }
+//            Log.i("pbdLog", "todaysMilliseconds: $todaysMilliseconds");
+            val todaysHours = TimeUnit.MILLISECONDS.toHours(todaysMilliseconds);
+            val todaysMinutes = TimeUnit.MILLISECONDS.toMinutes(todaysMilliseconds) - (todaysHours * 60);
+            Log.i("pbdLog", "todaysHours: ${todaysHours}, todaysMinutes: ${todaysMinutes}");
+            changeDutyTime(hrs = todaysHours, min = todaysMinutes);
+        }
+    }
+
+    private fun changeDutyTime(hrs: Long, min: Long) {
+        findViewById<TextView>(R.id.duty_period).text = "${hrs.toString()} ${getString(R.string.hrs)} ${min.toString()} ${getString(R.string.mins)}"
+    }
+
     override fun onResume() {
         super.onResume();
 
         dutySwitch(isMyServiceRunning(TrackingService::class.java)); //check if the service is running or not.
         gpsSwitchMonitor();         //Keep monitoring the switch state.
+        calculateDutyTime();
     }
 
     override fun onPause() {
@@ -123,7 +169,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         permissions: Array<String>,
         grantResults: IntArray
     ) {
-        if (requestCode == PbdExecutives().PERMISSION_REQUEST_FINE_ACCESS) {
+        if (requestCode == PbdExecutivesUtils().PERMISSION_REQUEST_FINE_ACCESS) {
             // Request for camera permission.
             if (grantResults.size == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 // Permission has been granted. Start camera preview Activity.
@@ -161,7 +207,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 try {
                     // Show the dialog by calling startResolutionForResult(),
                     // and check the result in onActivityResult().
-                    exception.startResolutionForResult(this, PbdExecutives().REQUEST_CHECK_LOCATION_SETTINGS)
+                    exception.startResolutionForResult(this, PbdExecutivesUtils().REQUEST_CHECK_LOCATION_SETTINGS)
                 } catch (sendEx: IntentSender.SendIntentException) {
                     // Ignore the error.
                 }
@@ -185,7 +231,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         setPositiveButton(R.string.ok,
                             DialogInterface.OnClickListener { dialog, id ->
                                 // User clicked OK button
-                                ActivityCompat.requestPermissions(it, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PbdExecutives().PERMISSION_REQUEST_FINE_ACCESS);
+                                ActivityCompat.requestPermissions(it, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PbdExecutivesUtils().PERMISSION_REQUEST_FINE_ACCESS);
                             })
                         setNegativeButton(R.string.cancel,
                             DialogInterface.OnClickListener { dialog, id ->
@@ -204,7 +250,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 alertDialog?.show();        //show user the reason for the need of location access.
             } else {
                 //if requesting for the very first time.
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PbdExecutives().PERMISSION_REQUEST_FINE_ACCESS)
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PbdExecutivesUtils().PERMISSION_REQUEST_FINE_ACCESS)
             }
         }
         return true;
@@ -228,16 +274,17 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         }
 
         R.id.action_logout -> {     //when logs out, just clear the user information and jump to the login activity.
-            Thread {
+            val self = this;
+            this.lifecycleScope.launch {
                 if(isMyServiceRunning(TrackingService::class.java)){
                     stopTrackingService();     //Stop tracking service if the service is alive.
                 };
-                val db = Room.databaseBuilder(applicationContext, AppDB::class.java, "PbdDB").build();
+                val db = Room.databaseBuilder(self, AppDB::class.java, "PbdDB").build();
                 db.userDetailsDao().clearUserDetails();
-                val intent = Intent(applicationContext, LoginActivity::class.java);        //go to home activity after save
+                val intent = Intent(self, LoginActivity::class.java);        //go to home activity after save
                 startActivity(intent);
                 finishAffinity();       //remove the current activity from the activity stack so that back button makes it jump out of the application.
-            }.start();
+            }
             true
         }
 

@@ -4,7 +4,10 @@ import android.Manifest
 import android.app.Notification
 import android.app.PendingIntent
 import android.app.Service
-import android.content.*
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
@@ -15,7 +18,12 @@ import android.provider.ContactsContract.Directory.PACKAGE_NAME
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import androidx.room.Room
 import com.google.android.gms.location.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import java.util.*
+import kotlin.random.Random.Default.nextInt
 
 
 class TrackingService : Service() {
@@ -27,6 +35,7 @@ class TrackingService : Service() {
     private val updateIntervalMilliseconds: Long = 1000 * 60;       //in milliseconds
     private val fastestUpdateIntervalMilliseconds: Long = updateIntervalMilliseconds / 2;
     private lateinit var locationCallback: LocationCallback;
+    private var sessionId: Int = 0;
 
     override fun onCreate() {
         super.onCreate()
@@ -38,7 +47,7 @@ class TrackingService : Service() {
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 super.onLocationResult(locationResult)
-                onNewLocation(locationResult.lastLocation)
+                saveLocation(locationResult.lastLocation)
             }
         }
     }
@@ -96,7 +105,7 @@ class TrackingService : Service() {
         var notificationBuider: Notification.Builder;
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {       //for API level 26 and above.
-            notificationBuider = Notification.Builder(this, PbdExecutives().CHANNEL_ID);
+            notificationBuider = Notification.Builder(this, PbdExecutivesUtils().CHANNEL_ID);
         } else {
             notificationBuider = Notification.Builder(this);
         }
@@ -125,6 +134,7 @@ class TrackingService : Service() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return
         }
+        sessionId = (100000..999999).random();
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
     }
 
@@ -137,8 +147,8 @@ class TrackingService : Service() {
         try {
             val lastLocation = fusedLocationClient.lastLocation;
             lastLocation.addOnSuccessListener { lastLocation ->
-                Log.i("pbdLog","Location is obtained Lattitude: ${lastLocation?.latitude}, Longitude: ${lastLocation?.longitude}")
-                lastLocation;
+                Log.i("pbdLog","Last location is obtained Latitude: ${lastLocation?.latitude}, Longitude: ${lastLocation?.longitude}")
+                saveLocation(lastLocation);
             }
 
             lastLocation.addOnFailureListener { exception ->
@@ -149,10 +159,19 @@ class TrackingService : Service() {
         }
     }
 
-    private fun onNewLocation(newLocation: Location) {
-        Log.i("pbdLog", "New location, Lattitude: ${newLocation.latitude}, Longitude: ${newLocation.longitude}");
+    private fun saveLocation(newLocation: Location) {
+        Log.i("pbdLog", "Saving location, Latitude: ${newLocation.latitude}, Longitude: ${newLocation.longitude}");
 
-
+        val self = this;
+        GlobalScope.launch {
+            try {
+                val db: AppDB = Room.databaseBuilder(self, AppDB::class.java, "PbdDB").build();
+                val location = Locations(latitude = newLocation.latitude, longitude = newLocation.longitude, sessionId = sessionId, createdAt = Date());
+                db.locationsDao().saveLocation(location);        //store the apiKey in local database.
+            } catch(e: Exception) {
+                Log.i("pbdLog", "Unable to store the location, exception: ${e}");
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -166,4 +185,5 @@ class TrackingService : Service() {
     override fun onBind(intent: Intent): IBinder {
         TODO("Return the communication channel to the service.")
     }
+
 }

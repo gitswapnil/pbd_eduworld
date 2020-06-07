@@ -6,16 +6,20 @@ import android.os.Bundle
 import android.view.View
 import android.widget.EditText
 import android.widget.Toast
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import androidx.room.Room
 import com.android.volley.DefaultRetryPolicy
 import com.android.volley.Request
 import com.android.volley.Response
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 
-class LoginActivity : AppCompatActivity() {
+class LoginActivity : AppCompatActivity(), LifecycleOwner {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,7 +31,7 @@ class LoginActivity : AppCompatActivity() {
         val pwd = findViewById<EditText>(R.id.editText2).text.toString();
 
         val queue = Volley.newRequestQueue(this);       //create a request
-        val url = "${PbdExecutives().serverAddress}/executivelogin";             //url for the request
+        val url = "${PbdExecutivesUtils().serverAddress}/executivelogin";             //url for the request
         val jsonString:JSONObject = JSONObject("{\"phNo\": \"${phNo}\", \"pwd\": \"${pwd}\"}");     //convert the string to JSON object
 
         val request = JsonObjectRequest(
@@ -35,16 +39,17 @@ class LoginActivity : AppCompatActivity() {
             Response.Listener { response ->
                 val responseJSON:JSONObject = JSONObject(response.toString());      //convert the response back into JSON Object from the response string
                 if(responseJSON.get("error") == false) {            //If it has no errors, then store the apiKey and go to HomeActivity
-                    val db = Room.databaseBuilder(applicationContext, AppDB::class.java, "PbdDB").build();
-                    Thread {
+                    val self = this;
+                    this.lifecycleScope.launch {
+                        val db = Room.databaseBuilder(self, AppDB::class.java, "PbdDB").build();
                         db.userDetailsDao().clearUserDetails();     //clear the user details before inserting a new value
                         val userDetail = UserDetails(id = 1, apiKey = responseJSON.get("message").toString());
                         db.userDetailsDao().saveUserDetails(userDetail);        //store the apiKey in local database.
 
-                        val intent = Intent(applicationContext, HomeActivity::class.java);        //go to home activity after save
+                        val intent = Intent(self, HomeActivity::class.java);        //go to home activity after save
                         startActivity(intent);
                         finishAffinity();
-                    }.start();
+                    }
                 } else {            //otherwise keep showing the error
                     Toast.makeText(this, responseJSON.get("message").toString(), Toast.LENGTH_LONG).show();
                 }

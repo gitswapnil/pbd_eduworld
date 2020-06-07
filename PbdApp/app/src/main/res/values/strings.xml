@@ -31,6 +31,7 @@
     <string name="attention">Attention!</string>
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
-    <string name="Hr">Hr</string>
-    <string name="Min">Min</string>
+    <string name="hrs">Hrs</string>
+    <string name="mins">Mins</string>
+    <string name="calculating">Calculating...</string>
 </resources>
