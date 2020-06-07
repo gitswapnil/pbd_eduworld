@@ -21,7 +21,6 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.room.Room
-import androidx.sqlite.db.SimpleSQLiteQuery
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.Task
@@ -32,6 +31,8 @@ import java.util.concurrent.TimeUnit
 
 class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsResultCallback, LifecycleOwner {
     private lateinit var gpsSwitchStateReceiver: BroadcastReceiver;
+    private lateinit var dutyTimeUpdateReceiver: BroadcastReceiver;
+
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         Log.i("pbdLog", "onCreateOptionsMenu called.")
         val inflater: MenuInflater = menuInflater;
@@ -68,7 +69,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
     //This function monitors the state of the switch. It listens to the broadcast from the service
     private fun gpsSwitchMonitor() {
-        val filter = IntentFilter(TrackingService().actionBroadcast)
+        val filter = IntentFilter(TrackingService().actionSwitchStateBroadcast)
 
         gpsSwitchStateReceiver = object : BroadcastReceiver() {         //receiver always called only when the duty switch is OFF.
             override fun onReceive(context: Context, intent: Intent) {
@@ -80,8 +81,24 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         LocalBroadcastManager.getInstance(this).registerReceiver(gpsSwitchStateReceiver, filter);
     }
 
+    private fun dutyTimeMonitor() {
+        val filter = IntentFilter(TrackingService().actionTimeUpdateBroadcast)
+
+        dutyTimeUpdateReceiver = object : BroadcastReceiver() {         //receiver always called only when the duty switch is OFF.
+            override fun onReceive(context: Context, intent: Intent) {
+                calculateDutyTime();
+            }
+        }
+
+        LocalBroadcastManager.getInstance(this).registerReceiver(dutyTimeUpdateReceiver, filter);
+    }
+
     private fun gpsSwitchUnmonitor() {
         LocalBroadcastManager.getInstance(this).unregisterReceiver(gpsSwitchStateReceiver);
+    }
+
+    private fun dutyTimeUnmonitor() {
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(dutyTimeUpdateReceiver);
     }
 
     private fun calculateDutyTime() {
@@ -131,12 +148,14 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         dutySwitch(isMyServiceRunning(TrackingService::class.java)); //check if the service is running or not.
         gpsSwitchMonitor();         //Keep monitoring the switch state.
         calculateDutyTime();
+        dutyTimeMonitor();
     }
 
     override fun onPause() {
         super.onPause();
 
         gpsSwitchUnmonitor();       //Leave the resources.
+        dutyTimeUnmonitor();
     }
 
     private fun dutySwitch(input: Boolean) {

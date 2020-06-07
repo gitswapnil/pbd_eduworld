@@ -23,13 +23,13 @@ import com.google.android.gms.location.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.*
-import kotlin.random.Random.Default.nextInt
 
 
 class TrackingService : Service() {
     private lateinit var gpsSwitchStateReceiver: BroadcastReceiver;
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-    val actionBroadcast: String = "$PACKAGE_NAME.broadcastSwitchState";
+    val actionSwitchStateBroadcast: String = "$PACKAGE_NAME.broadcastSwitchState";
+    val actionTimeUpdateBroadcast: String = "$PACKAGE_NAME.broadcastTimeUpdate";
     val switchInfo: String = "$PACKAGE_NAME.switchInfo";
     private lateinit var locationRequest: LocationRequest;
     private val updateIntervalMilliseconds: Long = 1000 * 60;       //in milliseconds
@@ -60,9 +60,14 @@ class TrackingService : Service() {
     }
 
     private fun broadcastSwitchState(state: Boolean) {
-        val intent = Intent(actionBroadcast);
+        val intent = Intent(actionSwitchStateBroadcast);
         intent.putExtra(switchInfo, state);
         Log.i("pbdLog", "Sending the broadcast value: $state");
+        LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent);
+    }
+
+    private fun broadcastLocationUpdate() {
+        val intent = Intent(actionTimeUpdateBroadcast);
         LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent);
     }
 
@@ -168,6 +173,7 @@ class TrackingService : Service() {
                 val db: AppDB = Room.databaseBuilder(self, AppDB::class.java, "PbdDB").build();
                 val location = Locations(latitude = newLocation.latitude, longitude = newLocation.longitude, sessionId = sessionId, createdAt = Date());
                 db.locationsDao().saveLocation(location);        //store the apiKey in local database.
+                broadcastLocationUpdate();
             } catch(e: Exception) {
                 Log.i("pbdLog", "Unable to store the location, exception: ${e}");
             }

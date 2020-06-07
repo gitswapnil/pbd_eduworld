@@ -1,0 +1,6 @@
+SELECT SUM(milliseconds) AS TotalTime FROM 
+	(SELECT id, sessionId, (createdAt - lastEntry) AS milliseconds FROM 
+		(SELECT id, sessionId, createdAt, LAG (createdAt, 1, createdAt) OVER (PARTITION BY sessionId ORDER BY id) lastEntry FROM 
+			(SELECT * FROM Locations WHERE createdAt BETWEEN 1591468200000 AND 1591554599999)
+		)
+	);
