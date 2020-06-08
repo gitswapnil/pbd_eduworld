@@ -235,4 +235,13 @@ if(Meteor.isClient) {
 		res.end(JSON.stringify({error: false, message: user.apiKey}));
 		return;
 	});
+
+	Router.route('/api/getappdata', {where: 'server'}).post(function(req, res, next){
+		console.log("API: getappdata invoked.");
+		const reqBody = req.body;
+		console.log("apiKey: " + reqBody.apiKey);
+
+		res.end(JSON.stringify({error: false, message: "This is the response from getappdata api."}));
+		return;
+	})
 }

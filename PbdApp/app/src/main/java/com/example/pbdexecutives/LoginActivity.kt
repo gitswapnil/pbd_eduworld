@@ -27,8 +27,8 @@ class LoginActivity : AppCompatActivity(), LifecycleOwner {
     }
 
     fun login(view: View) {
-        val phNo = findViewById<EditText>(R.id.editText).text.toString();
-        val pwd = findViewById<EditText>(R.id.editText2).text.toString();
+        val phNo: String = findViewById<EditText>(R.id.editText).text.toString();
+        val pwd: String = findViewById<EditText>(R.id.editText2).text.toString();
 
         val queue = Volley.newRequestQueue(this);       //create a request
         val url = "${PbdExecutivesUtils().serverAddress}/executivelogin";             //url for the request
@@ -46,7 +46,7 @@ class LoginActivity : AppCompatActivity(), LifecycleOwner {
                         val userDetail = UserDetails(id = 1, apiKey = responseJSON.get("message").toString());
                         db.userDetailsDao().saveUserDetails(userDetail);        //store the apiKey in local database.
 
-                        val intent = Intent(self, HomeActivity::class.java);        //go to home activity after save
+                        val intent = Intent(self, MainActivity::class.java);        //go to home activity after save
                         startActivity(intent);
                         finishAffinity();
                     }
@@ -68,6 +68,6 @@ class LoginActivity : AppCompatActivity(), LifecycleOwner {
         )
 
         // Add the volley post request to the request queue
-        VolleySingleton.getInstance(this).addToRequestQueue(request);
+        queue.add(request);
     }
 }
