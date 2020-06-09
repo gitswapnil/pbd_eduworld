@@ -32,10 +32,10 @@ class LoginActivity : AppCompatActivity(), LifecycleOwner {
 
         val queue = Volley.newRequestQueue(this);       //create a request
         val url = "${PbdExecutivesUtils().serverAddress}/executivelogin";             //url for the request
-        val jsonString:JSONObject = JSONObject("{\"phNo\": \"${phNo}\", \"pwd\": \"${pwd}\"}");     //convert the string to JSON object
+        val jsonRequestObject:JSONObject = JSONObject("{\"phNo\": \"${phNo}\", \"pwd\": \"${pwd}\"}");     //convert the string to JSON object
 
         val request = JsonObjectRequest(
-            Request.Method.POST, url, jsonString,
+            Request.Method.POST, url, jsonRequestObject,
             Response.Listener { response ->
                 val responseJSON:JSONObject = JSONObject(response.toString());      //convert the response back into JSON Object from the response string
                 if(responseJSON.get("error") == false) {            //If it has no errors, then store the apiKey and go to HomeActivity

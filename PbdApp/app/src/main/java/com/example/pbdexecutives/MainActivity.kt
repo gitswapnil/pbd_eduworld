@@ -15,6 +15,7 @@ import android.widget.Toast
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.room.Room
+import androidx.work.*
 import com.android.volley.DefaultRetryPolicy
 import com.android.volley.Request
 import com.android.volley.Response
@@ -22,6 +23,7 @@ import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity(), LifecycleOwner {
     private fun createNotificationChannel() {
@@ -56,10 +58,30 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
             handler.postDelayed({
                 if(apiKey == null) {    //if the apiKey is not found in the database then go to the login page
                     startActivity(Intent(self, LoginActivity::class.java));
-                } else {        //else go to the home page
+                    stopServerSync();
+                } else {        //else go to the home page and start syncing with the server
                     startActivity(Intent(self, HomeActivity::class.java));
+                    startServerSync()   //Start the background work that syncs the data to the server
                 }
             }, 1000);
         }
+    }
+
+    private fun stopServerSync() {
+        WorkManager.getInstance(applicationContext).cancelUniqueWork("serversync");
+    }
+
+    private fun startServerSync() {
+        val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build();
+        val serverSyncRequest: OneTimeWorkRequest =
+//        val serverSyncRequest: PeriodicWorkRequest =
+//            PeriodicWorkRequestBuilder<ServerSyncWorker>(15, TimeUnit.MINUTES)
+                OneTimeWorkRequestBuilder<ServerSyncWorker>()
+                .setConstraints(constraints)
+                .build()
+
+        WorkManager.getInstance(applicationContext)
+//            .enqueueUniquePeriodicWork("serversync", ExistingPeriodicWorkPolicy.KEEP, serverSyncRequest)
+            .enqueue(serverSyncRequest)
     }
 }

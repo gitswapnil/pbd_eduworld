@@ -30,7 +30,8 @@ data class Locations (
     val latitude: Double,
     val longitude: Double,
     val sessionId: Int,
-    val createdAt: Date
+    val createdAt: Long,
+    val synced: Boolean
 )
 
 @Dao
@@ -40,24 +41,17 @@ interface LocationsDAO {
 
     @Insert
     suspend fun saveLocation(location: Locations)
+
+    @Query("SELECT * FROM locations WHERE synced=0")
+    suspend fun getUnsyncedLocations(): Array<Locations>
+
+    @Query("UPDATE locations SET synced=1 WHERE id IN (:ids)")
+    suspend fun updateSyncStatus(ids: List<Long>)
 }
 
 @Database (entities = [UserDetails::class, Locations::class], version = 1)
-@TypeConverters(Converters::class)
 abstract class AppDB: RoomDatabase() {
     abstract fun userDetailsDao(): UserDetailsDAO
     abstract fun locationsDao(): LocationsDAO
-}
-
-class Converters {
-    @TypeConverter
-    fun fromTimestamp(value: Long?): Date? {
-        return PbdExecutivesUtils().fromTimestamp(value);
-    }
-
-    @TypeConverter
-    fun dateToTimestamp(date: Date?): Long? {
-        return PbdExecutivesUtils().dateToTimestamp(date);
-    }
 }
 

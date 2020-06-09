@@ -171,7 +171,7 @@ class TrackingService : Service() {
         GlobalScope.launch {
             try {
                 val db: AppDB = Room.databaseBuilder(self, AppDB::class.java, "PbdDB").build();
-                val location = Locations(latitude = newLocation.latitude, longitude = newLocation.longitude, sessionId = sessionId, createdAt = Date());
+                val location = Locations(latitude = newLocation.latitude, longitude = newLocation.longitude, sessionId = sessionId, createdAt = Date().time.toLong(), synced = false);
                 db.locationsDao().saveLocation(location);        //store the apiKey in local database.
                 broadcastLocationUpdate();
             } catch(e: Exception) {

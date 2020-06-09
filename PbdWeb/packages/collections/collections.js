@@ -1,9 +1,19 @@
 // Write your package code here!
+import SimpleSchema from 'simpl-schema';
+
 console.log("Collections are being defined.");
 const Collections = {
-	// executives: new Mongo.Collection("executives"),
+	locations: new Mongo.Collection("locations"),
 }
 
-// Variables exported by this module can be imported by other packages and
-// applications. See collections-tests.js for an example of importing.
+Collections.locations.schema = new SimpleSchema({
+	latitude: { type: Number },
+	longitude: { type: Number },
+	sessionId: { type: Number },
+	userId: { type: String, regEx: SimpleSchema.RegEx.Id },
+	createdAt: { type: Date }
+})
+
+Collections.locations.attachSchema(Collections.locations.schema);
+
 export default Collections;

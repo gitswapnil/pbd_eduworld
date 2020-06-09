@@ -13,6 +13,9 @@ Package.describe({
 Package.onUse(function(api) {
   api.versionsFrom('1.10.2');
   api.use(['ecmascript', 'mongo']);
+  Npm.depends({
+    "simpl-schema": "1.7.3"
+  })
   api.mainModule('collections.js');
 });
 

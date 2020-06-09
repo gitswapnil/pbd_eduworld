@@ -1,6 +1,7 @@
 import { Meteor } from 'meteor/meteor';
 import { Router } from 'meteor/iron:router';
 import SimpleSchema from 'simpl-schema';
+import Collections from 'meteor/collections';
 
 if(Meteor.isClient) {
 	import React from 'react';
@@ -236,12 +237,85 @@ if(Meteor.isClient) {
 		return;
 	});
 
-	Router.route('/api/getappdata', {where: 'server'}).post(function(req, res, next){
-		console.log("API: getappdata invoked.");
+	/*
+		params: {
+			apiKey: String, 
+			locations: [
+				{
+					id: Int,
+					latitude: Double,
+					longitude: Double,
+					sessionId: Int,
+					createdAt: timeStamp(Long Int)
+				}, ...
+			],
+			userDetails: {
+				updatedAt: timestamp(Long Int),	
+			},
+			notifications: {
+				updatedAt: timestamp(Long Int)
+			}
+		}
+		return: {
+			error: Boolean, 
+			message: "{
+				locationIds: [Int, Int, ...]			//these are the ids which are saved in the database
+			}"
+		}	if error is false then message is the apiKey for that user.
+	*/
+	Router.route('/api/syncdata', {where: 'server'}).post(function(req, res, next){
+		console.log("API: syncdata invoked.");
 		const reqBody = req.body;
-		console.log("apiKey: " + reqBody.apiKey);
 
-		res.end(JSON.stringify({error: false, message: "This is the response from getappdata api."}));
-		return;
+		//if request body is not defined, then return error
+		if(!reqBody) {
+			res.end(JSON.stringify({error: true, message: "reqBody must have atleast an apiKey. requset body is null."}));
+			return;
+		}
+
+		//first check for the APIkey;
+		console.log("apiKey: " + reqBody.apiKey);
+		if(!reqBody.apiKey || (typeof reqBody.apiKey !== "string") || reqBody.apiKey.length !== 32) {
+			res.end(JSON.stringify({error: true, message: "Invalid API key. Please check and try again."}));
+			return;
+		}
+
+		const user = Meteor.users.findOne({"apiKey": reqBody.apiKey});
+		if(!Roles.userIsInRole(user._id, "executive", Roles.GLOBAL_GROUP)){		//if the user does not have administrative rights.
+			res.end(JSON.stringify({error: true, message: "User does not have the rights to access mobile app."}));
+			return;
+		}
+
+		let returnObj = {};
+
+		//if the locations key is defined.
+		if(reqBody.locations) {
+			let locations = reqBody.locations;
+
+			console.log("locations: " + JSON.stringify(locations));
+			if(!Array.isArray(locations)) {		//validate the locations array
+				res.end(JSON.stringify({error: true, message: "Error in the given locations Array."}));
+				return;
+			}
+
+			let retIds = [];
+
+			locations.map((location, index) => {
+				let obj = {
+					latitude: location.latitude,
+					longitude: location.longitude,
+					sessionId: location.sessionId,
+					userId: user._id,
+					createdAt: location.createdAt
+				}
+
+				Collections.locations.insert(obj);
+				retIds.push(location.id);
+			});
+
+			returnObj.locationIds = retIds;
+		}
+
+		res.end(JSON.stringify({ error: false, message: returnObj }));
 	})
 }
