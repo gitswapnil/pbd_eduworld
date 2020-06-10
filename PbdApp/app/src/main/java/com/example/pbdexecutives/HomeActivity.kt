@@ -300,7 +300,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 };
                 val db = Room.databaseBuilder(self, AppDB::class.java, "PbdDB").build();
                 db.userDetailsDao().clearUserDetails();
-                val intent = Intent(self, LoginActivity::class.java);        //go to home activity after save
+                val intent = Intent(self, MainActivity::class.java);        //go to home activity after save
                 startActivity(intent);
                 finishAffinity();       //remove the current activity from the activity stack so that back button makes it jump out of the application.
             }

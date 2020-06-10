@@ -19,10 +19,12 @@ import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.room.Room
+import androidx.work.*
 import com.google.android.gms.location.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 
 class TrackingService : Service() {
@@ -32,7 +34,7 @@ class TrackingService : Service() {
     val actionTimeUpdateBroadcast: String = "$PACKAGE_NAME.broadcastTimeUpdate";
     val switchInfo: String = "$PACKAGE_NAME.switchInfo";
     private lateinit var locationRequest: LocationRequest;
-    private val updateIntervalMilliseconds: Long = 1000 * 60;       //in milliseconds
+    private val updateIntervalMilliseconds: Long = 1000 * 10;       //in milliseconds
     private val fastestUpdateIntervalMilliseconds: Long = updateIntervalMilliseconds / 2;
     private lateinit var locationCallback: LocationCallback;
     private var sessionId: Int = 0;
@@ -165,27 +167,36 @@ class TrackingService : Service() {
     }
 
     private fun saveLocation(newLocation: Location) {
-        Log.i("pbdLog", "Saving location, Latitude: ${newLocation.latitude}, Longitude: ${newLocation.longitude}");
+        Log.i("pbdLog", "Saving location, Latitude: ${newLocation.latitude}, Longitude: ${newLocation.longitude}")
 
-        val self = this;
+        val self = this
         GlobalScope.launch {
             try {
-                val db: AppDB = Room.databaseBuilder(self, AppDB::class.java, "PbdDB").build();
-                val location = Locations(latitude = newLocation.latitude, longitude = newLocation.longitude, sessionId = sessionId, createdAt = Date().time.toLong(), synced = false);
-                db.locationsDao().saveLocation(location);        //store the apiKey in local database.
-                broadcastLocationUpdate();
+                val db: AppDB = Room.databaseBuilder(self, AppDB::class.java, "PbdDB").build()
+                val location = Locations(latitude = newLocation.latitude, longitude = newLocation.longitude, sessionId = sessionId, createdAt = Date().time.toLong(), synced = false)
+                db.locationsDao().saveLocation(location)        //store the apiKey in local database.
+                broadcastLocationUpdate()
+                syncToServer()
             } catch(e: Exception) {
                 Log.i("pbdLog", "Unable to store the location, exception: ${e}");
             }
         }
     }
 
+    //enqueue the same worker so that it executes immediately
+    private fun syncToServer() {
+        val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+        val serverSyncRequest: PeriodicWorkRequest = PeriodicWorkRequestBuilder<ServerSyncWorker>(15, TimeUnit.MINUTES).setConstraints(constraints).build()
+
+        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork("serversync", ExistingPeriodicWorkPolicy.REPLACE, serverSyncRequest)
+    }
+
     override fun onDestroy() {
         super.onDestroy()
-        Log.i("pbdLog", "Tracker Service closed.");
-        stopTracking();
-        gpsSwitchHandlerDettach();
-        broadcastSwitchState(false);
+        Log.i("pbdLog", "Tracker Service closed.")
+        stopTracking()
+        gpsSwitchHandlerDettach()
+        broadcastSwitchState(false)
     }
 
     override fun onBind(intent: Intent): IBinder {

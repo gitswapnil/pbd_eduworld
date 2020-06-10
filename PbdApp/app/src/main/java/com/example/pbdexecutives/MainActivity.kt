@@ -73,15 +73,15 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
 
     private fun startServerSync() {
         val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build();
-        val serverSyncRequest: OneTimeWorkRequest =
-//        val serverSyncRequest: PeriodicWorkRequest =
-//            PeriodicWorkRequestBuilder<ServerSyncWorker>(15, TimeUnit.MINUTES)
-                OneTimeWorkRequestBuilder<ServerSyncWorker>()
+//        val serverSyncRequest: OneTimeWorkRequest =
+        val serverSyncRequest: PeriodicWorkRequest =
+            PeriodicWorkRequestBuilder<ServerSyncWorker>(15, TimeUnit.MINUTES)
+//                OneTimeWorkRequestBuilder<ServerSyncWorker>()
                 .setConstraints(constraints)
                 .build()
 
         WorkManager.getInstance(applicationContext)
-//            .enqueueUniquePeriodicWork("serversync", ExistingPeriodicWorkPolicy.KEEP, serverSyncRequest)
-            .enqueue(serverSyncRequest)
+            .enqueueUniquePeriodicWork("serversync", ExistingPeriodicWorkPolicy.REPLACE, serverSyncRequest)
+//            .enqueue(serverSyncRequest)
     }
 }
