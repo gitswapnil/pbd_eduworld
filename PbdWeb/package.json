@@ -16,6 +16,7 @@
     "@fortawesome/react-fontawesome": "^0.1.9",
     "bcrypt": "^4.0.1",
     "eslint": "^6.8.0",
+    "jquery": "^3.5.1",
     "meteor-node-stubs": "^1.0.0",
     "react": "^16.13.0",
     "react-dom": "^16.13.0",
