@@ -11,23 +11,26 @@ if(Meteor.isServer) {
 		if(this.userId && Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
 
 			// console.log("userId: " +JSON.stringify(userIds));
-			const handle = Meteor.users.find({}, {fields: {services: 0}}).observeChanges({
+			const handle = Meteor.roleAssignment.find({"role._id": "executive"}).observeChanges({
 				added: (_id, doc) => {
-					// console.log("Fields added: " + JSON.stringify(fields));
-					const userRole = Meteor.roleAssignment.findOne({"user._id": _id, "role._id": "executive"});
-					if(userRole) {		//if user is executive only then show it in the list.
-						doc.isExecutive = true;
-						this.added('users', _id, doc);
+					// console.log("Fields added: " + JSON.stringify(doc));
+					if(doc.user && doc.user._id) {
+						const userDoc = Meteor.users.findOne({"_id": doc.user._id}, {fields: {"services": 0}});
+						userDoc.isExecutive = true;
+						this.added('users', userDoc._id, userDoc);
 					}
 				},
 
 				changed: (_id, doc) => {
-					doc.isExecutive = true;
-					this.changed('users', _id, doc);
+					if(doc.user && doc.user._id) {
+						const userDoc = Meteor.users.findOne({"_id": doc.user._id}, {fields: {"services": 0}});
+						userDoc.isExecutive = true;
+						this.changed('users', userDoc._id, userDoc);
+					}
 				},
 
-				removed: (_id) => {
-					this.removed('users', _id);
+				removed: (_id) => {	
+					this.removed('users', userDoc._id);
 				}
 			});
 
