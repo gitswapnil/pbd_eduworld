@@ -1,13 +1,14 @@
 import { Meteor } from 'meteor/meteor';
 
 if(Meteor.isServer) {
-
+	
 }
 
 if(Meteor.isClient) {
 	import React, { useState, useEffect } from 'react';
 	import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 	import { faEnvelope, faMobileAlt, faUserCircle } from '@fortawesome/free-solid-svg-icons';
+	import { Tracker } from 'meteor/tracker';
 
 	import TimingBar from './TimingBar';
 
@@ -20,19 +21,26 @@ if(Meteor.isClient) {
 							<div className="col-6" style={{"borderRight": "1px solid #888"}}>
 								<div className="row">
 									<div className="col-3 text-center">
-										<FontAwesomeIcon icon={faUserCircle} size="5x"/>
+										{
+											(props.img) ? 
+											<img className="img-thumbnail" src={props.img} height="80px" width="auto"/>
+											:
+											<FontAwesomeIcon icon={faUserCircle} size="5x"/>
+										}
 									</div>
 									<div className="col-9">
-										<h5>Umesh Govekar</h5>
+										<h5>{props.name || "Unknown"}</h5>
 										<div>
 											<FontAwesomeIcon icon={faEnvelope} size="sm"/>&nbsp;
 											<span style={{"fontSize": "small"}}>
-												<a href="mailto:someone@example.com">sdsfjlksdfj@gmail.com</a>
+												<a href={`${props.email}`}>
+													{props.email || "----------"}
+												</a>
 											</span>
 										</div>
 										<div>
 											<FontAwesomeIcon icon={faMobileAlt} size="sm"/>&nbsp;
-											<span style={{"fontSize": "small"}}>454687987</span>
+											<span style={{"fontSize": "small"}}>{props.mobileNo || "----------"}</span>
 										</div>
 									</div>
 								</div>

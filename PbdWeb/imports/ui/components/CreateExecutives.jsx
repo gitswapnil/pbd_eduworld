@@ -26,7 +26,7 @@ if(Meteor.isServer) {
 			const handle2 = Meteor.users.find().observeChanges({
 				changed: (_id, doc) => {
 					if(_id && Meteor.roleAssignment.findOne({"user._id": _id, "role._id": "executive"})) {
-						let tempDoc = Meteor.users.findOne({_id: _id}, {services: 0, apiKey: 0});
+						let tempDoc = Meteor.users.findOne({ _id }, {fields: {services: 0, apiKey: 0}});
 						tempDoc.isExecutive = true;
 
 						if(tempDoc.active) {
@@ -144,6 +144,12 @@ Meteor.methods({
 					"active": cleanedInputs.active,
 					"updatedAt": new Date()
 				};
+				// console.log("modifier: " + JSON.stringify(modifier));
+				//first remove the image so that if it is not passed from the UI then it will not be retained
+				if(!cleanedInputs.userImg) {
+					Meteor.users.update({"_id": editId}, {$unset: {"profile.img": ""}}, {multi: false, upsert: false});
+				}
+				
 				Meteor.users.update({"_id": editId}, {$set: modifier}, {multi: false, upsert: false});
 				Accounts.removeEmail(editId, cleanedInputs.email);	//replace the email so that it will last in the list.
 				Accounts.addEmail(editId, cleanedInputs.email);
@@ -181,7 +187,7 @@ Meteor.methods({
 if(Meteor.isClient) {
 	import React, { useState, useEffect } from 'react';
 	import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-	import { faUserPlus, faUserEdit, faPencilAlt } from '@fortawesome/free-solid-svg-icons';
+	import { faUserPlus, faUserEdit, faPencilAlt, faTrashAlt } from '@fortawesome/free-solid-svg-icons';
 	import { Tracker } from 'meteor/tracker';
 	import Table from './Table.jsx';
 	import Modal from './Modal.jsx';
@@ -237,6 +243,10 @@ if(Meteor.isClient) {
 			setResAddressError("");
 			setPwdError("");
 			setGeneralError("");
+		}
+
+		function removeUserImg() {
+			setUserImg("");
 		}
 
 		function clearModal() {
@@ -477,14 +487,15 @@ if(Meteor.isClient) {
 										<div className="col-4">
 											<div className="text-center">
 												{
-													userImg != "" ? 
-													<img src={userImg} className="img-thumbnail"/> : 
+													(userImg == "") ? 
 													<div style={{"border": "1px solid #ccc", "borderRadius": "3px", "padding": "20px"}}>
 														<FontAwesomeIcon icon={faUserEdit} size="7x" style={{"color": "#aaa"}}/>
 													</div>
+													: 
+													<img src={userImg} className="img-thumbnail"/> 
 												}
 												<small className="text-danger">
-										        	{userImgError == "" ? "" : userImgError} 
+										        	{(userImgError == "") ? "" : userImgError} 
 										        </small>
 											</div>
 											<div className="text-right">
@@ -508,9 +519,16 @@ if(Meteor.isClient) {
 																setUserImgError(reader.error);
 															}
 														}}/>
-												<button type="button" className="btn btn-light btn-sm" onClick={() => { $('#inFileUserImg').click() }}>
-													<FontAwesomeIcon icon={faPencilAlt} size="sm"/>&nbsp;Edit
-												</button>
+												{
+													(userImg == "") ?
+													<button type="button" className="btn btn-light btn-sm" onClick={() => { $('#inFileUserImg').click() }}>
+														<FontAwesomeIcon icon={faPencilAlt} size="sm"/>&nbsp;Edit
+													</button>
+													:
+													<button type="button" className="btn btn-light btn-sm" onClick={removeUserImg}>
+														<FontAwesomeIcon icon={faTrashAlt} size="sm"/>&nbsp;Remove
+													</button> 
+												}
 											</div>
 										</div>
 									</div>

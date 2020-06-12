@@ -16,7 +16,7 @@ if(Meteor.isServer) {
 				added: (_id, doc) => {
 					// console.log("Fields added: " + JSON.stringify(fields));
 					if(doc.user && doc.user._id) {
-						const userDoc = Meteor.users.findOne({"_id": doc.user._id}, {fields: {"services": 0}});
+						const userDoc = Meteor.users.findOne({"_id": doc.user._id}, {fields: {"services": 0, apiKey: 0}});
 						userDoc.isParty = true;
 						if(userDoc.active) {
 							this.added('users', userDoc._id, userDoc);
@@ -28,7 +28,7 @@ if(Meteor.isServer) {
 			const handle2 = Meteor.users.find().observeChanges({
 				changed: (_id, doc) => {
 					if(_id && Meteor.roleAssignment.findOne({"user._id": _id, "role._id": "party"})) {
-						let tempDoc = Meteor.users.findOne({_id: _id}, {services: 0, apiKey: 0});
+						let tempDoc = Meteor.users.findOne({ _id }, {fields: {services: 0, apiKey: 0}});
 						tempDoc.isParty = true;
 
 						if(tempDoc.active) {
