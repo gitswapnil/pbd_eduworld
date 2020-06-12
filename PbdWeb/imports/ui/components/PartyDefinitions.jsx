@@ -12,33 +12,39 @@ if(Meteor.isServer) {
 		if(this.userId && Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
 
 			// console.log("userId: " +JSON.stringify(userIds));
-			const handle = Meteor.roleAssignment.find({"role._id": "party"}).observeChanges({
+			const handle1 = Meteor.roleAssignment.find({"role._id": "party"}).observeChanges({
 				added: (_id, doc) => {
 					// console.log("Fields added: " + JSON.stringify(fields));
 					if(doc.user && doc.user._id) {
 						const userDoc = Meteor.users.findOne({"_id": doc.user._id}, {fields: {"services": 0}});
 						userDoc.isParty = true;
-						this.added('users', userDoc._id, userDoc);
+						if(userDoc.active) {
+							this.added('users', userDoc._id, userDoc);
+						}
 					}
-				},
+				}
+			});
 
+			const handle2 = Meteor.users.find().observeChanges({
 				changed: (_id, doc) => {
-					if(doc.user && doc.user._id) {
-						const userDoc = Meteor.users.findOne({"_id": doc.user._id}, {fields: {"services": 0}});
-						userDoc.isParty = true;
-						this.changed('users', userDoc._id, userDoc);
-					}
-				},
+					if(_id && Meteor.roleAssignment.findOne({"user._id": _id, "role._id": "party"})) {
+						let tempDoc = Meteor.users.findOne({_id: _id}, {services: 0, apiKey: 0});
+						tempDoc.isParty = true;
 
-				removed: (_id) => {
-					this.removed('users', userDoc._id);
+						if(tempDoc.active) {
+							this.changed('users', _id, tempDoc);
+						} else {
+							this.removed('users', _id);
+						}
+					}
 				}
 			});
 
 			console.log("data publication for \"party.getAll is complete.\"");
 			this.ready();
 			this.onStop(() => {
-				handle.stop();
+				handle1.stop();
+				handle2.stop();
 				console.log("Publication, \"party.getAll\" is stopped.");
 			});
 		}
@@ -80,6 +86,10 @@ Meteor.methods({
 				min: 1,
 				max: 1000,
 				label: "Party Address",
+			},
+			active: {
+				type: Boolean,
+				defaultValue: true,
 			}
 		};
 
@@ -124,10 +134,13 @@ Meteor.methods({
 				let modifier = {
 					"profile.name": cleanedInputs.partyName,
 					"profile.phoneNumber": cleanedInputs.partyPhoneNo,
-					"profile.address": cleanedInputs.partyAddress
+					"profile.address": cleanedInputs.partyAddress,
+					"active": cleanedInputs.active,
+					"updatedAt": new Date()
 				};
 				Meteor.users.update({"_id": editId}, {$set: modifier}, {multi: false, upsert: false});
 				if(cleanedInputs.partyEmail) {		//if email is given then only change the email.
+					Accounts.removeEmail(editId, cleanedInputs.partyEmail);
 					Accounts.addEmail(editId, cleanedInputs.partyEmail);
 				}
 				console.log("new changes have been saved for the given party with the id: " + editId);
@@ -141,7 +154,9 @@ Meteor.methods({
 						name: cleanedInputs.partyName,
 						phoneNumber: cleanedInputs.partyPhoneNo,
 						address: cleanedInputs.partyAddress,
-					}
+					},
+					role: "party",
+					active: true
 				};
 
 				if(!insertData.email) {			//if email is not given, then remove it while inserting as new user
@@ -219,7 +234,7 @@ if(Meteor.isClient) {
 			setPartyCode(party.username);
 			setPartyName((party.profile && party.profile.name) || "");
 			setPartyPhoneNo((party.profile && party.profile.phoneNumber) || "");
-			setPartyEmail((party.emails && party.emails[0] && party.emails[0].address) || "");
+			setPartyEmail((party.emails && party.emails[party.emails.length - 1] && party.emails[party.emails.length - 1].address) || "");
 			setPartyAddress(party.profile && party.profile.address);
 
 			setEditId(editId);
@@ -291,7 +306,7 @@ if(Meteor.isClient) {
 								{ content: doc.username}, 
 								{ key: ((doc.profile && doc.profile.name) + (doc.profile && doc.profile.address)), content: <div>{doc.profile && doc.profile.name}<br/>{doc.profile && doc.profile.address}</div>},
 								{ content: (doc.profile && doc.profile.phoneNumber)},
-								{ content: moment(doc.createdAt).format("Do MMM YYYY h:mm:ss a")}
+								{ content: moment(doc.updatedAt || doc.createdAt).format("Do MMM YYYY h:mm:ss a")}
 							],
 							rowAttributes: {
 								key: doc._id,

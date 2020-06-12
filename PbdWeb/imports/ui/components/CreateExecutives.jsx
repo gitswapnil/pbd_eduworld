@@ -9,35 +9,40 @@ if(Meteor.isServer) {
 		console.log("Publishing the executives.getAll...");
 		//authorization
 		if(this.userId && Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
-
 			// console.log("userId: " +JSON.stringify(userIds));
-			const handle = Meteor.roleAssignment.find({"role._id": "executive"}).observeChanges({
+			const handle1 = Meteor.roleAssignment.find({"role._id": "executive"}).observeChanges({
 				added: (_id, doc) => {
 					// console.log("Fields added: " + JSON.stringify(doc));
 					if(doc.user && doc.user._id) {
 						const userDoc = Meteor.users.findOne({"_id": doc.user._id}, {fields: {"services": 0}});
 						userDoc.isExecutive = true;
-						this.added('users', userDoc._id, userDoc);
+						if(userDoc.active) {
+							this.added('users', userDoc._id, userDoc);
+						}
 					}
-				},
-
-				changed: (_id, doc) => {
-					if(doc.user && doc.user._id) {
-						const userDoc = Meteor.users.findOne({"_id": doc.user._id}, {fields: {"services": 0}});
-						userDoc.isExecutive = true;
-						this.changed('users', userDoc._id, userDoc);
-					}
-				},
-
-				removed: (_id) => {	
-					this.removed('users', userDoc._id);
 				}
+			});
+
+			const handle2 = Meteor.users.find().observeChanges({
+				changed: (_id, doc) => {
+					if(_id && Meteor.roleAssignment.findOne({"user._id": _id, "role._id": "executive"})) {
+						let tempDoc = Meteor.users.findOne({_id: _id}, {services: 0, apiKey: 0});
+						tempDoc.isExecutive = true;
+
+						if(tempDoc.active) {
+							this.changed('users', _id, tempDoc);
+						} else {
+							this.removed('users', _id);
+						}
+					}
+				},
 			});
 
 			console.log("data publication for \"executives.getAll is complete.\"");
 			this.ready();
 			this.onStop(() => {
-				handle.stop();
+				handle1.stop();
+				handle2.stop();
 				console.log("Publication, \"executives.getAll\" is stopped.");
 			});
 		}
@@ -87,6 +92,10 @@ Meteor.methods({
 				min: 4,
 				max: 10,
 				label: "Password",
+			},
+			active: {
+				type: Boolean,
+				defaultValue: true,
 			}
 		};
 
@@ -131,9 +140,12 @@ Meteor.methods({
 					"profile.name": cleanedInputs.name,
 					"profile.img": cleanedInputs.userImg,
 					"profile.phoneNumber": cleanedInputs.pPhNo,
-					"profile.address": cleanedInputs.resAddress
+					"profile.address": cleanedInputs.resAddress,
+					"active": cleanedInputs.active,
+					"updatedAt": new Date()
 				};
 				Meteor.users.update({"_id": editId}, {$set: modifier}, {multi: false, upsert: false});
+				Accounts.removeEmail(editId, cleanedInputs.email);	//replace the email so that it will last in the list.
 				Accounts.addEmail(editId, cleanedInputs.email);
 				if(cleanedInputs.pwd) {		//if password is given then only set the password.
 					Accounts.setPassword(editId, cleanedInputs.pwd);
@@ -152,6 +164,7 @@ Meteor.methods({
 						address: cleanedInputs.resAddress,
 					},
 					role: "executive",
+					active: true,
 				});
 				console.log(`An executive with username: ${cleanedInputs.cPhNo} is created.`);
 				console.log("Now adding user the previlege of an executive...");
@@ -239,7 +252,7 @@ if(Meteor.isClient) {
 			setUserImg((executive.profile && executive.profile.img) || "");
 			setName((executive.profile && executive.profile.name) || "");
 			setPPhNo((executive.profile && executive.profile.phoneNumber) || "");
-			setEmail((executive.emails && executive.emails[0] && executive.emails[0].address) || "");
+			setEmail((executive.emails && executive.emails[executive.emails.length - 1] && executive.emails[executive.emails.length - 1].address) || "");
 			setResAddress(executive.profile && executive.profile.address);
 
 			setEditId(editId);
@@ -312,7 +325,7 @@ if(Meteor.isClient) {
 								{ style: {"textAlign": "right"}, content: (index + 1)}, 
 								{ content: (doc.profile && doc.profile.name)}, 
 								{ content: doc.username}, 
-								{ content: moment(doc.createdAt).format("Do MMM YYYY h:mm:ss a")}
+								{ content: moment(doc.updatedAt || doc.createdAt).format("Do MMM YYYY h:mm:ss a")}
 							],
 							rowAttributes: {
 								key: doc._id,

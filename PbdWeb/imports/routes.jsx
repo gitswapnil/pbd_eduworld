@@ -213,7 +213,7 @@ if(Meteor.isClient) {
 		}
 
 		let user = Accounts.findUserByUsername(reqBody.phNo);
-		if(!user) {				//if the user exists
+		if(!user || !user.active) {				//if the user does not exists or if it is not active
 			res.end(JSON.stringify({error: true, message: "Invalid phone number. Please check again."}));
 			return;
 		}
