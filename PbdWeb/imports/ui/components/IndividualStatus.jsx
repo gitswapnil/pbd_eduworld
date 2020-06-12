@@ -46,22 +46,10 @@ if(Meteor.isClient) {
 								</div>
 							</div>
 							<div className="col-6" style={{padding: "0 25px"}}>
-								<TimingBar data={
-									{
-										"123": {
-											"start": moment("11-06-20 8:45", "DD-MM-YY HH:mm").toDate(),
-											"end": moment("11-06-20 11:18", "DD-MM-YY HH:mm").toDate()
-										},
-										"545": {
-											"start": moment("11-06-20 12:30", "DD-MM-YY HH:mm").toDate(),
-											"end": moment("11-06-20 14:37", "DD-MM-YY HH:mm").toDate()
-										},
-										"546": {
-											"start": moment("11-06-20 15:30", "DD-MM-YY HH:mm").toDate(),
-											"end": moment("11-06-20 20:37", "DD-MM-YY HH:mm").toDate()
-										}
-									}
-								}/>
+							{
+								props.sessions &&
+								<TimingBar data={props.sessions}/>
+							}
 							</div>
 						</div>
 					</div>

@@ -9,10 +9,10 @@ const TimingBar = (props) => {
 	let dutyTimeStartMargin = "0%";
 	let dutyTimeEndMargin = "100%";
 
-	let incomingData = Object.assign(props.data, {});
-	const sessionIds = Object.keys(incomingData);
-	const dataStart = moment(incomingData[sessionIds[0]].start).unix();
-	const dataEnd = moment(incomingData[sessionIds[sessionIds.length-1]].end).unix();
+	let incomingData = [...props.data];
+	console.log("incomingData: " + JSON.stringify(incomingData));
+	const dataStart = moment(incomingData[0].start).unix();
+	const dataEnd = moment(incomingData[incomingData.length-1].end).unix();
 
 	let start = dutyStartTime;
 	if(dataStart < dutyStartTime) {
@@ -35,27 +35,27 @@ const TimingBar = (props) => {
 	}
 
 	let data = [];
-	sessionIds.forEach((sessionId, index) => {
+	incomingData.forEach((session, index) => {
 		if(index == 0) {
 			if(dutyStartTime < dataStart) {
 				data.push({
 					tag: "offline",
 					start: moment.unix(dutyStartTime).toDate(),
-					end: incomingData[sessionId].start
+					end: session.start
 				});
 			}
 		} else {
 			data.push({
 				tag: "offline",
-				start: incomingData[sessionIds[index - 1]].end,
-				end: incomingData[sessionId].start
+				start: incomingData[index - 1].end,
+				end: session.start
 			})
 		}
 
 		data.push({
 			tag: "ongoing",
-			start: incomingData[sessionId].start,
-			end: incomingData[sessionId].end
+			start: session.start,
+			end: session.end
 		})
 	});
 

@@ -7,6 +7,8 @@ if(Meteor.isServer) {
 		//authorization
 		if(this.userId && Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
 			// console.log("userId: " +JSON.stringify(userIds));
+			let initializing = true;		//flag to skip the huge loading during initial time.
+
 			const handle1 = Meteor.users.find({}).observeChanges({
 				added: (_id, doc) => {
 					// console.log("Fields added: " + JSON.stringify(doc));
@@ -30,10 +32,112 @@ if(Meteor.isServer) {
 				}
 			});
 
+			const userIdRecorder = {};
+
+			const getLocations = (callback) => {
+				Collections.locations.rawCollection().aggregate([
+					{
+						$match: {
+							createdAt: { 
+				                $gte: moment().startOf('day').toDate(), 
+				                $lte: moment().endOf('day').toDate()
+				            }
+						}
+					},
+					{
+				        $sort: {
+				            "createdAt": 1
+				        }
+				    },
+				    {
+				        $group: {
+				            _id: "$sessionId",
+				            latitude: { $last: "$latitude" },
+				            longitude: { $last: "$longitude" },
+				            userId: { $first: "$userId" },
+				            start: { $first: "$createdAt" },
+				            end: { $last: "$createdAt" }
+				        }
+				    },
+				    {
+				        $group: {
+				            _id: "$userId",
+				            locations: { 
+				                $push: {
+				                    sessionId: "$_id",
+				                    start: "$start",
+				                    end: "$end",
+				                    latitude: "$latitude",
+				                    longitude: "$longitude"
+				                }
+				            }
+				        }
+				    },
+				    { $unwind: "$locations" },
+				    {
+				        $sort: {
+				            "locations.start": 1
+				        }
+				    },
+				    {
+				        $group: {
+				            _id: "$_id",
+				            sessions: { 
+				                $push: {
+				                    sessionId: "$locations.sessionId",
+				                    start: "$locations.start",
+				                    end: "$locations.end",
+				                    latitude: "$locations.latitude",
+				                    longitude: "$locations.longitude"
+				                }
+				            }
+				        }
+				    }
+				], (err, cursor) => {
+					if(err) {
+						throw new Meteor.Error("publication-error", err)
+						return;
+					}
+
+					cursor.toArray(callback);
+				})
+			};
+
+			const handle2 = Collections.locations.find({}).observeChanges({
+				added: (_id, doc) => {
+					if(!initializing) {
+						getLocations((err, docs) => {
+							// console.log("docs: " + JSON.stringify(docs));
+
+							docs.forEach(doc => {
+								if(userIdRecorder[doc._id]) {
+									this.changed("locations", doc._id, doc);
+								} else {
+									this.added("locations", doc._id, doc);
+								}
+							});
+						});
+					}
+				}
+			});
+
+			getLocations((err, docs) => {
+				// console.log("docs: " + JSON.stringify(docs));
+				docs.forEach(doc => {
+					userIdRecorder[doc._id] = true;
+					this.added("locations", doc._id, doc);
+				});
+
+				console.log("userIdRecorder: " + JSON.stringify(userIdRecorder));
+
+				initializing = false;
+			});
+
 			console.log("data publication for \"executives.getExecutiveStatus is complete.\"");
 			this.ready();
 			this.onStop(() => {
 				handle1.stop();
+				handle2.stop();
 				console.log("Publication, \"executives.getExecutiveStatus\" is stopped.");
 			});
 		}
@@ -68,7 +172,15 @@ if(Meteor.isClient) {
 
 			Tracker.autorun(() => {
 				if(handle.ready()) {
-					const executives = Meteor.users.find({"isExecutive": true}).fetch();
+					const executives = Meteor.users.find({"isExecutive": true}).map(user => {
+						const userLocationObj = Collections.locations.findOne({ _id: user._id });
+						if(!userLocationObj) {
+							return user;
+						}
+						// console.log("sessions: " + JSON.stringify(userLocationObj.sessions));
+						return Object.assign({ sessions: userLocationObj.sessions }, user);
+					});
+
 					setExecutives(executives);	
 				}
 			})
@@ -90,7 +202,9 @@ if(Meteor.isClient) {
 														img={executive.profile && executive.profile.img}
 														name={executive.profile && executive.profile.name}
 														email={executive.emails && executive.emails[executive.emails.length - 1].address}
-														mobileNo={executive.username}/>
+														mobileNo={executive.username}
+														sessions={executive.sessions}
+														/>
 									<br/>
 								</div>
 							)

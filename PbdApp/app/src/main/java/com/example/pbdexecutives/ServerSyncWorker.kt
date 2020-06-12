@@ -105,9 +105,8 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
 
                         request.retryPolicy = DefaultRetryPolicy(
                             DefaultRetryPolicy.DEFAULT_TIMEOUT_MS,
-                            // 0 means no retry
-                            2, // DefaultRetryPolicy.DEFAULT_MAX_RETRIES = 2
-                            1f // DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
+                            DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                            DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
                         )
 
                         // Add the volley post request to the request queue

@@ -34,7 +34,7 @@ class TrackingService : Service() {
     val actionTimeUpdateBroadcast: String = "$PACKAGE_NAME.broadcastTimeUpdate";
     val switchInfo: String = "$PACKAGE_NAME.switchInfo";
     private lateinit var locationRequest: LocationRequest;
-    private val updateIntervalMilliseconds: Long = 1000 * 10;       //in milliseconds
+    private val updateIntervalMilliseconds: Long = 1000 * 60;       //in milliseconds
     private val fastestUpdateIntervalMilliseconds: Long = updateIntervalMilliseconds / 2;
     private lateinit var locationCallback: LocationCallback;
     private var sessionId: Int = 0;
