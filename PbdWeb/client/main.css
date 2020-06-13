@@ -110,7 +110,7 @@ table.tbl > tbody > tr.row-selectable:hover {
 .status-block {
 	border: 1px solid #94ADDC;
 	border-radius: 5px;
-	padding: 10px;
+	padding: 10px 0px 10px;
 	box-shadow: 2px 3px 4px #dadada;
 	background: rgb(221,221,221);
 	background: linear-gradient(180deg, rgba(221,221,221,1) 0%, rgba(255,255,255,1) 0%, rgba(188,209,246,1) 100%); 
@@ -132,14 +132,20 @@ table.tbl > tbody > tr.row-selectable:hover {
 }
 
 .timing-bar > .timing-duty-ongoing > .start-tip,
-.timing-bar > .timing-duty-ongoing > .end-tip,
 .timing-bar > .timing-duty-completed > .start-tip,
-.timing-bar > .timing-duty-completed > .end-tip,
 .timing-bar > .timing-duty-failure > .start-tip,
+.timing-bar > .timing-duty-offline > .start-tip {
+	height: 15px;
+	width: 1px;
+	background: black;
+	float: left;
+}
+
+.timing-bar > .timing-duty-ongoing > .end-tip,
+.timing-bar > .timing-duty-completed > .end-tip,
 .timing-bar > .timing-duty-failure > .end-tip,
-.timing-bar > .timing-duty-offline > .start-tip,
 .timing-bar > .timing-duty-offline > .end-tip {
-	height: 18px;
+	height: 28px;
 	width: 1px;
 	background: black;
 	float: left;
@@ -156,17 +162,29 @@ table.tbl > tbody > tr.row-selectable:hover {
 	display: none;
 }
 
-.timing-bar > .timing-duty-ongoing > .start-tip > .start-tip-time,
-.timing-bar > .timing-duty-ongoing > .end-tip > .start-tip-time,
-.timing-bar > .timing-duty-completed > .start-tip > .start-tip-time,
-.timing-bar > .timing-duty-completed > .end-tip > .start-tip-time,
-.timing-bar > .timing-duty-failure > .start-tip > .start-tip-time,
-.timing-bar > .timing-duty-failure > .end-tip > .start-tip-time,
-.timing-bar > .timing-duty-offline > .start-tip > .start-tip-time,
-.timing-bar > .timing-duty-offline > .end-tip > .start-tip-time {
+.tip-time {
 	font-size: x-small;
-	margin-top: 20px;
-	margin-left: -8px;
+	margin-left: -10px;
+	position: absolute;
+	z-index: 10;
+	background: #fff;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	padding: 0px 2px;
+}
+
+.timing-bar > .timing-duty-ongoing > .start-tip > .tip-time,
+.timing-bar > .timing-duty-completed > .start-tip > .tip-time,
+.timing-bar > .timing-duty-failure > .start-tip > .tip-time,
+.timing-bar > .timing-duty-offline > .start-tip > .tip-time {
+	margin-top: 15px;
+}
+
+.timing-bar > .timing-duty-ongoing > .end-tip > .tip-time,
+.timing-bar > .timing-duty-completed > .end-tip > .tip-time,
+.timing-bar > .timing-duty-failure > .end-tip > .tip-time,
+.timing-bar > .timing-duty-offline > .end-tip > .tip-time {
+	margin-top: 28px;
 }
 
 .timing-bar > .timing-duty-ongoing > .main-section,

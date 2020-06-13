@@ -95,15 +95,15 @@ const TimingBar = (props) => {
 			<div className="timing-bar">
 				{
 					drawingData.map(session => 
-						<div className={`timing-duty-${session.tag}`} style={{width: session.sessionWidth}}>
+						<div key={session.sessionId} className={`timing-duty-${session.tag}`} style={{width: session.sessionWidth}}>
 							<div className="start-tip hidden">
-								<div className="start-tip-time">
+								<div className="tip-time">
 									{session.sessionStart}
 								</div>
 							</div>
 							<div className="main-section"></div>
 							<div className="end-tip hidden">
-								<div className="start-tip-time">
+								<div className="tip-time">
 									{session.sessionEnd}
 								</div>
 							</div>
