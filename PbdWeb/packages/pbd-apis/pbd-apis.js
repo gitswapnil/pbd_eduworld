@@ -14,3 +14,7 @@ export const findByType = (children, component) => {
   /* Then we go through each React children, if one of matches the name of the sub-component we’re looking for we put it in the result array */
   return result[0];
 };
+
+export const MAP_API_KEY = "2D16m-0MldWtZBO8ymMUMxz-qRlneZkQUx_s-VhRmBo";
+export const DUTY_START_TIME = "10:00";    //format should always be in HH:mm
+export const DUTY_END_TIME = "18:00";

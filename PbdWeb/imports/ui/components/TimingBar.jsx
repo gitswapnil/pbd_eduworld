@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-
-const DUTY_START_TIME = "10:00";		//format should always be in HH:MM
-const DUTY_END_TIME = "18:00";
+import { DUTY_START_TIME, DUTY_END_TIME } from 'meteor/pbd-apis'
 
 const TimingBar = (props) => {
 	const dutyStartTime = moment(`${moment().format("DD-MM-YYYY")} ${DUTY_START_TIME}`, "DD-MM-YYYY HH:mm").unix();
@@ -94,7 +92,8 @@ const TimingBar = (props) => {
 			</div>
 			<div className="timing-bar">
 				{
-					drawingData.map(session => 
+
+					(drawingData && drawingData.length) && drawingData.map(session => 
 						<div key={session.sessionId} className={`timing-duty-${session.tag}`} style={{width: session.sessionWidth}}>
 							<div className="start-tip hidden">
 								<div className="tip-time">
