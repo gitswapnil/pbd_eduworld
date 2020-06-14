@@ -40,6 +40,13 @@ if(Meteor.isServer) {
 				}
 			});
 
+			Meteor.roleAssignment.find({"role._id": "executive"}).fetch().forEach(executive => {
+				const userObj = Meteor.users.findOne({ _id: executive.user._id, active: true }, {fields: {"profile.name": 1}});
+				userObj.isExecutive = true;
+
+				this.added('users', userObj._id, userObj);
+			});
+
 			console.log("data publication for \"party.getAll is complete.\"");
 			this.ready();
 			this.onStop(() => {
@@ -90,6 +97,12 @@ Meteor.methods({
 			active: {
 				type: Boolean,
 				defaultValue: true,
+			},
+			selectedExIds: {
+				type: Array,
+			},
+			"selectedExIds.$": {
+				type: String
 			}
 		};
 
@@ -136,6 +149,7 @@ Meteor.methods({
 					"profile.phoneNumber": cleanedInputs.partyPhoneNo,
 					"profile.address": cleanedInputs.partyAddress,
 					"active": cleanedInputs.active,
+					"availableTo": cleanedInputs.selectedExIds,
 					"updatedAt": new Date()
 				};
 				Meteor.users.update({"_id": editId}, {$set: modifier}, {multi: false, upsert: false});
@@ -155,6 +169,7 @@ Meteor.methods({
 						phoneNumber: cleanedInputs.partyPhoneNo,
 						address: cleanedInputs.partyAddress,
 					},
+					availableTo: cleanedInputs.selectedExIds,
 					role: "party",
 					active: true
 				};
@@ -200,8 +215,13 @@ if(Meteor.isClient) {
 		const [partyAddress, setPartyAddress] = useState("");
 		const [partyAddressError, setPartyAddressError] = useState("");
 
+		const [partyAvailableTo, setPartyAvailableTo] = useState("selectAll");
+
 		const [showModal, setShowModal] = useState(false);
-		const [parties, setParties] = useState([]);
+		const [parties, setParties] = useState(null);
+
+		const [executives, setExecutives] = useState([]);
+
 		const [generalError, setGeneralError] = useState("");
 		const [editId, setEditId] = useState("");
 
@@ -211,6 +231,7 @@ if(Meteor.isClient) {
 			setPartyPhoneNo("");
 			setPartyEmail("");
 			setPartyAddress("");
+			setExecutives(executives.map(executive => Object.assign(executive, { selected: false })));
 		}
 
 		function removeAllErrors() {
@@ -236,6 +257,12 @@ if(Meteor.isClient) {
 			setPartyPhoneNo((party.profile && party.profile.phoneNumber) || "");
 			setPartyEmail((party.emails && party.emails[party.emails.length - 1] && party.emails[party.emails.length - 1].address) || "");
 			setPartyAddress(party.profile && party.profile.address);
+			
+			const executives = Meteor.users.find({ isExecutive: true }).map(executive => {
+				let selected = (party.availableTo) ? (party.availableTo.indexOf(executive._id) != -1) : false;
+				return Object.assign(executive, { selected });
+			});
+			setExecutives(executives);
 
 			setEditId(editId);
 			setShowModal(true);
@@ -258,8 +285,16 @@ if(Meteor.isClient) {
 				}
 			});
 
+			//get the selected executives.
+			let selectedExIds = [];
+			executives.forEach(executive => {
+				if(executive.selected) {
+					selectedExIds.push(executive._id);
+				}
+			});
+
 			Meteor.apply('party.saveParty', 
-				[{ partyCode, partyName, partyPhoneNo, partyEmail, partyAddress }, editId], 
+				[{ partyCode, partyName, partyPhoneNo, partyEmail, partyAddress, selectedExIds }, editId], 
 				{returnStubValues: true, throwStubExceptions: true}, 
 				(err, res) => {
 					// console.log("err: " + err);
@@ -299,7 +334,7 @@ if(Meteor.isClient) {
 
 			Tracker.autorun(() => {
 				if(handle.ready()) {
-					let arr = Meteor.users.find({"isParty": true}).map((doc, index) => {
+					let arr = Meteor.users.find({ isParty: true }).map((doc, index) => {
 						return {
 							cells: [
 								{ style: {"textAlign": "right"}, content: (index + 1)}, 
@@ -315,7 +350,7 @@ if(Meteor.isClient) {
 							}
 						}
 					});
-					setParties(arr);	
+					setParties(arr);
 				}
 			})
 
@@ -414,6 +449,48 @@ if(Meteor.isClient) {
 										      		<div className="invalid-feedback text-left">
 											        	{partyAddressError}
 											        </div>
+										    	</div>
+											</div>
+											<div className="form-group row">
+										    	<label className="col-4 col-form-label-sm text-right">Make this party available to:</label>
+										    	<div className="col-5 text-left">
+										    		<div className="form-check">
+											    		<input 	className="form-check-input" 
+											    				type="checkbox" 
+											    				checked={(() => {
+											    					const selectedArr = executives.map(executive => executive.selected)
+											    					return (selectedArr.indexOf(false) == -1);
+											    				})()} 
+											    				id="defaultCheck1" 
+											    				onChange={e => {
+											    						const newExecutives = executives.map(executive => Object.assign(executive, {selected: e.target.checked}));
+											    						setExecutives(newExecutives);
+											    					}
+											    				}/>
+														<label className="form-check-label" htmlFor="defaultCheck1">All</label>
+													</div>
+										      		<div style={{height: "200px", overflowY: "auto"}}>
+										      			<ul className="list-group">
+										      				{
+										      					executives.map((executive, index) => 
+																	<li key={executive._id} className="list-group-item">
+																		<div className="form-check">
+																    		<input 	className="form-check-input" 
+																    				type="checkbox" 
+																    				checked={executive.selected}
+																    				onChange={(e => {
+																    					const newExecutives = [...executives];
+																    					newExecutives[index].selected = e.target.checked;
+																    					setExecutives(newExecutives);
+																    				}).bind(index)} 
+																    				id={`${executive._id}-${index}`}/>
+																			<label className="form-check-label" htmlFor={`${executive._id}-${index}`}>{executive.profile.name}</label>
+																		</div>
+																	</li>
+										      					)
+										      				}
+														</ul>
+										      		</div>
 										    	</div>
 											</div>
 										</div>

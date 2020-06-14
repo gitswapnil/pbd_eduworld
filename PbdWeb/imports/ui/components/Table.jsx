@@ -1,5 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCircleNotch } from '@fortawesome/free-solid-svg-icons';
 import { findByType } from 'meteor/pbd-apis';
 
 const Header = () => null;
@@ -9,6 +11,14 @@ const Body = () => null;
 Body.displayName = "Body";
 
 class Table extends React.Component {
+	constructor(props) {
+		super(props);
+
+		this.state = {
+			columns: 0
+		}
+	}
+
 	renderHeader() {
 		const { children } = this.props;
 		const header = findByType(children, Header);
@@ -16,6 +26,8 @@ class Table extends React.Component {
 		if(!header) {
 			return null;
 		}
+
+		this.state.columns = header.props.dataArray.length;
 
 		return (
 			<thead>
@@ -41,6 +53,18 @@ class Table extends React.Component {
 		return (
 			<tbody>
 				{
+					(body.props.dataArray == null) ? 
+					<tr>
+						<td colSpan={this.state.columns} style={{textAlign: "center"}}>
+							<FontAwesomeIcon icon={faCircleNotch} spin/> Loading...
+						</td>
+					</tr>
+					:
+					!body.props.dataArray.length ? 
+					<tr>
+						<td colSpan={this.state.columns} style={{textAlign: "center"}}>No Data</td>
+					</tr>
+					:
 					body.props.dataArray.map(rowObj => {
 						// console.log("rowObj: " + JSON.stringify(rowObj));
 						return !rowObj ? null : !rowObj.rowAttributes ? null :

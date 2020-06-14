@@ -218,7 +218,7 @@ if(Meteor.isClient) {
 
 		const [generalError, setGeneralError] = useState("");
 
-		const [executives, setExecutives] = useState([]);
+		const [executives, setExecutives] = useState(null);
 
 		const [editId, setEditId] = useState("");
 

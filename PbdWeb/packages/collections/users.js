@@ -71,6 +71,16 @@ Meteor.users.attachSchema(new SimpleSchema({
     	type: Boolean,
     },
 
+    "availableTo": {
+        type: Array,
+        optional: true,
+    },
+
+    "availableTo.$": {
+        type: String,
+        regEx: SimpleSchema.RegEx.Id
+    },
+
     "services": {
         type: Object,
         optional: true,

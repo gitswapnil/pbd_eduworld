@@ -33,6 +33,10 @@ Meteor.startup(() => {
       customizedUser.active = options.active;
     }
 
+    if(options.availableTo) {
+      customizedUser.availableTo = [...options.availableTo];
+    }
+
   	return customizedUser;
   });
 
