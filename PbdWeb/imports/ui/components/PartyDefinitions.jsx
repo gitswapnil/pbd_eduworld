@@ -40,8 +40,8 @@ if(Meteor.isServer) {
 				}
 			});
 
-			Meteor.roleAssignment.find({"role._id": "executive"}).fetch().forEach(executive => {
-				const userObj = Meteor.users.findOne({ _id: executive.user._id, active: true }, {fields: {"profile.name": 1}});
+			Meteor.roleAssignment.find({"role._id": "executive"}).fetch().forEach(role => {
+				const userObj = Meteor.users.findOne({ _id: role.user._id, active: true }, {fields: {"profile.name": 1}});
 				userObj.isExecutive = true;
 
 				this.added('users', userObj._id, userObj);
@@ -231,7 +231,9 @@ if(Meteor.isClient) {
 			setPartyPhoneNo("");
 			setPartyEmail("");
 			setPartyAddress("");
-			setExecutives(executives.map(executive => Object.assign(executive, { selected: false })));
+
+			const exs = Meteor.users.find({ isExecutive: true }).map(executive => Object.assign(executive, { selected: false }));
+			setExecutives(exs);
 		}
 
 		function removeAllErrors() {
@@ -258,11 +260,11 @@ if(Meteor.isClient) {
 			setPartyEmail((party.emails && party.emails[party.emails.length - 1] && party.emails[party.emails.length - 1].address) || "");
 			setPartyAddress(party.profile && party.profile.address);
 			
-			const executives = Meteor.users.find({ isExecutive: true }).map(executive => {
-				let selected = (party.availableTo) ? (party.availableTo.indexOf(executive._id) != -1) : false;
+			const exs = Meteor.users.find({ isExecutive: true }).map(executive => {
+				let selected = party.availableTo ? party.availableTo.indexOf(executive._id) != -1 : false;
 				return Object.assign(executive, { selected });
 			});
-			setExecutives(executives);
+			setExecutives(exs);
 
 			setEditId(editId);
 			setShowModal(true);
@@ -351,6 +353,9 @@ if(Meteor.isClient) {
 						}
 					});
 					setParties(arr);
+
+					const exs = Meteor.users.find({ isExecutive: true }).map(executive => Object.assign(executive, { selected: false }));
+					setExecutives(exs);
 				}
 			})
 
