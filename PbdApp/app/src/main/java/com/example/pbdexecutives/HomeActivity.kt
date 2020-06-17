@@ -17,6 +17,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.get
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -24,17 +25,21 @@ import androidx.room.Room
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.Task
+import com.google.android.material.tabs.TabLayout
+import com.google.android.material.tabs.TabLayoutMediator
+import kotlinx.android.synthetic.main.activity_home.*
 import kotlinx.coroutines.launch
 import java.util.*
 import java.util.concurrent.TimeUnit
+import kotlin.collections.ArrayList
 
 
 class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsResultCallback, LifecycleOwner {
-    private lateinit var gpsSwitchStateReceiver: BroadcastReceiver;
-    private lateinit var dutyTimeUpdateReceiver: BroadcastReceiver;
+    private lateinit var gpsSwitchStateReceiver: BroadcastReceiver
+    private lateinit var dutyTimeUpdateReceiver: BroadcastReceiver
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        Log.i("pbdLog", "onCreateOptionsMenu called.")
+//        Log.i("pbdLog", "onCreateOptionsMenu called.")
         val inflater: MenuInflater = menuInflater;
         inflater.inflate(R.menu.main_menu, menu)
         return true
@@ -60,11 +65,28 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         }
     }
 
+    private fun setTabConfigurations() {
+        val homeContentAdapter = HomeContentAdapter(this, 3)
+        homecontentspager.adapter = homeContentAdapter
+
+        var tabsText: ArrayList<String> = ArrayList()
+        for (i in 0 until tabsLayout.tabCount) {
+            tabsText.add(tabsLayout.getTabAt(i)?.text as String)
+        }
+
+        TabLayoutMediator(tabsLayout, homecontentspager) { tab, position ->
+            //To get the first name of doppelganger celebrities
+            Log.i("pbdLog", "${tabsText[position]}")
+            tab.text = tabsText[position]
+        }.attach()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_home)
 
-        setSupportActionBar(findViewById(R.id.main_toolbar));
+        setContentView(R.layout.activity_home)
+        setSupportActionBar(findViewById(R.id.main_toolbar))
+        setTabConfigurations()
     }
 
     //This function monitors the state of the switch. It listens to the broadcast from the service

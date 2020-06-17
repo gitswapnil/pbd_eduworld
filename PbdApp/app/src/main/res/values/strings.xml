@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">PBD Executives</string>
     <string name="executives">Executives</string>
-<!--  Login activity  -->
+    <!--  Login activity  -->
     <string name="login_to_continue">Please Login to continue</string>
     <string name="phone_number">Phone Number</string>
     <string name="password">Password</string>
@@ -9,7 +9,7 @@
     <string name="dont_have_account">Don\'t have an account? Please contact your\u0020</string>
     <string name="administrator">administrator</string>
     <string name="copyright_statements">© 2020 PBD Eduworld Private Limited, India. All Rights Reserved.</string>
-<!--  Home activity  -->
+    <!--  Home activity  -->
     <string name="getsGeoLocation">Gets geolocation and stores in local db</string>
     <string name="please_allow_location_access">Please Allow Location Access for the app to get yourself on the duty.</string>
     <string name="home">Home</string>
@@ -34,4 +34,6 @@
     <string name="hrs">Hrs</string>
     <string name="mins">Mins</string>
     <string name="calculating">Calculating...</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>
