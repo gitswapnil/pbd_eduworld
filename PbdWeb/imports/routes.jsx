@@ -174,7 +174,7 @@ if(Meteor.isClient) {
 	});
 
 	/*
-		params: {phNo: String, pwd: String}
+		params: {phNo: String, pwd: String, apiKey: String}
 		return: {error: Boolean, message: String}	if error is false then message is the apiKey for that user.
 	*/
 	Router.route('/api/executivelogin', {where: 'server'}).post(function(req, res, next) {
@@ -193,7 +193,7 @@ if(Meteor.isClient) {
 			pwd: { 
 				type: String,
 				label: "Password",
-			}
+			},
 		};
 
 		const validationContext = new SimpleSchema(schemaObj, {clean: {filter: true, removeEmptyStrings: true, trimStrings: true}}).newContext();
@@ -203,38 +203,38 @@ if(Meteor.isClient) {
 		validationContext.validate(cleanedInputs);
 
 		if(validationContext.keyIsInvalid("phNo")) {		//the phone number should be properly given
-			res.end(JSON.stringify({error: true, message: validationContext.keyErrorMessage("phNo")}));
+			res.end(JSON.stringify({error: true, message: validationContext.keyErrorMessage("phNo"), code: 400}));
 			return;
 		}
 
 		if(validationContext.keyIsInvalid("pwd")) {			//the password should be properly given
-			res.end(JSON.stringify({error: true, message: validationContext.keyErrorMessage("pwd")}));
+			res.end(JSON.stringify({error: true, message: validationContext.keyErrorMessage("pwd"), code: 400}));
 			return;
 		}
 
 		let user = Accounts.findUserByUsername(reqBody.phNo);
 		if(!user || !user.active) {				//if the user does not exists or if it is not active
-			res.end(JSON.stringify({error: true, message: "Invalid phone number. Please check again."}));
+			res.end(JSON.stringify({error: true, message: "Invalid phone number. Please check again.", code: 400}));
 			return;
 		}
 
 		if(!Roles.userIsInRole(user._id, "executive", Roles.GLOBAL_GROUP)){		//if the user does not have administrative rights.
-			res.end(JSON.stringify({error: true, message: "User does not have the rights to access mobile app."}));
+			res.end(JSON.stringify({error: true, message: "User does not have the rights to access mobile app.", code: 400}));
 			return;
 		}
 
 		const passwordValid = Accounts._checkPassword(user, reqBody.pwd);
 		if(passwordValid.error) {		//if the password is invalid
-			res.end(JSON.stringify({error: true, message: "Incorrect Password."}));
+			res.end(JSON.stringify({error: true, message: "Incorrect Password.", code: 400}));
 			return;
 		}
 
 		if(!user.apiKey) {
-			res.end(JSON.stringify({error: true, message: "User does not have an apiKey."}));
+			res.end(JSON.stringify({error: true, message: "User does not have an apiKey.", code: 400}));
 			return;
 		}
 		
-		res.end(JSON.stringify({error: false, message: user.apiKey}));
+		res.end(JSON.stringify({error: false, message: user.apiKey, code: 200}));
 		return;
 	});
 
@@ -261,7 +261,8 @@ if(Meteor.isClient) {
 			error: Boolean, 
 			message: "{
 				locationIds: [Int, Int, ...]			//these are the ids which are saved in the database
-			}"
+			}",
+			code: Integer
 		}	if error is false then message is the apiKey for that user.
 	*/
 	Router.route('/api/syncdata', {where: 'server'}).post(function(req, res, next){
@@ -270,20 +271,25 @@ if(Meteor.isClient) {
 
 		//if request body is not defined, then return error
 		if(!reqBody) {
-			res.end(JSON.stringify({error: true, message: "reqBody must have atleast an apiKey. requset body is null."}));
+			res.end(JSON.stringify({error: true, message: "reqBody must have atleast an apiKey. requset body is null.", code: 400}));
 			return;
 		}
 
 		//first check for the APIkey;
 		console.log("apiKey: " + reqBody.apiKey);
 		if(!reqBody.apiKey || (typeof reqBody.apiKey !== "string") || reqBody.apiKey.length !== 32) {
-			res.end(JSON.stringify({error: true, message: "Invalid API key. Please check and try again."}));
+			res.end(JSON.stringify({error: true, message: "Invalid API key. Please check and try again.", code: 400}));
 			return;
 		}
 
 		const user = Meteor.users.findOne({"apiKey": reqBody.apiKey});
+		if(!user) {
+			res.end(JSON.stringify({error: true, message: "Unkonwn API key.", code: 401}));
+			return;
+		}
+
 		if(!Roles.userIsInRole(user._id, "executive", Roles.GLOBAL_GROUP)){		//if the user does not have administrative rights.
-			res.end(JSON.stringify({error: true, message: "User does not have the rights to access mobile app."}));
+			res.end(JSON.stringify({error: true, message: "User does not have the rights to access mobile app.", code: 400}));
 			return;
 		}
 
@@ -295,7 +301,7 @@ if(Meteor.isClient) {
 
 			console.log("locations: " + JSON.stringify(locations));
 			if(!Array.isArray(locations)) {		//validate the locations array
-				res.end(JSON.stringify({error: true, message: "Error in the given locations Array."}));
+				res.end(JSON.stringify({error: true, message: "Error in the given locations Array.", code: 400}));
 				return;
 			}
 
@@ -317,6 +323,6 @@ if(Meteor.isClient) {
 			returnObj.locationIds = retIds;
 		}
 
-		res.end(JSON.stringify({ error: false, message: returnObj }));
+		res.end(JSON.stringify({ error: false, message: returnObj, code: 200 }));
 	})
 }

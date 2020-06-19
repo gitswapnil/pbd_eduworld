@@ -170,7 +170,6 @@ Meteor.methods({
 						address: cleanedInputs.partyAddress,
 					},
 					availableTo: cleanedInputs.selectedExIds,
-					role: "party",
 					active: true
 				};
 

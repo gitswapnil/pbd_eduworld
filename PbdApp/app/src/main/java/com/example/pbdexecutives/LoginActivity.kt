@@ -27,47 +27,31 @@ class LoginActivity : AppCompatActivity(), LifecycleOwner {
     }
 
     fun login(view: View) {
-        val phNo: String = findViewById<EditText>(R.id.editText).text.toString();
-        val pwd: String = findViewById<EditText>(R.id.editText2).text.toString();
+        val phNo: String = findViewById<EditText>(R.id.editText).text.toString()
+        val pwd: String = findViewById<EditText>(R.id.editText2).text.toString()
 
-        val queue = Volley.newRequestQueue(this);       //create a request
-        val url = "${PbdExecutivesUtils().serverAddress}/executivelogin";             //url for the request
-        val jsonRequestObject:JSONObject = JSONObject("{\"phNo\": \"${phNo}\", \"pwd\": \"${pwd}\"}");     //convert the string to JSON object
+        val jsonRequestObject:JSONObject = JSONObject("{\"phNo\": \"${phNo}\", \"pwd\": \"${pwd}\"}")     //convert the string to JSON object
 
-        val request = JsonObjectRequest(
-            Request.Method.POST, url, jsonRequestObject,
-            Response.Listener { response ->
-                val responseJSON:JSONObject = JSONObject(response.toString());      //convert the response back into JSON Object from the response string
-                if(responseJSON.get("error") == false) {            //If it has no errors, then store the apiKey and go to HomeActivity
-                    val self = this;
-                    this.lifecycleScope.launch {
-                        val db = Room.databaseBuilder(self, AppDB::class.java, "PbdDB").build();
-                        db.userDetailsDao().clearUserDetails();     //clear the user details before inserting a new value
-                        val userDetail = UserDetails(id = 1, apiKey = responseJSON.get("message").toString());
-                        db.userDetailsDao().saveUserDetails(userDetail);        //store the apiKey in local database.
+        PbdExecutivesUtils().sendData(
+            this,
+            "executivelogin",
+            jsonRequestObject,
+            { code: Int, response: Any ->
+                this.lifecycleScope.launch {
+                    val db = Room.databaseBuilder(this@LoginActivity, AppDB::class.java, "PbdDB").build()
+                    db.userDetailsDao().clearUserDetails()     //clear the user details before inserting a new value
+                    val userDetail = UserDetails(id = 1, apiKey = response.toString())
+                    db.userDetailsDao().saveUserDetails(userDetail)        //store the apiKey in local database.
 
-                        val intent = Intent(self, MainActivity::class.java);        //go to home activity after save
-                        startActivity(intent);
-                        finishAffinity();
-                    }
-                } else {            //otherwise keep showing the error
-                    Toast.makeText(this, responseJSON.get("message").toString(), Toast.LENGTH_LONG).show();
+                    val intent = Intent(this@LoginActivity, MainActivity::class.java)        //go to home activity after save
+                    startActivity(intent)
+                    finishAffinity()
                 }
             },
-            Response.ErrorListener {
-                val res:String = "Unable to connect to server...";
-                Toast.makeText(this, res, Toast.LENGTH_LONG).show();
-            })
-
-        // Volley request policy, only one time request to avoid duplicate transaction
-        request.retryPolicy = DefaultRetryPolicy(
-            DefaultRetryPolicy.DEFAULT_TIMEOUT_MS,
-            // 0 means no retry
-            0, // DefaultRetryPolicy.DEFAULT_MAX_RETRIES = 2
-            1f // DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
+            { code: Int, error: Any ->
+                Toast.makeText(this, error.toString(), Toast.LENGTH_LONG).show()
+            },
+            DefaultRetryPolicy(5000, 0, 1f)
         )
-
-        // Add the volley post request to the request queue
-        queue.add(request);
     }
 }

@@ -13,10 +13,9 @@ Meteor.startup(() => {
   	// console.log("user: " + JSON.stringify(user));
   	// console.log("options: " + JSON.stringify(options));
   	let customizedUser = Object.assign({ active: true }, user);
-  	if(options.role && (options.role === "executive")) {
-	  	const apiKey = Random.hexString(32);
+  	if(options.apiKey) {
 	  	console.log(`adding an API key: ${apiKey}, to the user with id: ${user._id}.`);
-  		customizedUser.apiKey = apiKey;
+  		customizedUser.apiKey = options.apiKey;
   	}
 
     if(options.role && (options.role === "party")) {

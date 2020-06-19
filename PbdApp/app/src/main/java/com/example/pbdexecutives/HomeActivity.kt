@@ -22,6 +22,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.room.Room
+import androidx.work.WorkManager
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.Task
@@ -37,6 +38,7 @@ import kotlin.collections.ArrayList
 class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsResultCallback, LifecycleOwner {
     private lateinit var gpsSwitchStateReceiver: BroadcastReceiver
     private lateinit var dutyTimeUpdateReceiver: BroadcastReceiver
+    private lateinit var userLoginStateReceiver: BroadcastReceiver
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
 //        Log.i("pbdLog", "onCreateOptionsMenu called.")
@@ -76,7 +78,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
         TabLayoutMediator(tabsLayout, homecontentspager) { tab, position ->
             //To get the first name of doppelganger celebrities
-            Log.i("pbdLog", "${tabsText[position]}")
+//            Log.i("pbdLog", "${tabsText[position]}")
             tab.text = tabsText[position]
         }.attach()
     }
@@ -95,12 +97,12 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
         gpsSwitchStateReceiver = object : BroadcastReceiver() {         //receiver always called only when the duty switch is OFF.
             override fun onReceive(context: Context, intent: Intent) {
-                val switchState = intent.getBooleanExtra(TrackingService().switchInfo, false);
-                dutySwitch(switchState);
+                val switchState = intent.getBooleanExtra(TrackingService().switchInfo, false)
+                dutySwitch(switchState)
             }
         }
 
-        LocalBroadcastManager.getInstance(this).registerReceiver(gpsSwitchStateReceiver, filter);
+        LocalBroadcastManager.getInstance(this).registerReceiver(gpsSwitchStateReceiver, filter)
     }
 
     private fun dutyTimeMonitor() {
@@ -108,19 +110,41 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
         dutyTimeUpdateReceiver = object : BroadcastReceiver() {         //receiver always called only when the duty switch is OFF.
             override fun onReceive(context: Context, intent: Intent) {
-                calculateDutyTime();
+                calculateDutyTime()
             }
         }
 
-        LocalBroadcastManager.getInstance(this).registerReceiver(dutyTimeUpdateReceiver, filter);
+        LocalBroadcastManager.getInstance(this).registerReceiver(dutyTimeUpdateReceiver, filter)
+    }
+
+    private fun userLoginStatusMonitor() {
+        val filter = IntentFilter(PbdExecutivesUtils().actionUserLoggedOut)
+        val newIntent = Intent(this, MainActivity::class.java)        //go to home activity after save
+
+        userLoginStateReceiver = object : BroadcastReceiver() {         //receiver always called only when the duty switch is OFF.
+            override fun onReceive(context: Context, intent: Intent) {
+                if(isMyServiceRunning(TrackingService::class.java)){
+                    stopTrackingService()     //Stop tracking service if the service is alive.
+                }
+
+                startActivity(newIntent)
+                finishAffinity()
+            }
+        }
+
+        LocalBroadcastManager.getInstance(this).registerReceiver(userLoginStateReceiver, filter)
     }
 
     private fun gpsSwitchUnmonitor() {
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(gpsSwitchStateReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(gpsSwitchStateReceiver)
     }
 
     private fun dutyTimeUnmonitor() {
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(dutyTimeUpdateReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(dutyTimeUpdateReceiver)
+    }
+
+    private fun userLoginStatusUnonitor() {
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(userLoginStateReceiver)
     }
 
     private fun calculateDutyTime() {
@@ -165,19 +189,21 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     }
 
     override fun onResume() {
-        super.onResume();
+        super.onResume()
 
         dutySwitch(isMyServiceRunning(TrackingService::class.java)); //check if the service is running or not.
-        gpsSwitchMonitor();         //Keep monitoring the switch state.
-        calculateDutyTime();
-        dutyTimeMonitor();
+        gpsSwitchMonitor()         //Keep monitoring the switch state.
+        calculateDutyTime()
+        dutyTimeMonitor()
+        userLoginStatusMonitor()
     }
 
     override fun onPause() {
         super.onPause();
 
-        gpsSwitchUnmonitor();       //Leave the resources.
-        dutyTimeUnmonitor();
+        gpsSwitchUnmonitor()       //Leave the resources.
+        dutyTimeUnmonitor()
+        userLoginStatusUnonitor()
     }
 
     private fun dutySwitch(input: Boolean) {
@@ -315,17 +341,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         }
 
         R.id.action_logout -> {     //when logs out, just clear the user information and jump to the login activity.
-            val self = this;
-            this.lifecycleScope.launch {
-                if(isMyServiceRunning(TrackingService::class.java)){
-                    stopTrackingService();     //Stop tracking service if the service is alive.
-                };
-                val db = Room.databaseBuilder(self, AppDB::class.java, "PbdDB").build();
-                db.userDetailsDao().clearUserDetails();
-                val intent = Intent(self, MainActivity::class.java);        //go to home activity after save
-                startActivity(intent);
-                finishAffinity();       //remove the current activity from the activity stack so that back button makes it jump out of the application.
-            }
+            PbdExecutivesUtils().logoutUser(this)
             true
         }
 

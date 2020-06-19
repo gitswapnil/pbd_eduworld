@@ -1,5 +1,6 @@
 package com.example.pbdexecutives
 
+import androidx.lifecycle.LiveData
 import androidx.room.*
 import androidx.sqlite.db.SupportSQLiteQuery
 import java.util.*
@@ -13,8 +14,11 @@ data class UserDetails (
 
 @Dao
 interface UserDetailsDAO {
+    @Query("SELECT * FROM UserDetails ORDER BY ID DESC LIMIT 1")
+    fun getCurrentUser(): LiveData<UserDetails>
+
     @Query("SELECT apiKey FROM UserDetails ORDER BY ID DESC LIMIT 1")
-    suspend fun getApiKey(): String;
+    suspend fun getApiKey(): String
 
     @Query("DELETE FROM UserDetails")
     suspend fun clearUserDetails()

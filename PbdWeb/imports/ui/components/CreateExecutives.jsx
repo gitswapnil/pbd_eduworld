@@ -3,6 +3,7 @@ import SimpleSchema from 'simpl-schema';
 import { ReactiveVar } from 'meteor/reactive-var';
 import Collections from 'meteor/collections';
 import { Accounts } from 'meteor/accounts-base';
+import { Random } from 'meteor/random';
 
 if(Meteor.isServer) {
 	Meteor.publish('executives.getAll', function(){
@@ -136,6 +137,7 @@ Meteor.methods({
 				};
 
 				console.log("Saving the changes for executive with _id: " + editId + "...");
+
 				let modifier = {
 					"profile.name": cleanedInputs.name,
 					"profile.img": cleanedInputs.userImg,
@@ -149,13 +151,15 @@ Meteor.methods({
 				if(!cleanedInputs.userImg) {
 					Meteor.users.update({"_id": editId}, {$unset: {"profile.img": ""}}, {multi: false, upsert: false});
 				}
+
+				if(cleanedInputs.pwd) {		//if password is given then only set the password.
+					Accounts.setPassword(editId, cleanedInputs.pwd);
+					modifier.apiKey = Random.hexString(32);
+				}
 				
 				Meteor.users.update({"_id": editId}, {$set: modifier}, {multi: false, upsert: false});
 				Accounts.removeEmail(editId, cleanedInputs.email);	//replace the email so that it will last in the list.
 				Accounts.addEmail(editId, cleanedInputs.email);
-				if(cleanedInputs.pwd) {		//if password is given then only set the password.
-					Accounts.setPassword(editId, cleanedInputs.pwd);
-				}
 				console.log("new changes have been saved for the given executive with the id: " + editId);
 			} else {
 				console.log("Creating a new executive...");
@@ -169,7 +173,7 @@ Meteor.methods({
 						phoneNumber: cleanedInputs.pPhNo,
 						address: cleanedInputs.resAddress,
 					},
-					role: "executive",
+					apiKey: Random.hexString(32),
 					active: true,
 				});
 				console.log(`An executive with username: ${cleanedInputs.cPhNo} is created.`);
