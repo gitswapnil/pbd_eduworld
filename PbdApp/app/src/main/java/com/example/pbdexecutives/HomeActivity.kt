@@ -4,8 +4,12 @@ import android.Manifest
 import android.app.Activity
 import android.app.ActivityManager
 import android.content.*
+import android.content.pm.PackageInfo
+import android.content.pm.PackageItemInfo
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Log
 import android.view.Menu
 import android.view.MenuInflater
@@ -15,8 +19,10 @@ import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.startActivity
 import androidx.core.view.get
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
@@ -26,6 +32,7 @@ import androidx.work.WorkManager
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.Task
+import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.android.synthetic.main.activity_home.*
@@ -33,7 +40,6 @@ import kotlinx.coroutines.launch
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.collections.ArrayList
-
 
 class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsResultCallback, LifecycleOwner {
     private lateinit var gpsSwitchStateReceiver: BroadcastReceiver
@@ -53,13 +59,15 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             PbdExecutivesUtils().REQUEST_CHECK_LOCATION_SETTINGS ->
                 when(resultCode) {
                     Activity.RESULT_OK -> {
-                        Log.i("pbdLog", "Settings are changed successfully.");
-                        findViewById<TextView>(R.id.textView2).text = "";
+                        Log.i("pbdLog", "Settings are changed successfully.")
+//                        findViewById<TextView>(R.id.textView2).text = ""
                         startTrackingService();
                     }
                     Activity.RESULT_CANCELED -> {
-                        Log.i("pbdLog", "Settings are not changed. Hence cannot assign on duty.");
-                        findViewById<TextView>(R.id.textView2).setText(R.string.location_not_enabled);
+                        Log.i("pbdLog", "Settings are not changed. Hence cannot assign on duty.")
+                        Snackbar.make(  findViewById<CoordinatorLayout>(R.id.home_layout),
+                                        R.string.location_not_enabled,
+                                        Snackbar.LENGTH_SHORT).show()
                     }
                     else -> "Nothing"
                 }
@@ -245,7 +253,15 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             } else {
                 // Permission request was denied.
                 Log.i("pbdLog", "Location Permission is denied. To reactivate go to settings and change the location permission.");
-                findViewById<TextView>(R.id.textView2).setText(R.string.location_permission_denied);
+                val snackBar = Snackbar.make( findViewById<CoordinatorLayout>(R.id.home_layout),
+                                                    R.string.location_permission_denied,
+                                                    Snackbar.LENGTH_INDEFINITE)
+                snackBar.setAction(R.string.settings){
+                    startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.fromParts("package", packageName, null)
+                    })
+                }
+                snackBar.show()
             }
         }
     }
@@ -304,7 +320,15 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                             DialogInterface.OnClickListener { dialog, id ->
                                 // User cancelled the dialog
                                 Log.i("pbdLog", "Location Permission is denied. To reactivate go to settings and change the location permission.");
-                                findViewById<TextView>(R.id.textView2).setText(R.string.location_permission_denied);
+                                val snackBar = Snackbar.make( findViewById<CoordinatorLayout>(R.id.home_layout),
+                                    R.string.location_permission_denied,
+                                    Snackbar.LENGTH_INDEFINITE)
+                                snackBar.setAction(R.string.settings){
+                                    startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = Uri.fromParts("package", packageName, null)
+                                    })
+                                }
+                                snackBar.show()
                             })
                     }
                     // Set other dialog properties
@@ -327,7 +351,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         val duty: Boolean = findViewById<Switch>(R.id.duty_switch).isChecked;
         dutySwitch(false);      //reset the duty switch first;
         if(duty) {          //if the duty is ON
-            findViewById<TextView>(R.id.textView2).text = "";
+//            findViewById<TextView>(R.id.textView2).text = "";
             checkLocationPermissionAndSettings();      //check for the permissions.
         } else {            //if the duty is OFF
             stopTrackingService();

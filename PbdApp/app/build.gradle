@@ -33,14 +33,13 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
-
 }
 
 apply plugin: 'com.android.application'
 
 dependencies {
+    implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
     def lifecycle_version = "2.2.0"
-    def arch_version = "2.1.0"
     def room_version = "2.2.5"
     def work_version = "2.3.4"
     def nav_version = "2.3.0-rc01"
@@ -89,11 +88,6 @@ dependencies {
     implementation "androidx.work:work-runtime-ktx:$work_version"
     implementation "androidx.work:work-rxjava2:$work_version"
 
-    //Navigation
-    implementation "androidx.navigation:navigation-fragment-ktx:$nav_version"
-    implementation "androidx.navigation:navigation-ui-ktx:$nav_version"
-    implementation "androidx.navigation:navigation-dynamic-features-fragment:$nav_version"
-
     //View Pager
     implementation "androidx.viewpager2:viewpager2:1.0.0"
 
@@ -109,6 +103,7 @@ dependencies {
     implementation "androidx.room:room-ktx:$room_version"
     implementation "androidx.room:room-rxjava2:$room_version"
     implementation "androidx.room:room-guava:$room_version"
+
 
 
     testImplementation "androidx.room:room-testing:$room_version"
