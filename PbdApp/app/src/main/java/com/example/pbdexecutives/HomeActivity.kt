@@ -51,7 +51,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
 //        Log.i("pbdLog", "onCreateOptionsMenu called.")
-        val inflater: MenuInflater = menuInflater;
+        val inflater: MenuInflater = menuInflater
         inflater.inflate(R.menu.main_menu, menu)
 
         // Associate searchable configuration with the SearchView
@@ -61,6 +61,34 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         }
 
         return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
+        R.id.option_notifications -> {
+
+            true
+        }
+
+        R.id.option_profile -> {
+            startActivity(Intent(this, ProfileActivity::class.java))
+            true
+        }
+
+        R.id.option_systemLog -> {
+
+            true
+        }
+
+        R.id.option_about -> {
+
+            true
+        }
+
+        else -> {
+            // If we got here, the user's action was not recognized.
+            // Invoke the superclass to handle it.
+            super.onOptionsItemSelected(item)
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -83,6 +111,191 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 }
             else -> "Nothing"
         }
+    }
+
+    private fun checkSettings() {
+        val locationRequest = LocationRequest.create()?.apply {
+            interval = 10000
+            fastestInterval = 5000
+            priority = LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY
+        }
+
+        val builder = locationRequest?.let { LocationSettingsRequest.Builder().addLocationRequest(it) };
+        val client: SettingsClient = LocationServices.getSettingsClient(this)
+        val task: Task<LocationSettingsResponse> = client.checkLocationSettings(builder?.build())
+
+        task.addOnSuccessListener { locationSettingsResponse ->
+            // All location settings are satisfied. The client can initialize
+            // location requests here.
+            startTrackingService();
+        }
+
+        task.addOnFailureListener { exception ->
+            if (exception is ResolvableApiException){
+                // Location settings are not satisfied, but this can be fixed
+                // by showing the user a dialog.
+                try {
+                    // Show the dialog by calling startResolutionForResult(),
+                    // and check the result in onActivityResult().
+                    exception.startResolutionForResult(this, PbdExecutivesUtils().REQUEST_CHECK_LOCATION_SETTINGS)
+                } catch (sendEx: IntentSender.SendIntentException) {
+                    // Ignore the error.
+                }
+            }
+        }
+
+    }
+
+    override fun onRequestPermissionsResult(        //On getting the request permission's result from the user
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        if (requestCode == PbdExecutivesUtils().PERMISSION_REQUEST_FINE_ACCESS) {
+            // Request for camera permission.
+            if (grantResults.size == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission has been granted. Start camera preview Activity.
+                Log.i("pbdLog", "Permission is granted, you can start tracking services now.");
+                checkSettings();
+            } else {
+                // Permission request was denied.
+                Log.i("pbdLog", "Location Permission is denied. To reactivate go to settings and change the location permission.");
+                val snackBar = Snackbar.make( findViewById<CoordinatorLayout>(R.id.home_layout),
+                    R.string.location_permission_denied,
+                    Snackbar.LENGTH_INDEFINITE)
+                snackBar.setAction(R.string.settings){
+                    startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.fromParts("package", packageName, null)
+                    })
+                }
+                snackBar.show()
+            }
+        }
+    }
+
+    private fun checkLocationPermissionAndSettings(): Boolean {
+        Log.i("pbdLog", "Checking Location Permission.");
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            //if location access was previously granted.
+            checkSettings();
+        } else {
+            //if location access is not yet granted.
+            if(ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
+                //if location access is not yet granted and you need to show the reason as to why it is important.
+                val alertDialog: AlertDialog? = this.let {
+                    val builder = AlertDialog.Builder(it)
+                    builder.apply {
+                        setPositiveButton(R.string.ok,
+                            DialogInterface.OnClickListener { dialog, id ->
+                                // User clicked OK button
+                                ActivityCompat.requestPermissions(it, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PbdExecutivesUtils().PERMISSION_REQUEST_FINE_ACCESS);
+                            })
+                        setNegativeButton(R.string.cancel,
+                            DialogInterface.OnClickListener { dialog, id ->
+                                // User cancelled the dialog
+                                Log.i("pbdLog", "Location Permission is denied. To reactivate go to settings and change the location permission.");
+                                val snackBar = Snackbar.make( findViewById<CoordinatorLayout>(R.id.home_layout),
+                                    R.string.location_permission_denied,
+                                    Snackbar.LENGTH_INDEFINITE)
+                                snackBar.setAction(R.string.settings){
+                                    startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = Uri.fromParts("package", packageName, null)
+                                    })
+                                }
+                                snackBar.show()
+                            })
+                    }
+                    // Set other dialog properties
+                    builder?.setMessage(R.string.location_permission_message)
+                        .setTitle(R.string.attention)
+
+                    // Create the AlertDialog
+                    builder.create()
+                }
+                alertDialog?.show();        //show user the reason for the need of location access.
+            } else {
+                //if requesting for the very first time.
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PbdExecutivesUtils().PERMISSION_REQUEST_FINE_ACCESS)
+            }
+        }
+        return true;
+    }
+
+    fun changeDuty (view: View) {
+        val duty: Boolean = findViewById<Switch>(R.id.duty_switch).isChecked;
+        dutySwitch(false);      //reset the duty switch first;
+        if(duty) {          //if the duty is ON
+//            findViewById<TextView>(R.id.textView2).text = "";
+            checkLocationPermissionAndSettings();      //check for the permissions.
+        } else {            //if the duty is OFF
+            stopTrackingService();
+        }
+    }
+
+    private fun dutySwitch(input: Boolean) {
+        findViewById<Switch>(R.id.duty_switch).isChecked = input;
+    }
+
+    private fun calculateDutyTime() {
+        val calendarInstance: Calendar = Calendar.getInstance();
+        val hours: Int = calendarInstance.get(Calendar.HOUR_OF_DAY);
+        val minutes: Int = calendarInstance.get(Calendar.MINUTE);
+        val seconds: Int = calendarInstance.get(Calendar.SECOND);
+        val milliseconds: Int = calendarInstance.get(Calendar.MILLISECOND);
+        val todaysCurrentMilliSeconds = (hours * 3600000) + (minutes * 60000) + (seconds * 1000) + milliseconds;
+        val startOfToday:Long = calendarInstance.timeInMillis - todaysCurrentMilliSeconds;
+        val endOfToday:Long = startOfToday + 86399999;
+
+//        Log.i("pbdLog", "currTS: $calendarInstance.timeInMillis");
+//        Log.i("pbdLog", "todaysMilliSeconds: $todaysCurrentMilliSeconds");
+//        Log.i("pbdLog", "startOfToday: $startOfToday");
+//        Log.i("pbdLog", "startOfToday: $endOfToday");
+
+        val self = this;
+        this.lifecycleScope.launch {
+            val db = Room.databaseBuilder(self, AppDB::class.java, "PbdDB").build();
+            val result = db.locationsDao().getTodaysTimestamps(start = startOfToday, end = endOfToday);     //result contains timestamp strings.
+            var todaysMilliseconds: Long = 0;
+            result.forEach { tsString ->        //split those strings into arrays.
+                val timestamps = tsString.split(",");
+                var previousTS = timestamps[0].toLong();
+                timestamps.forEach {
+                    val currentTS = it.toLong();
+                    todaysMilliseconds += previousTS - currentTS;       //add the difference everytime.
+                    previousTS = currentTS
+                }
+            }
+//            Log.i("pbdLog", "todaysMilliseconds: $todaysMilliseconds");
+            val todaysHours = TimeUnit.MILLISECONDS.toHours(todaysMilliseconds);
+            val todaysMinutes = TimeUnit.MILLISECONDS.toMinutes(todaysMilliseconds) - (todaysHours * 60);
+            Log.i("pbdLog", "todaysHours: ${todaysHours}, todaysMinutes: ${todaysMinutes}");
+            changeDutyTime(hrs = todaysHours, min = todaysMinutes);
+        }
+    }
+
+    private fun changeDutyTime(hrs: Long, min: Long) {
+        findViewById<TextView>(R.id.duty_period).text = "${hrs.toString()} ${getString(R.string.hrs)} ${min.toString()} ${getString(R.string.mins)}"
+    }
+
+    //This method gives whether a service is running or not.
+    private fun isMyServiceRunning(serviceClass: Class<*>): Boolean {
+        val manager: ActivityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        for (service: ActivityManager.RunningServiceInfo in manager.getRunningServices(Int.MAX_VALUE)) {
+            if (serviceClass.name == service.service.className) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun startTrackingService() {
+        val serviceIntent = Intent(this, TrackingService::class.java)
+        ContextCompat.startForegroundService(this, serviceIntent);
+    }
+
+    private fun stopTrackingService() {
+        val serviceIntent = Intent(this, TrackingService::class.java)
+        stopService(serviceIntent);
     }
 
     private fun setTabConfigurations() {
@@ -165,47 +378,6 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         LocalBroadcastManager.getInstance(this).unregisterReceiver(userLoginStateReceiver)
     }
 
-    private fun calculateDutyTime() {
-        val calendarInstance: Calendar = Calendar.getInstance();
-        val hours: Int = calendarInstance.get(Calendar.HOUR_OF_DAY);
-        val minutes: Int = calendarInstance.get(Calendar.MINUTE);
-        val seconds: Int = calendarInstance.get(Calendar.SECOND);
-        val milliseconds: Int = calendarInstance.get(Calendar.MILLISECOND);
-        val todaysCurrentMilliSeconds = (hours * 3600000) + (minutes * 60000) + (seconds * 1000) + milliseconds;
-        val startOfToday:Long = calendarInstance.timeInMillis - todaysCurrentMilliSeconds;
-        val endOfToday:Long = startOfToday + 86399999;
-
-//        Log.i("pbdLog", "currTS: $calendarInstance.timeInMillis");
-//        Log.i("pbdLog", "todaysMilliSeconds: $todaysCurrentMilliSeconds");
-//        Log.i("pbdLog", "startOfToday: $startOfToday");
-//        Log.i("pbdLog", "startOfToday: $endOfToday");
-
-        val self = this;
-        this.lifecycleScope.launch {
-            val db = Room.databaseBuilder(self, AppDB::class.java, "PbdDB").build();
-            val result = db.locationsDao().getTodaysTimestamps(start = startOfToday, end = endOfToday);     //result contains timestamp strings.
-            var todaysMilliseconds: Long = 0;
-            result.forEach { tsString ->        //split those strings into arrays.
-                val timestamps = tsString.split(",");
-                var previousTS = timestamps[0].toLong();
-                timestamps.forEach {
-                    val currentTS = it.toLong();
-                    todaysMilliseconds += previousTS - currentTS;       //add the difference everytime.
-                    previousTS = currentTS
-                }
-            }
-//            Log.i("pbdLog", "todaysMilliseconds: $todaysMilliseconds");
-            val todaysHours = TimeUnit.MILLISECONDS.toHours(todaysMilliseconds);
-            val todaysMinutes = TimeUnit.MILLISECONDS.toMinutes(todaysMilliseconds) - (todaysHours * 60);
-            Log.i("pbdLog", "todaysHours: ${todaysHours}, todaysMinutes: ${todaysMinutes}");
-            changeDutyTime(hrs = todaysHours, min = todaysMinutes);
-        }
-    }
-
-    private fun changeDutyTime(hrs: Long, min: Long) {
-        findViewById<TextView>(R.id.duty_period).text = "${hrs.toString()} ${getString(R.string.hrs)} ${min.toString()} ${getString(R.string.mins)}"
-    }
-
     override fun onResume() {
         super.onResume()
 
@@ -222,178 +394,6 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         gpsSwitchUnmonitor()       //Leave the resources.
         dutyTimeUnmonitor()
         userLoginStatusUnonitor()
-    }
-
-    private fun dutySwitch(input: Boolean) {
-        findViewById<Switch>(R.id.duty_switch).isChecked = input;
-    }
-
-    //This method gives whether a service is running or not.
-    private fun isMyServiceRunning(serviceClass: Class<*>): Boolean {
-        val manager: ActivityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        for (service: ActivityManager.RunningServiceInfo in manager.getRunningServices(Int.MAX_VALUE)) {
-            if (serviceClass.name == service.service.className) {
-                return true
-            }
-        }
-        return false
-    }
-
-    private fun startTrackingService() {
-        val serviceIntent = Intent(this, TrackingService::class.java)
-        ContextCompat.startForegroundService(this, serviceIntent);
-    }
-
-    private fun stopTrackingService() {
-        val serviceIntent = Intent(this, TrackingService::class.java)
-        stopService(serviceIntent);
-    }
-
-    override fun onRequestPermissionsResult(        //On getting the request permission's result from the user
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
-    ) {
-        if (requestCode == PbdExecutivesUtils().PERMISSION_REQUEST_FINE_ACCESS) {
-            // Request for camera permission.
-            if (grantResults.size == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission has been granted. Start camera preview Activity.
-                Log.i("pbdLog", "Permission is granted, you can start tracking services now.");
-                checkSettings();
-            } else {
-                // Permission request was denied.
-                Log.i("pbdLog", "Location Permission is denied. To reactivate go to settings and change the location permission.");
-                val snackBar = Snackbar.make( findViewById<CoordinatorLayout>(R.id.home_layout),
-                                                    R.string.location_permission_denied,
-                                                    Snackbar.LENGTH_INDEFINITE)
-                snackBar.setAction(R.string.settings){
-                    startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                        data = Uri.fromParts("package", packageName, null)
-                    })
-                }
-                snackBar.show()
-            }
-        }
-    }
-
-    private fun checkSettings() {
-        val locationRequest = LocationRequest.create()?.apply {
-            interval = 10000
-            fastestInterval = 5000
-            priority = LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY
-        }
-
-        val builder = locationRequest?.let { LocationSettingsRequest.Builder().addLocationRequest(it) };
-        val client: SettingsClient = LocationServices.getSettingsClient(this)
-        val task: Task<LocationSettingsResponse> = client.checkLocationSettings(builder?.build())
-
-        task.addOnSuccessListener { locationSettingsResponse ->
-            // All location settings are satisfied. The client can initialize
-            // location requests here.
-            startTrackingService();
-        }
-
-        task.addOnFailureListener { exception ->
-            if (exception is ResolvableApiException){
-                // Location settings are not satisfied, but this can be fixed
-                // by showing the user a dialog.
-                try {
-                    // Show the dialog by calling startResolutionForResult(),
-                    // and check the result in onActivityResult().
-                    exception.startResolutionForResult(this, PbdExecutivesUtils().REQUEST_CHECK_LOCATION_SETTINGS)
-                } catch (sendEx: IntentSender.SendIntentException) {
-                    // Ignore the error.
-                }
-            }
-        }
-
-    }
-
-    private fun checkLocationPermissionAndSettings(): Boolean {
-        Log.i("pbdLog", "Checking Location Permission.");
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            //if location access was previously granted.
-            checkSettings();
-        } else {
-            //if location access is not yet granted.
-            if(ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
-                //if location access is not yet granted and you need to show the reason as to why it is important.
-                val alertDialog: AlertDialog? = this.let {
-                    val builder = AlertDialog.Builder(it)
-                    builder.apply {
-                        setPositiveButton(R.string.ok,
-                            DialogInterface.OnClickListener { dialog, id ->
-                                // User clicked OK button
-                                ActivityCompat.requestPermissions(it, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PbdExecutivesUtils().PERMISSION_REQUEST_FINE_ACCESS);
-                            })
-                        setNegativeButton(R.string.cancel,
-                            DialogInterface.OnClickListener { dialog, id ->
-                                // User cancelled the dialog
-                                Log.i("pbdLog", "Location Permission is denied. To reactivate go to settings and change the location permission.");
-                                val snackBar = Snackbar.make( findViewById<CoordinatorLayout>(R.id.home_layout),
-                                    R.string.location_permission_denied,
-                                    Snackbar.LENGTH_INDEFINITE)
-                                snackBar.setAction(R.string.settings){
-                                    startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                        data = Uri.fromParts("package", packageName, null)
-                                    })
-                                }
-                                snackBar.show()
-                            })
-                    }
-                    // Set other dialog properties
-                    builder?.setMessage(R.string.location_permission_message)
-                            .setTitle(R.string.attention)
-
-                    // Create the AlertDialog
-                    builder.create()
-                }
-                alertDialog?.show();        //show user the reason for the need of location access.
-            } else {
-                //if requesting for the very first time.
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PbdExecutivesUtils().PERMISSION_REQUEST_FINE_ACCESS)
-            }
-        }
-        return true;
-    }
-
-    fun changeDuty (view: View) {
-        val duty: Boolean = findViewById<Switch>(R.id.duty_switch).isChecked;
-        dutySwitch(false);      //reset the duty switch first;
-        if(duty) {          //if the duty is ON
-//            findViewById<TextView>(R.id.textView2).text = "";
-            checkLocationPermissionAndSettings();      //check for the permissions.
-        } else {            //if the duty is OFF
-            stopTrackingService();
-        }
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
-        R.id.option_notifications -> {
-
-            true
-        }
-
-        R.id.option_profile -> {
-
-            true
-        }
-
-        R.id.option_systemLog -> {
-
-            true
-        }
-
-        R.id.option_about -> {
-
-            true
-        }
-
-        else -> {
-            // If we got here, the user's action was not recognized.
-            // Invoke the superclass to handle it.
-            super.onOptionsItemSelected(item)
-        }
     }
 
     override fun onDestroy() {

@@ -19,6 +19,7 @@
             android:layout_height="?attr/actionBarSize"
             android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
             app:layout_scrollFlags="scroll|enterAlways"
+            app:menu="@menu/main_menu"
             app:title="@string/app_name"></androidx.appcompat.widget.Toolbar>
 
         <androidx.appcompat.widget.Toolbar
