@@ -38,6 +38,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.android.synthetic.main.activity_home.*
+import kotlinx.android.synthetic.main.activity_login.*
 import kotlinx.coroutines.launch
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -55,7 +56,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
         // Associate searchable configuration with the SearchView
         val searchManager = getSystemService(Context.SEARCH_SERVICE) as SearchManager
-        (menu.findItem(R.id.search).actionView as SearchView).apply {
+        (menu.findItem(R.id.option_search).actionView as SearchView).apply {
             setSearchableInfo(searchManager.getSearchableInfo(componentName))
         }
 
@@ -368,13 +369,23 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     }
 
     override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
-        R.id.action_settings -> {
-            // User chose the "Settings" item, show the app settings UI...
+        R.id.option_notifications -> {
+
             true
         }
 
-        R.id.action_logout -> {     //when logs out, just clear the user information and jump to the login activity.
-            PbdExecutivesUtils().logoutUser(this)
+        R.id.option_profile -> {
+
+            true
+        }
+
+        R.id.option_systemLog -> {
+
+            true
+        }
+
+        R.id.option_about -> {
+
             true
         }
 

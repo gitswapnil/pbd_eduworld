@@ -24,7 +24,8 @@
     <string name="notifications">Notifications</string>
     <string name="settings">Settings</string>
     <string name="profile">Profile</string>
-    <string name="logout">Logout</string>
+    <string name="system_log">System Log</string>
+    <string name="about">About</string>
     <string name="search_title">Search</string>
     <string name="search_hint">Search...</string>
     <string name="location_permission_message">You need to allow this app to have location access in order to assign you on the Duty.</string>
