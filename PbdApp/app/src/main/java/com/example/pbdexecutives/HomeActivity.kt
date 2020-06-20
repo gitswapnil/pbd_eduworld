@@ -3,6 +3,7 @@ package com.example.pbdexecutives
 import android.Manifest
 import android.app.Activity
 import android.app.ActivityManager
+import android.app.SearchManager
 import android.content.*
 import android.content.pm.PackageInfo
 import android.content.pm.PackageItemInfo
@@ -15,6 +16,7 @@ import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
+import android.widget.SearchView
 import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -50,6 +52,13 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 //        Log.i("pbdLog", "onCreateOptionsMenu called.")
         val inflater: MenuInflater = menuInflater;
         inflater.inflate(R.menu.main_menu, menu)
+
+        // Associate searchable configuration with the SearchView
+        val searchManager = getSystemService(Context.SEARCH_SERVICE) as SearchManager
+        (menu.findItem(R.id.search).actionView as SearchView).apply {
+            setSearchableInfo(searchManager.getSearchableInfo(componentName))
+        }
+
         return true
     }
 
