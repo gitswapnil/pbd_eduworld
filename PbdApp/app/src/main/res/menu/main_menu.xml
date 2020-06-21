@@ -4,7 +4,7 @@
 
     <item
         android:id="@+id/option_notifications"
-        android:icon="@drawable/notification_bell"
+        android:icon="@drawable/ic_baseline_notifications_24"
         android:title="@string/notifications"
         app:showAsAction="collapseActionView|ifRoom" />
 

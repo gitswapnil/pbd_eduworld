@@ -5,6 +5,7 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import kotlinx.android.synthetic.main.fragment_home_contents.*
 
 // TODO: Rename parameter arguments, choose names that match
 // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
@@ -64,6 +65,15 @@ class HomeContentsFragment : Fragment() {
     ): View? {
         // Inflate the layout for this fragment
         return inflater.inflate(R.layout.fragment_home_contents, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        val position = requireArguments().getInt(ARG_POSITION)
+//        val imageFilePath = getString(R.string.doppelganger_image_path, position)
+//        val doppelgangerNamesArray = requireContext().resources.getStringArray(R.array.doppelganger_names)
+
+//        setImageFromAssetsFile(requireContext(), imageFilePath)
+        test_id.text = position.toString()
     }
 
 }

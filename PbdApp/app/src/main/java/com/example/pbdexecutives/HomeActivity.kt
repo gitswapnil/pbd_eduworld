@@ -54,7 +54,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         val inflater: MenuInflater = menuInflater
         inflater.inflate(R.menu.main_menu, menu)
 
-        // Associate searchable configuration with the SearchView
+//         Associate searchable configuration with the SearchView
         val searchManager = getSystemService(Context.SEARCH_SERVICE) as SearchManager
         (menu.findItem(R.id.option_search).actionView as SearchView).apply {
             setSearchableInfo(searchManager.getSearchableInfo(componentName))
@@ -279,14 +279,14 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
     private fun setTabConfigurations() {
         val homeContentAdapter = HomeContentAdapter(this, 3)
-        homecontentspager.adapter = homeContentAdapter
+        home_contents_pager.adapter = homeContentAdapter
 
         var tabsText: ArrayList<String> = ArrayList()
-        for (i in 0 until tabsLayout.tabCount) {
-            tabsText.add(tabsLayout.getTabAt(i)?.text as String)
+        for (i in 0 until tabs_layout.tabCount) {
+            tabsText.add(tabs_layout.getTabAt(i)?.text as String)
         }
 
-        TabLayoutMediator(tabsLayout, homecontentspager) { tab, position ->
+        TabLayoutMediator(tabs_layout, home_contents_pager) { tab, position ->
             //To get the first name of doppelganger celebrities
 //            Log.i("pbdLog", "${tabsText[position]}")
             tab.text = tabsText[position]
@@ -297,7 +297,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_home)
-        setSupportActionBar(findViewById(R.id.main_toolbar))
+        setSupportActionBar(findViewById(R.id.home_toolbar))
         setTabConfigurations()
     }
 

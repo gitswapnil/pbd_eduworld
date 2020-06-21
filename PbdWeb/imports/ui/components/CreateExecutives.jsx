@@ -339,7 +339,7 @@ if(Meteor.isClient) {
 								{ style: {"textAlign": "right"}, content: (index + 1)}, 
 								{ content: (doc.profile && doc.profile.name)}, 
 								{ content: doc.username}, 
-								{ content: moment(doc.updatedAt || doc.createdAt).format("Do MMM YYYY h:mm:ss a")}
+								{ content: moment(doc.updatedAt).format("Do MMM YYYY h:mm:ss a")}
 							],
 							rowAttributes: {
 								key: doc._id,

@@ -342,7 +342,7 @@ if(Meteor.isClient) {
 								{ content: doc.username}, 
 								{ key: ((doc.profile && doc.profile.name) + (doc.profile && doc.profile.address)), content: <div>{doc.profile && doc.profile.name}<br/>{doc.profile && doc.profile.address}</div>},
 								{ content: (doc.profile && doc.profile.phoneNumber)},
-								{ content: moment(doc.updatedAt || doc.createdAt).format("Do MMM YYYY h:mm:ss a")}
+								{ content: moment(doc.updatedAt).format("Do MMM YYYY h:mm:ss a")}
 							],
 							rowAttributes: {
 								key: doc._id,

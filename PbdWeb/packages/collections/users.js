@@ -29,7 +29,6 @@ Meteor.users.attachSchema(new SimpleSchema({
 
     "updatedAt": {
     	type: Date,
-    	optional: true
     },
 
     "profile": {

@@ -7,4 +7,9 @@
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
     </style>
+
+    <style name="MenuTheme" parent="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
+        <item name="android:textColor">@color/design_default_color_on_secondary</item>
+        <item name="android:itemBackground">@color/design_default_color_on_primary</item>
+    </style>
 </resources>
