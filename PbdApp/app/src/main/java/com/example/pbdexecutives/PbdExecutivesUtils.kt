@@ -1,5 +1,7 @@
 package com.example.pbdexecutives
 
+import android.app.Activity
+import android.app.ActivityManager
 import android.app.Application
 import android.content.Context
 import android.content.Intent
@@ -7,7 +9,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.NetworkInfo
 import android.os.Build
-import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.room.Room
 import androidx.work.WorkManager
@@ -49,6 +51,17 @@ class PbdExecutivesUtils: Application() {
         }
     }
 
+    //This method gives whether a service is running or not.
+    fun isMyServiceRunning(context: Context, serviceClass: Class<*>): Boolean {
+        val manager: ActivityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        for (service: ActivityManager.RunningServiceInfo in manager.getRunningServices(Int.MAX_VALUE)) {
+            if (serviceClass.name == service.service.className) {
+                return true
+            }
+        }
+        return false
+    }
+
     fun logoutUser(context: Context) {
         GlobalScope.launch {
             //clear all of his data first
@@ -61,6 +74,10 @@ class PbdExecutivesUtils: Application() {
             //send the broadcast signal that the user has logged out.
             val intent = Intent(actionUserLoggedOut)
             LocalBroadcastManager.getInstance(this@PbdExecutivesUtils).sendBroadcast(intent)
+
+            if(isMyServiceRunning(context, TrackingService::class.java)){
+                stopTrackingService(context)     //Stop tracking service if the service is alive.
+            }
         }
     }
 
@@ -90,5 +107,15 @@ class PbdExecutivesUtils: Application() {
         request.retryPolicy = policy
         // Add the volley post request to the request queue
         queue.add(request)
+    }
+
+    fun startTrackingService(context: Context) {
+        val serviceIntent = Intent(context, TrackingService::class.java)
+        ContextCompat.startForegroundService(context, serviceIntent);
+    }
+
+    fun stopTrackingService(context: Context) {
+        val serviceIntent = Intent(context, TrackingService::class.java)
+        context.stopService(serviceIntent);
     }
 }

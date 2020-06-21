@@ -99,7 +99,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     Activity.RESULT_OK -> {
                         Log.i("pbdLog", "Settings are changed successfully.")
 //                        findViewById<TextView>(R.id.textView2).text = ""
-                        startTrackingService();
+                        PbdExecutivesUtils().startTrackingService(applicationContext);
                     }
                     Activity.RESULT_CANCELED -> {
                         Log.i("pbdLog", "Settings are not changed. Hence cannot assign on duty.")
@@ -127,7 +127,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         task.addOnSuccessListener { locationSettingsResponse ->
             // All location settings are satisfied. The client can initialize
             // location requests here.
-            startTrackingService();
+            PbdExecutivesUtils().startTrackingService(applicationContext);
         }
 
         task.addOnFailureListener { exception ->
@@ -228,7 +228,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 //            findViewById<TextView>(R.id.textView2).text = "";
             checkLocationPermissionAndSettings();      //check for the permissions.
         } else {            //if the duty is OFF
-            stopTrackingService();
+            PbdExecutivesUtils().stopTrackingService(applicationContext);
         }
     }
 
@@ -275,27 +275,6 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
     private fun changeDutyTime(hrs: Long, min: Long) {
         findViewById<TextView>(R.id.duty_period).text = "${hrs.toString()} ${getString(R.string.hrs)} ${min.toString()} ${getString(R.string.mins)}"
-    }
-
-    //This method gives whether a service is running or not.
-    private fun isMyServiceRunning(serviceClass: Class<*>): Boolean {
-        val manager: ActivityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        for (service: ActivityManager.RunningServiceInfo in manager.getRunningServices(Int.MAX_VALUE)) {
-            if (serviceClass.name == service.service.className) {
-                return true
-            }
-        }
-        return false
-    }
-
-    private fun startTrackingService() {
-        val serviceIntent = Intent(this, TrackingService::class.java)
-        ContextCompat.startForegroundService(this, serviceIntent);
-    }
-
-    private fun stopTrackingService() {
-        val serviceIntent = Intent(this, TrackingService::class.java)
-        stopService(serviceIntent);
     }
 
     private fun setTabConfigurations() {
@@ -354,10 +333,6 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
         userLoginStateReceiver = object : BroadcastReceiver() {         //receiver always called only when the duty switch is OFF.
             override fun onReceive(context: Context, intent: Intent) {
-                if(isMyServiceRunning(TrackingService::class.java)){
-                    stopTrackingService()     //Stop tracking service if the service is alive.
-                }
-
                 startActivity(newIntent)
                 finishAffinity()
             }
@@ -381,7 +356,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     override fun onResume() {
         super.onResume()
 
-        dutySwitch(isMyServiceRunning(TrackingService::class.java)); //check if the service is running or not.
+        dutySwitch(PbdExecutivesUtils().isMyServiceRunning(applicationContext, TrackingService::class.java)); //check if the service is running or not.
         gpsSwitchMonitor()         //Keep monitoring the switch state.
         calculateDutyTime()
         dutyTimeMonitor()

@@ -33,11 +33,17 @@
     <string name="location_not_enabled">Location service not enabled!</string>
     <string name="navigation_notification_message">You are on the Duty...</string>
     <string name="attention">Attention!</string>
+    <string name="executive_avatar">Executive Avatar</string>
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
     <string name="hrs">Hrs</string>
     <string name="mins">Mins</string>
     <string name="calculating">Calculating...</string>
-    <!-- TODO: Remove or change this placeholder text -->
+    <string name="name">Name:\u0020</string>
+    <string name="email">Email:\u0020</string>
+    <string name="companyNo">Phone No.:\u0020</string>
+    <string name="personalNo">Personal Ph No.:\u0020</string>
+    <string name="address">Address:\u0020</string>
+    <string name="log_out">Log Out</string>
     <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>

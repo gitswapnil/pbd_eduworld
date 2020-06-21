@@ -3,19 +3,54 @@ package com.example.pbdexecutives
 import androidx.lifecycle.LiveData
 import androidx.room.*
 import androidx.sqlite.db.SupportSQLiteQuery
+import java.nio.ByteBuffer
 import java.util.*
 
 //UserDetails
 @Entity
 data class UserDetails (
     @PrimaryKey val id: Int,
-    val apiKey: String?
-)
+    val apiKey: String?,
+    val name: String,
+    val phoneNo: String,
+    val email: String,
+    @ColumnInfo(typeAffinity = ColumnInfo.BLOB) val img: ByteArray,
+    val createdAt: Long,
+    val updatedAt: Long
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as UserDetails
+
+        if (id != other.id) return false
+        if (apiKey != other.apiKey) return false
+        if (name != other.name) return false
+        if (phoneNo != other.phoneNo) return false
+        if (email != other.email) return false
+        if (!img.contentEquals(other.img)) return false
+        if (updatedAt != other.updatedAt) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = id
+        result = 31 * result + (apiKey?.hashCode() ?: 0)
+        result = 31 * result + name.hashCode()
+        result = 31 * result + phoneNo.hashCode()
+        result = 31 * result + email.hashCode()
+        result = 31 * result + img.contentHashCode()
+        result = 31 * result + updatedAt.hashCode()
+        return result
+    }
+}
 
 @Dao
 interface UserDetailsDAO {
     @Query("SELECT * FROM UserDetails ORDER BY ID DESC LIMIT 1")
-    fun getCurrentUser(): LiveData<UserDetails>
+    fun getCurrentUser(): UserDetails
 
     @Query("SELECT apiKey FROM UserDetails ORDER BY ID DESC LIMIT 1")
     suspend fun getApiKey(): String

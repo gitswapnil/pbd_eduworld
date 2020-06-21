@@ -27,9 +27,14 @@ data class LocationObject(
     @SerializedName("createdAt") val createdAt: Long
 )
 
+data class UserDetailsObject(
+    @SerializedName("updatedAt") val updatedAt: Long
+)
+
 data class RequestObject(
     @SerializedName("apiKey") val apiKey: String,
-    @SerializedName("locations") val locations: List<LocationObject>
+    @SerializedName("locations") val locations: List<LocationObject>,
+    @SerializedName("userDetails") val userDetails: UserDetailsObject
 )
 
 data class MessageObject(
@@ -37,10 +42,6 @@ data class MessageObject(
 )
 
 class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): ListenableWorker(appContext, workerParams){
-    private fun syncData() {
-
-    }
-
     override fun startWork(): ListenableFuture<Result> {
         Log.i("pbdLog", "Sync worker started.")
         return CallbackToFutureAdapter.getFuture { completer ->
@@ -61,11 +62,14 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                         )
                     }
 
+                    val userDetails = db.userDetailsDao().getCurrentUser()
+                    val userDetailsObject = UserDetailsObject(userDetails.updatedAt)
+
 //                    if (locations.size != 0 ) {           //If there are no locations to be synced, just ignore
 //                        this.cancel()
 //                    }
 
-                    val requestJSONObject: JSONObject = JSONObject(Gson().toJson(RequestObject(apiKey.toString(), locations)))
+                    val requestJSONObject: JSONObject = JSONObject(Gson().toJson(RequestObject(apiKey.toString(), locations, userDetailsObject)))
                     Log.i("pbdLog", "requestJSONObject: $requestJSONObject")
 
                     PbdExecutivesUtils().sendData(

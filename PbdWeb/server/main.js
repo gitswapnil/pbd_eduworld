@@ -3,7 +3,6 @@ import '../imports/startup/server/methods.js';          //import all the methods
 import startupScripts from '../imports/startup/server/startupScripts.js';   //import all startup scripts
 import '../imports/routes.jsx';   //import all startup scripts
 import { Accounts } from 'meteor/accounts-base';
-import { Random } from 'meteor/random';
 
 Meteor.startup(() => {
   startupScripts();
@@ -17,10 +16,6 @@ Meteor.startup(() => {
 	  	console.log(`adding an API key: ${apiKey}, to the user with id: ${user._id}.`);
   		customizedUser.apiKey = options.apiKey;
   	}
-
-    if(options.role && (options.role === "party")) {
-      //any party specific code can go here
-    }
   	
     //check if the profile field is given or not
   	if(options.profile) {

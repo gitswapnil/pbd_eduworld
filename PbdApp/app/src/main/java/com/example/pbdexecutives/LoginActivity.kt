@@ -17,6 +17,7 @@ import com.android.volley.toolbox.Volley
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import java.util.*
 
 
 class LoginActivity : AppCompatActivity(), LifecycleOwner {
@@ -40,7 +41,7 @@ class LoginActivity : AppCompatActivity(), LifecycleOwner {
                 this.lifecycleScope.launch {
                     val db = Room.databaseBuilder(this@LoginActivity, AppDB::class.java, "PbdDB").build()
                     db.userDetailsDao().clearUserDetails()     //clear the user details before inserting a new value
-                    val userDetail = UserDetails(id = 1, apiKey = response.toString())
+                    val userDetail = UserDetails(id = 1, apiKey = response.toString(), name = "", phoneNo = "", email = "", img = ByteArray(0x0), createdAt = Date().time.toLong(), updatedAt = 0)
                     db.userDetailsDao().saveUserDetails(userDetail)        //store the apiKey in local database.
 
                     val intent = Intent(this@LoginActivity, MainActivity::class.java)        //go to home activity after save

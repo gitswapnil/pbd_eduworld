@@ -251,7 +251,7 @@ if(Meteor.isClient) {
 				}, ...
 			],
 			userDetails: {
-				updatedAt: timestamp(Long Int),	
+				updatedAt: timestamp(Long Int),
 			},
 			notifications: {
 				updatedAt: timestamp(Long Int)
@@ -261,6 +261,13 @@ if(Meteor.isClient) {
 			error: Boolean, 
 			message: "{
 				locationIds: [Int, Int, ...]			//these are the ids which are saved in the database
+				userDetails: {
+					name: String,
+					phoneNo: String,
+					email: String,
+					img: String,
+					updatedAt: String
+				}
 			}",
 			code: Integer
 		}	if error is false then message is the apiKey for that user.
@@ -275,6 +282,7 @@ if(Meteor.isClient) {
 			return;
 		}
 
+		console.log("syncdata reqBody: " + JSON.stringify(reqBody));
 		//first check for the APIkey;
 		console.log("apiKey: " + reqBody.apiKey);
 		if(!reqBody.apiKey || (typeof reqBody.apiKey !== "string") || reqBody.apiKey.length !== 32) {
@@ -299,7 +307,7 @@ if(Meteor.isClient) {
 		if(reqBody.locations) {
 			let locations = reqBody.locations;
 
-			console.log("locations: " + JSON.stringify(locations));
+			// console.log("locations: " + JSON.stringify(locations));
 			if(!Array.isArray(locations)) {		//validate the locations array
 				res.end(JSON.stringify({error: true, message: "Error in the given locations Array.", code: 400}));
 				return;
@@ -321,6 +329,22 @@ if(Meteor.isClient) {
 			});
 
 			returnObj.locationIds = retIds;
+		}
+
+		if(reqBody.userDetails && reqBody.userDetails.updatedAt) {
+			const updatedAt = reqBody.userDetails.updatedAt;
+
+			const dbUserUpdatedAt = moment(user.updatedAt || user.createdAt).unix()*1000;		//convert the timeStamps to milliseconds
+
+			if(updatedAt < dbUserUpdatedAt) {		//if app's updatedAt is less than web's then only send app the updated values
+				returnObj.userDetails = JSON.stringify({
+					name: user.profile.name || "Unassigned",
+					phoneNo: user.username,
+					email: (user.emails && user.emails[user.emails.length - 1] && user.emails[user.emails.length - 1].address) || "",
+					img: user.profile.img,
+					updatedAt: dbUserUpdatedAt
+				})
+			}
 		}
 
 		res.end(JSON.stringify({ error: false, message: returnObj, code: 200 }));
