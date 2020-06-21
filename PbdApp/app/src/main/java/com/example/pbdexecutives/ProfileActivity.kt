@@ -4,11 +4,25 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Bundle
+import android.util.Base64
+import android.util.Base64.encodeToString
+import android.util.Log
 import android.view.MenuItem
 import android.view.View
+import android.widget.ImageView
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.cardview.widget.CardView
+import androidx.core.net.toUri
+import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import androidx.room.Room
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import java.util.*
 
 
 class ProfileActivity : AppCompatActivity() {
@@ -20,6 +34,8 @@ class ProfileActivity : AppCompatActivity() {
 
         setSupportActionBar(findViewById(R.id.profile_toolbar))
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
+
+        displayUserDetails()
     }
 
     override fun onResume() {
@@ -32,6 +48,22 @@ class ProfileActivity : AppCompatActivity() {
         super.onPause();
 
         userLoginStatusUnonitor()
+    }
+
+    private fun displayUserDetails() {
+        val db = Room.databaseBuilder(this, AppDB::class.java, "PbdDB").build()
+        GlobalScope.launch {
+            val userDetails = db.userDetailsDao().getCurrentUser()
+
+            findViewById<TextView>(R.id.textView6).text = userDetails.name
+            findViewById<TextView>(R.id.textView8).text = userDetails.email
+            findViewById<TextView>(R.id.textView10).text = userDetails.phoneNo
+            findViewById<TextView>(R.id.textView15).text = userDetails.address
+
+            Log.i("pbdLog", "userDetails.img: ${userDetails.img}")
+            val bitmap = BitmapFactory.decodeByteArray(userDetails.img, 0, userDetails.img.size)
+            findViewById<ImageView>(R.id.imageView5).setImageBitmap(bitmap)
+        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

@@ -15,6 +15,7 @@ data class UserDetails (
     val phoneNo: String,
     val email: String,
     @ColumnInfo(typeAffinity = ColumnInfo.BLOB) val img: ByteArray,
+    val address: String,
     val createdAt: Long,
     val updatedAt: Long
 ) {
@@ -59,7 +60,10 @@ interface UserDetailsDAO {
     suspend fun clearUserDetails()
 
     @Insert
-    suspend fun saveUserDetails(user: UserDetails)
+    suspend fun createUser(user: UserDetails)
+
+    @Query("UPDATE UserDetails SET name=:name, phoneNo=:phoneNo, email=:email, img=:img, address=:address, updatedAt=:updatedAt")
+    suspend fun saveUserDetails(name: String, phoneNo: String, email: String, img: ByteArray, address: String, updatedAt: Long)
 }
 
 //Locations
@@ -81,10 +85,10 @@ interface LocationsDAO {
     @Insert
     suspend fun saveLocation(location: Locations)
 
-    @Query("SELECT * FROM locations WHERE synced=0")
+    @Query("SELECT * FROM Locations WHERE synced=0")
     suspend fun getUnsyncedLocations(): Array<Locations>
 
-    @Query("UPDATE locations SET synced=1 WHERE id IN (:ids)")
+    @Query("UPDATE Locations SET synced=1 WHERE id IN (:ids)")
     suspend fun updateSyncStatus(ids: List<Long>)
 }
 

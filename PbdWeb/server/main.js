@@ -31,6 +31,8 @@ Meteor.startup(() => {
       customizedUser.availableTo = [...options.availableTo];
     }
 
+    customizedUser.updatedAt = user.createdAt;
+
   	return customizedUser;
   });
 

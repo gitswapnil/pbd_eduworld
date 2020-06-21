@@ -334,18 +334,21 @@ if(Meteor.isClient) {
 		if(reqBody.userDetails && reqBody.userDetails.updatedAt) {
 			const updatedAt = reqBody.userDetails.updatedAt;
 
-			const dbUserUpdatedAt = moment(user.updatedAt || user.createdAt).unix()*1000;		//convert the timeStamps to milliseconds
+			const dbUserUpdatedAt = moment(user.updatedAt).unix() * 1000;		//convert the timeStamps to milliseconds
 
 			if(updatedAt < dbUserUpdatedAt) {		//if app's updatedAt is less than web's then only send app the updated values
-				returnObj.userDetails = JSON.stringify({
+				returnObj.userDetails = {
 					name: user.profile.name || "Unassigned",
 					phoneNo: user.username,
-					email: (user.emails && user.emails[user.emails.length - 1] && user.emails[user.emails.length - 1].address) || "",
-					img: user.profile.img,
+					email: (user.emails && user.emails[user.emails.length - 1] && user.emails[user.emails.length - 1].address) || "Unknown",
+					img: (user.profile.img && user.profile.img.split(",")[1]),
+					address: user.profile.address || "Unknown",
 					updatedAt: dbUserUpdatedAt
-				})
+				}
 			}
 		}
+
+		console.log(`returnObj: ${JSON.stringify(returnObj)}`);
 
 		res.end(JSON.stringify({ error: false, message: returnObj, code: 200 }));
 	})

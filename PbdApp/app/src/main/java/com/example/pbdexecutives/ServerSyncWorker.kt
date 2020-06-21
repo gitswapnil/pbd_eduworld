@@ -2,6 +2,7 @@ package com.example.pbdexecutives
 
 import android.content.Context
 import android.telecom.Call
+import android.util.Base64
 import android.util.Log
 import androidx.concurrent.futures.CallbackToFutureAdapter
 import androidx.room.Room
@@ -37,8 +38,18 @@ data class RequestObject(
     @SerializedName("userDetails") val userDetails: UserDetailsObject
 )
 
+data class UserDetailsResponseObject(
+    @SerializedName("name") val name: String,
+    @SerializedName("phoneNo") val phoneNo: String,
+    @SerializedName("email") val email: String,
+    @SerializedName("img") val img: String,
+    @SerializedName("address") val address: String,
+    @SerializedName("updatedAt") val updatedAt: Long
+)
+
 data class MessageObject(
-    @SerializedName("locationIds") val locationIds: ArrayList<Long>?
+    @SerializedName("locationIds") val locationIds: ArrayList<Long>?,
+    @SerializedName("userDetails") val userDetails: UserDetailsResponseObject
 )
 
 class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): ListenableWorker(appContext, workerParams){
@@ -46,8 +57,8 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
         Log.i("pbdLog", "Sync worker started.")
         return CallbackToFutureAdapter.getFuture { completer ->
             GlobalScope.launch {
-                val db = Room.databaseBuilder(applicationContext, AppDB::class.java, "PbdDB").build();
-                val apiKey: String? = db.userDetailsDao().getApiKey();
+                val db = Room.databaseBuilder(applicationContext, AppDB::class.java, "PbdDB").build()
+                val apiKey: String? = db.userDetailsDao().getApiKey()
                 if (apiKey != null) {            //if the user is not logged in then dont sync anything.
                     val locations = ArrayList<LocationObject>()
                     db.locationsDao().getUnsyncedLocations().forEach {
@@ -77,12 +88,28 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                         "syncdata",
                         requestJSONObject,
                         { code, response ->
+                            Log.i("pbdLog", "response: $response")
                             val responseObject = Gson().fromJson(
                                 response.toString(),
                                 MessageObject::class.java
                             );      //convert the response back into JSON Object from the response string
-                            Log.i("pbdLog", "responseObject: $responseObject")
+//                            Log.i("pbdLog", "responseObject: $responseObject")
                             //if the response object has location ids then only update them from the local database
+
+                            if(responseObject.userDetails != null) {
+                                val userDetails = responseObject.userDetails
+                                GlobalScope.launch {
+                                    db.userDetailsDao().saveUserDetails(
+                                        name = userDetails.name,
+                                        phoneNo = userDetails.phoneNo,
+                                        email = userDetails.email,
+                                        img = if(userDetails.img != null) Base64.decode(userDetails.img, Base64.DEFAULT) else ByteArray(0x0),
+                                        address = userDetails.address,
+                                        updatedAt = userDetails.updatedAt
+                                    )
+                                }
+                            }
+
                             if(responseObject.locationIds != null && responseObject.locationIds.size != 0) {
                                 var updateIds: List<Long> = listOf()
                                 responseObject.locationIds.forEach {
