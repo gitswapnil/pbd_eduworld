@@ -67,6 +67,10 @@ dependencies {
     //Location
     implementation 'com.google.android.gms:play-services-location:17.0.0'
 
+    //Recycler View
+    implementation "androidx.recyclerview:recyclerview:1.1.0"
+    implementation "androidx.recyclerview:recyclerview-selection:1.1.0-rc01"
+
     // Lifecycles only (without ViewModel or LiveData)
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_version"
     // ViewModel

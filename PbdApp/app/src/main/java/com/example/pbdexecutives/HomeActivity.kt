@@ -2,11 +2,8 @@ package com.example.pbdexecutives
 
 import android.Manifest
 import android.app.Activity
-import android.app.ActivityManager
 import android.app.SearchManager
 import android.content.*
-import android.content.pm.PackageInfo
-import android.content.pm.PackageItemInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
@@ -24,21 +21,16 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.content.ContextCompat.startActivity
-import androidx.core.view.get
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.room.Room
-import androidx.work.WorkManager
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.Task
 import com.google.android.material.snackbar.Snackbar
-import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.android.synthetic.main.activity_home.*
-import kotlinx.android.synthetic.main.activity_login.*
 import kotlinx.coroutines.launch
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -278,15 +270,15 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     }
 
     private fun setTabConfigurations() {
-        val homeContentAdapter = HomeContentAdapter(this, 3)
-        home_contents_pager.adapter = homeContentAdapter
+        val tabsAdapter = TabsAdapter(this, 3)
+        tabs_pager.adapter = tabsAdapter
 
         var tabsText: ArrayList<String> = ArrayList()
         for (i in 0 until tabs_layout.tabCount) {
             tabsText.add(tabs_layout.getTabAt(i)?.text as String)
         }
 
-        TabLayoutMediator(tabs_layout, home_contents_pager) { tab, position ->
+        TabLayoutMediator(tabs_layout, tabs_pager) { tab, position ->
             //To get the first name of doppelganger celebrities
 //            Log.i("pbdLog", "${tabsText[position]}")
             tab.text = tabsText[position]
