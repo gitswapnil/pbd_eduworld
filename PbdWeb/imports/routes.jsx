@@ -247,15 +247,12 @@ if(Meteor.isClient) {
 					latitude: Double,
 					longitude: Double,
 					sessionId: Int,
-					createdAt: timeStamp(Long Int)
+					createdAt: timeStamp<Long Int>
 				}, ...
 			],
-			userDetails: {
-				updatedAt: timestamp(Long Int),
-			},
-			notifications: {
-				updatedAt: timestamp(Long Int)
-			}
+			lastUserDetails: timestamp<Long Int>,
+			lastPartyDetails: timestamp<Long Int>,
+			notifications: timestamp<Long Int>
 		}
 		return: {
 			error: Boolean, 
@@ -267,11 +264,201 @@ if(Meteor.isClient) {
 					email: String,
 					img: String,
 					updatedAt: String
+				},
+				partyDetails: {
+					upsert: [
+						{ id: HexString, code: String, name: String, address: String, createdAt: timestamp<Long Int> },
+						...
+					],
+					remove: [HexString, HexString, ...]
 				}
 			}",
 			code: Integer
 		}	if error is false then message is the apiKey for that user.
 	*/
+
+	const storeLocations = async (userId, locations) => {
+		//if the locations key is defined.
+		if(locations) {
+			// console.log("locations: " + JSON.stringify(locations));
+			if(!Array.isArray(locations)) {		//validate the locations array
+				throw new Error("Error in the given locations Array.");
+				return;
+			}
+
+			return locations.map((location, index) => {
+				let obj = {
+					latitude: location.latitude,
+					longitude: location.longitude,
+					sessionId: location.sessionId,
+					userId: userId,
+					createdAt: location.createdAt
+				}
+
+				Collections.locations.insert(obj, (err, res) => {
+					if(err) {
+						throw new Error(err.message);
+					}
+				});
+				return location.id;
+			});
+		}
+
+		return [];
+	};
+
+	const getUserDetails = async (user, lastUserDetails) => {
+		if(lastUserDetails) {
+			try {
+				const dbUserUpdatedAt = moment(user.updatedAt).unix() * 1000;		//convert the timeStamps to milliseconds
+
+				if(lastUserDetails < dbUserUpdatedAt) {		//if app's updatedAt is less than web's then only send app the updated values
+					return {
+						name: user.profile.name || "Unassigned",
+						phoneNo: user.username,
+						email: (user.emails && user.emails[user.emails.length - 1] && user.emails[user.emails.length - 1].address) || "Unknown",
+						img: (user.profile.img && user.profile.img.split(",")[1]),
+						address: user.profile.address || "Unknown",
+						updatedAt: dbUserUpdatedAt
+					}
+				}
+
+				return {};
+			} catch(e) {
+				throw new Error(e.message);
+			}
+		}
+
+		return {};
+	};
+
+	const getPartyDetails = async (userId, lastUpdatedAtUnix) => {
+		if(lastUpdatedAtUnix) {
+			let partyDetails = new Promise((resolve, reject) => {
+				const lastUpdatedAt = new Date(lastUpdatedAtUnix);
+
+				Meteor.users.rawCollection().aggregate([
+					{
+				        $lookup: {
+				            from: "role-assignment",
+				            localField: "_id",
+				            foreignField: "user._id",
+				            as: "assignedRoleDoc"
+				        }
+				    },
+				    {
+				        $unwind: "$assignedRoleDoc"
+				    },
+				    {
+				        $match: {
+				            "assignedRoleDoc.role._id": "party",
+				            updatedAt: { $gt: lastUpdatedAt },
+				        }
+				    },
+				    {
+				        $project: {
+				            _id: 1,
+				            updatedAt: 1,
+				            active: 1,
+				            code: "$username",
+				            name: "$profile.name",
+				            address: "$profile.address",
+				            available: { $in: [userId, { $ifNull: ["$availableTo", []] }] }
+				        }
+				    },
+				    {
+				        $match: {
+				            available: true
+				        }
+				    },
+				    {
+				        $group: {
+				            _id: { $cond: ["$active", "upsert", "remove"] },
+				            parties: { $addToSet: "$$ROOT" }
+				        }
+				    },
+				    {
+				        $project: {
+				            _id: 1,
+				            "parties._id": 1,
+				            "parties.updatedAt": 1,
+				            "parties.code": 1,
+				            "parties.name": 1,
+				            "parties.address": 1,
+				        }
+				    },
+				    {
+				        $project: {
+				            _id: 1,
+				            parties: { 
+				                $cond: [ { $eq: ["$_id", "remove"]}, "$parties._id", "$parties"]
+				            }
+				        }
+				    },
+				    {
+				        $unwind: "$parties"
+				    },
+				    {
+				        $group: {
+				            _id: "data",
+				            remove: {
+				                $addToSet: { $cond: [{ $eq: ["$_id", "remove"] }, "$parties", null ]}
+				            },
+				            upsert: {
+				                $addToSet: { $cond: [{ $eq: ["$_id", "upsert"] }, "$parties", null ]}
+				            }
+				        }
+				    },
+				    {
+				        $project: {
+				            _id: 1,
+				            upsert: {
+				                $filter: {
+				                    input: "$upsert",
+				                    as: "upsrt",
+				                    cond: { $ne: ["$$upsrt", null] }
+				                }
+				            },
+				            remove: {
+				                $filter: {
+				                    input: "$remove",
+				                    as: "rmv",
+				                    cond: { $ne: ["$$rmv", null] }
+				                }
+				            }
+				        }
+				    }
+				], (error, cursor) => {
+					if(error) {
+						reject(new Error(error.message));
+						return;
+					} 
+
+					cursor.toArray((err, docs) => {
+						if(err) {
+							reject(new Error(err.message));
+							return;
+						}
+
+						let retData = { upsert: [], remove: [] };
+						console.log("docs: " + JSON.stringify(docs));
+						if(docs.length) {
+							retData.upsert = docs[0].upsert;
+							retData.remove = docs[0].remove;
+						}
+						resolve(retData);
+					})
+				})
+
+			});
+
+			return await partyDetails;
+			
+		}
+
+		return { upsert: [], remove: [] };
+	};
+
 	Router.route('/api/syncdata', {where: 'server'}).post(function(req, res, next){
 		console.log("API: syncdata invoked.");
 		const reqBody = req.body;
@@ -296,6 +483,11 @@ if(Meteor.isClient) {
 			return;
 		}
 
+		if(!user.active) {		//the user should be an active user
+			res.end(JSON.stringify({error: true, message: "Inactive User.", code: 401}));
+			return;
+		}
+
 		if(!Roles.userIsInRole(user._id, "executive", Roles.GLOBAL_GROUP)){		//if the user does not have administrative rights.
 			res.end(JSON.stringify({error: true, message: "User does not have the rights to access mobile app.", code: 400}));
 			return;
@@ -303,53 +495,35 @@ if(Meteor.isClient) {
 
 		let returnObj = {};
 
-		//if the locations key is defined.
-		if(reqBody.locations) {
-			let locations = reqBody.locations;
+		const locationsApi = storeLocations(user._id, reqBody.locations).catch(err => {
+			res.end(JSON.stringify({error: true, message: err.message, code: 400}));
+			return;
+		});
 
-			// console.log("locations: " + JSON.stringify(locations));
-			if(!Array.isArray(locations)) {		//validate the locations array
-				res.end(JSON.stringify({error: true, message: "Error in the given locations Array.", code: 400}));
-				return;
+		const userDetailsApi = getUserDetails(user, reqBody.lastUserDetails).catch(err => {
+			res.end(JSON.stringify({error: true, message: err.message, code: 500}));
+			return;
+		});
+
+		const partyDetailsApi = getPartyDetails(user._id, reqBody.lastPartyDetails).catch(err => {
+			res.end(JSON.stringify({error: true, message: err.message, code: 500}));
+			return;
+		});
+
+		const callAllFuncs = async () => {
+			const values = await Promise.all([locationsApi, userDetailsApi, partyDetailsApi]);
+
+			console.log(`values: ${JSON.stringify(values)}`);
+			const message = {
+				locationIds: values[0],
+				userDetails: values[1],
+				partyDetails: values[2]
 			}
-
-			let retIds = [];
-
-			locations.map((location, index) => {
-				let obj = {
-					latitude: location.latitude,
-					longitude: location.longitude,
-					sessionId: location.sessionId,
-					userId: user._id,
-					createdAt: location.createdAt
-				}
-
-				Collections.locations.insert(obj);
-				retIds.push(location.id);
-			});
-
-			returnObj.locationIds = retIds;
+			res.end(JSON.stringify({ error: false, message, code: 200 }));
 		}
 
-		if(reqBody.userDetails && reqBody.userDetails.updatedAt) {
-			const updatedAt = reqBody.userDetails.updatedAt;
-
-			const dbUserUpdatedAt = moment(user.updatedAt).unix() * 1000;		//convert the timeStamps to milliseconds
-
-			if(updatedAt < dbUserUpdatedAt) {		//if app's updatedAt is less than web's then only send app the updated values
-				returnObj.userDetails = {
-					name: user.profile.name || "Unassigned",
-					phoneNo: user.username,
-					email: (user.emails && user.emails[user.emails.length - 1] && user.emails[user.emails.length - 1].address) || "Unknown",
-					img: (user.profile.img && user.profile.img.split(",")[1]),
-					address: user.profile.address || "Unknown",
-					updatedAt: dbUserUpdatedAt
-				}
-			}
-		}
-
-		console.log(`returnObj: ${JSON.stringify(returnObj)}`);
-
-		res.end(JSON.stringify({ error: false, message: returnObj, code: 200 }));
+		callAllFuncs().catch(error => {
+			res.end(JSON.stringify({ error: true, message: error.message, code: 500 }));
+		})
 	})
 }

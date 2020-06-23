@@ -7,7 +7,7 @@ import java.nio.ByteBuffer
 import java.util.*
 
 //UserDetails
-@Entity
+@Entity(indices = [Index(value = ["id"], unique = true)])
 data class UserDetails (
     @PrimaryKey val id: Int,
     val apiKey: String?,
@@ -67,7 +67,7 @@ interface UserDetailsDAO {
 }
 
 //Locations
-@Entity
+@Entity(indices = [Index(value = ["id"], unique = true)])
 data class Locations (
     @PrimaryKey (autoGenerate = true) val id: Long = 0,
     val latitude: Double,
@@ -92,9 +92,26 @@ interface LocationsDAO {
     suspend fun updateSyncStatus(ids: List<Long>)
 }
 
+//Parties
+@Entity(indices = [Index(value = ["id"], unique = true)])
+data class Parties (
+    @PrimaryKey val id: String = "",
+    val code: String,
+    val name: String,
+    val address: String,
+    val createdAt: Long
+)
+
+@Dao
+interface PartiesDAO {
+    @Insert
+    suspend fun saveParty(location: Locations)
+}
+
 @Database (entities = [UserDetails::class, Locations::class], version = 1)
 abstract class AppDB: RoomDatabase() {
     abstract fun userDetailsDao(): UserDetailsDAO
     abstract fun locationsDao(): LocationsDAO
+    abstract fun partiesDao(): PartiesDAO
 }
 
