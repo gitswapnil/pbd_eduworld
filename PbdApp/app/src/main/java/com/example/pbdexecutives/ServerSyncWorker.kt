@@ -28,14 +28,11 @@ data class LocationObject(
     @SerializedName("createdAt") val createdAt: Long
 )
 
-data class UserDetailsObject(
-    @SerializedName("updatedAt") val updatedAt: Long
-)
-
 data class RequestObject(
     @SerializedName("apiKey") val apiKey: String,
     @SerializedName("locations") val locations: List<LocationObject>,
-    @SerializedName("userDetails") val userDetails: UserDetailsObject
+    @SerializedName("lastUserDetails") val lastUserDetails: Long,
+    @SerializedName("lastPartyDetails") val lastPartyDetails: Long
 )
 
 data class UserDetailsResponseObject(
@@ -47,9 +44,15 @@ data class UserDetailsResponseObject(
     @SerializedName("updatedAt") val updatedAt: Long
 )
 
+data class PartyDetailsResponseObject(
+    @SerializedName("upsert") val upsert: List<Parties>,
+    @SerializedName("remove") val remove: List<String>
+)
+
 data class MessageObject(
-    @SerializedName("locationIds") val locationIds: ArrayList<Long>?,
-    @SerializedName("userDetails") val userDetails: UserDetailsResponseObject
+    @SerializedName("locationIds") val locationIds: List<Long>?,
+    @SerializedName("userDetails") val userDetails: UserDetailsResponseObject?,
+    @SerializedName("partyDetails") val partyDetails: PartyDetailsResponseObject?
 )
 
 class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): ListenableWorker(appContext, workerParams){
@@ -73,14 +76,20 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                         )
                     }
 
-                    val userDetails = db.userDetailsDao().getCurrentUser()
-                    val userDetailsObject = UserDetailsObject(userDetails.updatedAt)
+                    val lastUserDetails: Long = db.userDetailsDao().getCurrentUser().updatedAt
+
+                    val lastPartyDetails = db.partiesDao().getLastUpdatedParty()
+                    var lastPartyUpdatedAt:Long = 1
+
+                    if(lastPartyDetails != null) {      //if the user is initially loading the data then Parties table wont ne there hence check for the null rule
+                        lastPartyUpdatedAt = lastPartyDetails.updatedAt
+                    }
 
 //                    if (locations.size != 0 ) {           //If there are no locations to be synced, just ignore
 //                        this.cancel()
 //                    }
 
-                    val requestJSONObject: JSONObject = JSONObject(Gson().toJson(RequestObject(apiKey.toString(), locations, userDetailsObject)))
+                    val requestJSONObject: JSONObject = JSONObject(Gson().toJson(RequestObject(apiKey.toString(), locations, lastUserDetails, lastPartyUpdatedAt)))
                     Log.i("pbdLog", "requestJSONObject: $requestJSONObject")
 
                     PbdExecutivesUtils().sendData(
@@ -96,30 +105,53 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
 //                            Log.i("pbdLog", "responseObject: $responseObject")
                             //if the response object has location ids then only update them from the local database
 
-                            if(responseObject.userDetails != null) {
-                                val userDetails = responseObject.userDetails
-                                GlobalScope.launch {
-                                    db.userDetailsDao().saveUserDetails(
-                                        name = userDetails.name,
-                                        phoneNo = userDetails.phoneNo,
-                                        email = userDetails.email,
-                                        img = if(userDetails.img != null) Base64.decode(userDetails.img, Base64.DEFAULT) else ByteArray(0x0),
-                                        address = userDetails.address,
-                                        updatedAt = userDetails.updatedAt
-                                    )
-                                }
-                            }
-
-                            if(responseObject.locationIds != null && responseObject.locationIds.size != 0) {
-                                var updateIds: List<Long> = listOf()
+                            if(responseObject.locationIds != null && responseObject.locationIds.isNotEmpty()) {
+                                var updateIds: MutableList<Long> = ArrayList()
                                 responseObject.locationIds.forEach {
-                                    updateIds += it;
+                                    updateIds.add(it);
                                 }
 
                                 GlobalScope.launch {
                                     db.locationsDao().updateSyncStatus(updateIds)     //update the locations as synced to database
                                 }
                             }
+
+                            if(responseObject.userDetails != null) {
+                                val userDetailsRef: UserDetailsResponseObject = responseObject.userDetails
+                                GlobalScope.launch {
+                                    db.userDetailsDao().saveUserDetails(
+                                        name = userDetailsRef.name,
+                                        phoneNo = userDetailsRef.phoneNo,
+                                        email = userDetailsRef.email,
+                                        img = if(userDetailsRef.img != null) Base64.decode(userDetailsRef.img, Base64.DEFAULT) else ByteArray(0x0),
+                                        address = userDetailsRef.address,
+                                        updatedAt = userDetailsRef.updatedAt
+                                    )
+                                }
+                            }
+
+                            if(responseObject.partyDetails != null) {
+                                val idsToRemove: MutableList<String> = ArrayList()
+                                val partiesToUpsert: MutableList<Parties> = ArrayList()
+                                if(responseObject.partyDetails.remove.isNotEmpty()) {
+                                    idsToRemove.addAll(responseObject.partyDetails.remove)
+                                }
+
+                                if(responseObject.partyDetails.upsert.isNotEmpty()) {
+                                    responseObject.partyDetails.upsert.forEach { party ->
+                                        idsToRemove.add(party.id)
+                                        partiesToUpsert.add(party)
+                                    }
+                                }
+
+                                GlobalScope.launch {
+                                    Log.i("pbdLog", "idsToRemove: $idsToRemove")
+                                    Log.i("pbdLog", "partiesToUpsert: $partiesToUpsert")
+                                    db.partiesDao().removeParties(idsToRemove)
+                                    db.partiesDao().addParties(partiesToUpsert)
+                                }
+                            }
+
                             completer.set(Result.success())
                         },
                         { code, error ->

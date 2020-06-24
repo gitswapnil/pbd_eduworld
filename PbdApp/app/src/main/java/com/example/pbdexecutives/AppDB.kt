@@ -3,8 +3,10 @@ package com.example.pbdexecutives
 import androidx.lifecycle.LiveData
 import androidx.room.*
 import androidx.sqlite.db.SupportSQLiteQuery
+import com.google.gson.annotations.SerializedName
 import java.nio.ByteBuffer
 import java.util.*
+import kotlin.collections.ArrayList
 
 //UserDetails
 @Entity(indices = [Index(value = ["id"], unique = true)])
@@ -16,7 +18,6 @@ data class UserDetails (
     val email: String,
     @ColumnInfo(typeAffinity = ColumnInfo.BLOB) val img: ByteArray,
     val address: String,
-    val createdAt: Long,
     val updatedAt: Long
 ) {
     override fun equals(other: Any?): Boolean {
@@ -95,20 +96,26 @@ interface LocationsDAO {
 //Parties
 @Entity(indices = [Index(value = ["id"], unique = true)])
 data class Parties (
-    @PrimaryKey val id: String = "",
-    val code: String,
-    val name: String,
-    val address: String,
-    val createdAt: Long
+    @SerializedName("id") @PrimaryKey val id: String,
+    @SerializedName("code") val code: String,
+    @SerializedName("name") val name: String,
+    @SerializedName("address") val address: String,
+    @SerializedName("updatedAt") val updatedAt: Long
 )
 
 @Dao
 interface PartiesDAO {
+    @Query("SELECT * FROM Parties ORDER BY updatedAt DESC LIMIT 1")
+    suspend fun getLastUpdatedParty(): Parties
+
     @Insert
-    suspend fun saveParty(location: Locations)
+    suspend fun addParties(parties: List<Parties>)
+
+    @Query("DELETE FROM Parties WHERE id IN (:ids)")
+    suspend fun removeParties(ids: List<String>)
 }
 
-@Database (entities = [UserDetails::class, Locations::class], version = 1)
+@Database (entities = [UserDetails::class, Locations::class, Parties::class], version = 1)
 abstract class AppDB: RoomDatabase() {
     abstract fun userDetailsDao(): UserDetailsDAO
     abstract fun locationsDao(): LocationsDAO

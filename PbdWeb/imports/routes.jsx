@@ -267,7 +267,13 @@ if(Meteor.isClient) {
 				},
 				partyDetails: {
 					upsert: [
-						{ id: HexString, code: String, name: String, address: String, createdAt: timestamp<Long Int> },
+						{ 	
+							id: HexString, 
+							code: String, 
+							name: String, 
+							address: String, 
+							updatedAt: timestamp<Long Int> 
+						},
 						...
 					],
 					remove: [HexString, HexString, ...]
@@ -304,7 +310,7 @@ if(Meteor.isClient) {
 			});
 		}
 
-		return [];
+		return;
 	};
 
 	const getUserDetails = async (user, lastUserDetails) => {
@@ -323,13 +329,13 @@ if(Meteor.isClient) {
 					}
 				}
 
-				return {};
+				return;
 			} catch(e) {
 				throw new Error(e.message);
 			}
 		}
 
-		return {};
+		return;
 	};
 
 	const getPartyDetails = async (userId, lastUpdatedAtUnix) => {
@@ -399,6 +405,23 @@ if(Meteor.isClient) {
 				        $unwind: "$parties"
 				    },
 				    {
+                        $project: {
+                            "parties": {
+                                $cond: [
+                                    {$eq: ["$_id", "remove"]},
+                                    "$parties",
+                                    {
+                                        "id": "$parties._id",
+                                        "code": "$parties.code",
+                                        "name": "$parties.name",
+                                        "address": "$parties.address",
+                                        "updatedAt": { $subtract: [ "$parties.updatedAt", new Date("1970-01-01") ] }
+                                    }
+                                ]
+                            },
+                        }
+                    },
+				    {
 				        $group: {
 				            _id: "data",
 				            remove: {
@@ -456,7 +479,7 @@ if(Meteor.isClient) {
 			
 		}
 
-		return { upsert: [], remove: [] };
+		return;
 	};
 
 	Router.route('/api/syncdata', {where: 'server'}).post(function(req, res, next){
