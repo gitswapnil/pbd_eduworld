@@ -2,7 +2,6 @@ package com.example.pbdexecutives
 
 import android.content.Context
 import android.os.Bundle
-import android.text.Editable
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.MenuItem
@@ -87,18 +86,10 @@ class PartiesListAdapter(context: Context, private val parties: List<PartiesList
     }
 }
 
-data class NewTaskData(
-    @SerializedName("type") val type: String,
-    @SerializedName("organization") val organization: String,
-    @SerializedName("contactPersonName") val contactPerson: String,
-    @SerializedName("contactPersonNumber") val contactPersonNumber: Long,
-    @SerializedName("reasonForVisit") val reasonForVisit: String,
-    @SerializedName("done") val done: String,
-    @SerializedName("remarks") val remarks: String,
-    @SerializedName("subject") val subject: String
-)
-
 class AddNewTaskActivity : AppCompatActivity() {
+    private lateinit var parties: List<PartiesListItem>
+    private lateinit var selectedOrganization: String
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_new_task)
@@ -113,54 +104,8 @@ class AddNewTaskActivity : AppCompatActivity() {
         taskTypes.onItemSelectedListener = TaskTypeSpinner()
 
         loadParties()
-        loadDoneEvents()
-    }
-
-    private fun loadDoneEvents() {
-        radioGroup.setOnCheckedChangeListener { group, checkedId ->
-            val reasonForVisit = findViewById<Spinner>(R.id.reason_for_visit).selectedItemPosition
-            val reminderLabels = resources.getStringArray(R.array.set_reminder_labels)
-
-            findViewById<TextView>(R.id.reminder_label).visibility = View.VISIBLE
-            findViewById<CalendarView>(R.id.reminder_calendar).visibility = View.VISIBLE
-
-            if(checkedId == R.id.radioNo) {
-                when(reasonForVisit) {
-                    0 -> reminder_label.text = reminderLabels[0]
-                    1 -> reminder_label.text = reminderLabels[2]
-                    2 -> reminder_label.text = reminderLabels[4]
-                }
-            } else if(checkedId == R.id.radioYes) {
-                when(reasonForVisit) {
-                    0 -> reminder_label.text = reminderLabels[1]
-                    1 -> reminder_label.text = reminderLabels[3]
-                    2 -> {
-                        findViewById<TextView>(R.id.reminder_label).visibility = View.GONE
-                        findViewById<CalendarView>(R.id.reminder_calendar).visibility = View.GONE
-                    }
-                }
-            }
-        }
-    }
-
-    private fun loadParties() {
-        lifecycleScope.launch {
-//            var partiesListLayoutView = this@AddNewTaskActivity.layoutInflater.inflate(R.layout.parties_list_layout, scrollView3, false)
-            val db = Room.databaseBuilder(this@AddNewTaskActivity, AppDB::class.java, "PbdDB").build()
-            val parties: List<PartiesListItem> = db.partiesDao().getAllParties().map { party ->
-                return@map PartiesListItem(party.id, party.name, party.address)
-            }
-
-//            val partiesAdapter: ArrayAdapter<String> = ArrayAdapter<String>(this@AddNewTaskActivity, android.R.layout.simple_spinner_dropdown_item, parties)
-            select_organization.threshold = 1
-            select_organization.setAdapter(PartiesListAdapter(this@AddNewTaskActivity, parties))
-            select_organization.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
-                Log.i("pbdLog", "clicked Item, ${parent.getItemAtPosition(position)}")
-                val ListItem = (parent.getItemAtPosition(position) as PartiesListItem)
-                select_organization.setText("${ListItem.name} ${ListItem.address}")
-            }
-        }
-
+        loadDoneWithTaskEvents()
+        loadSetReminderEvents()
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -170,83 +115,6 @@ class AddNewTaskActivity : AppCompatActivity() {
         }
 
         return super.onOptionsItemSelected(item);
-    }
-
-    inner class ReasonSpinner : AdapterView.OnItemSelectedListener {
-        override fun onItemSelected(parent: AdapterView<*>, view: View, pos: Int, id: Long) {
-            val reminderLabels = resources.getStringArray(R.array.set_reminder_labels)
-
-            findViewById<TextView>(R.id.reminder_label).visibility = View.VISIBLE
-            findViewById<CalendarView>(R.id.reminder_calendar).visibility = View.VISIBLE
-
-            when(pos) {
-                0 -> {
-                    reason_question_label.text = getString(R.string.done_with_sampling)
-
-                    if(radioGroup.checkedRadioButtonId == R.id.radioNo) {
-                        reminder_label.text = reminderLabels[0]
-                    } else if(radioGroup.checkedRadioButtonId == R.id.radioYes) {
-                        reminder_label.text = reminderLabels[1]
-                    }
-                }
-
-                1 -> {
-                    reason_question_label.text = getString(R.string.done_with_receiving_order)
-
-                    if(radioGroup.checkedRadioButtonId == R.id.radioNo) {
-                        reminder_label.text = reminderLabels[2]
-                    } else if(radioGroup.checkedRadioButtonId == R.id.radioYes) {
-                        reminder_label.text = reminderLabels[3]
-                    }
-                }
-
-                2 -> {
-                    reason_question_label.text = getString(R.string.done_with_payments)
-
-                    if(radioGroup.checkedRadioButtonId == R.id.radioNo) {
-                        reminder_label.text = reminderLabels[4]
-                    } else if(radioGroup.checkedRadioButtonId == R.id.radioYes) {
-                        findViewById<TextView>(R.id.reminder_label).visibility = View.GONE
-                        findViewById<CalendarView>(R.id.reminder_calendar).visibility = View.GONE
-                    }
-                }
-            }
-        }
-
-        override fun onNothingSelected(parent: AdapterView<*>) {
-            // Another interface callback
-        }
-    }
-
-    private fun changeVisitView(visibility: Int) {
-        findViewById<TextView>(R.id.select_organization_label).visibility = visibility
-        findViewById<AutoCompleteTextView>(R.id.select_organization).visibility = visibility
-        findViewById<TextView>(R.id.contact_person_name_label).visibility = visibility
-        findViewById<EditText>(R.id.contact_person_name).visibility = visibility
-        findViewById<TextView>(R.id.contact_person_number_label).visibility = visibility
-        findViewById<EditText>(R.id.contact_person_number).visibility = visibility
-        findViewById<TextView>(R.id.reason_for_visit_label).visibility = visibility
-        findViewById<Spinner>(R.id.reason_for_visit).visibility = visibility
-        findViewById<TextView>(R.id.reason_question_label).visibility = visibility
-        findViewById<RadioGroup>(R.id.radioGroup).visibility = visibility
-        findViewById<TextView>(R.id.reminder_label).visibility = visibility
-        findViewById<CalendarView>(R.id.reminder_calendar).visibility = visibility
-    }
-
-    private fun changeOtherView(visibility: Int) {
-        findViewById<TextView>(R.id.subject_label).visibility = visibility
-        findViewById<EditText>(R.id.subject).visibility = visibility
-
-        val constraintSet: ConstraintSet = ConstraintSet()
-        constraintSet.clone(add_new_task_layout)
-        if(visibility == View.VISIBLE) {
-            constraintSet.connect(R.id.remarks_label, ConstraintSet.TOP, R.id.subject, ConstraintSet.BOTTOM,16)
-        } else {
-            constraintSet.connect(R.id.remarks_label, ConstraintSet.TOP, R.id.reminder_calendar, ConstraintSet.BOTTOM,16)
-        }
-        constraintSet.applyTo(add_new_task_layout)
-
-
     }
 
     inner class TaskTypeSpinner : AdapterView.OnItemSelectedListener {
@@ -270,7 +138,164 @@ class AddNewTaskActivity : AppCompatActivity() {
         }
     }
 
+    private fun loadParties() {
+        lifecycleScope.launch {
+//            var partiesListLayoutView = this@AddNewTaskActivity.layoutInflater.inflate(R.layout.parties_list_layout, scrollView3, false)
+            val db = Room.databaseBuilder(this@AddNewTaskActivity, AppDB::class.java, "PbdDB").build()
+            parties = db.partiesDao().getAllParties().map { party ->
+                return@map PartiesListItem(party.id, party.name, party.address)
+            }
+
+//            val partiesAdapter: ArrayAdapter<String> = ArrayAdapter<String>(this@AddNewTaskActivity, android.R.layout.simple_spinner_dropdown_item, parties)
+            select_organization.threshold = 1
+            select_organization.setAdapter(PartiesListAdapter(this@AddNewTaskActivity, parties))
+            select_organization.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
+//                Log.i("pbdLog", "clicked Item, ${parent.getItemAtPosition(position)}")
+                val ListItem = (parent.getItemAtPosition(position) as PartiesListItem)
+                select_organization.error = null
+                selectedOrganization = ListItem.id
+                select_organization.setText("${ListItem.name} ${ListItem.address}")
+            }
+        }
+
+    }
+
+    inner class ReasonSpinner : AdapterView.OnItemSelectedListener {
+        override fun onItemSelected(parent: AdapterView<*>, view: View, pos: Int, id: Long) {
+            reason_question_label.text = resources.getStringArray(R.array.task_done_questions)[pos]
+            checkDoneWithTaskEvents()
+        }
+
+        override fun onNothingSelected(parent: AdapterView<*>) {
+            // Another interface callback
+        }
+    }
+
+    private fun loadDoneWithTaskEvents() {
+        done_with_task.setOnCheckedChangeListener { group, checkedId ->
+            checkDoneWithTaskEvents()
+        }
+    }
+
+    private fun checkDoneWithTaskEvents() {
+        val checkedId = done_with_task.checkedRadioButtonId
+        val reasonForVisit = findViewById<Spinner>(R.id.reason_for_visit).selectedItemPosition
+        val reminderLabels = resources.getStringArray(R.array.set_reminder_labels)
+
+        findViewById<TextView>(R.id.reminder_label).visibility = View.VISIBLE
+        findViewById<RadioGroup>(R.id.set_reminder).visibility = View.VISIBLE
+
+        if(set_reminder.checkedRadioButtonId == R.id.reminder_no) {
+            findViewById<CalendarView>(R.id.reminder_calendar).visibility = View.GONE
+        } else if(set_reminder.checkedRadioButtonId == R.id.reminder_yes) {
+            findViewById<CalendarView>(R.id.reminder_calendar).visibility = View.VISIBLE
+        }
+
+        if(checkedId == R.id.task_done_no) {
+            when(reasonForVisit) {
+                0 -> reminder_label.text = reminderLabels[0]
+                1 -> reminder_label.text = reminderLabels[2]
+                2 -> reminder_label.text = reminderLabels[4]
+            }
+        } else if(checkedId == R.id.task_done_yes) {
+            when(reasonForVisit) {
+                0 -> reminder_label.text = reminderLabels[1]
+                1 -> reminder_label.text = reminderLabels[3]
+                2 -> {
+                    findViewById<CalendarView>(R.id.reminder_calendar).visibility = View.GONE
+                    findViewById<TextView>(R.id.reminder_label).visibility = View.GONE
+                    findViewById<RadioGroup>(R.id.set_reminder).visibility = View.GONE
+                }
+            }
+        }
+    }
+
+    private fun loadSetReminderEvents() {
+        set_reminder.setOnCheckedChangeListener { group, checkedId ->
+            checkSetReminder()
+        }
+
+        val minDate = (System.currentTimeMillis() + 86399000)
+        reminder_calendar.minDate = minDate
+        reminder_calendar.date = minDate
+    }
+
+    private fun checkSetReminder() {
+        val checkedId = set_reminder.checkedRadioButtonId
+        if(checkedId == R.id.reminder_yes) {
+            findViewById<CalendarView>(R.id.reminder_calendar).visibility = View.VISIBLE
+        } else if(checkedId == R.id.reminder_no) {
+            findViewById<CalendarView>(R.id.reminder_calendar).visibility = View.GONE
+        }
+    }
+
+    private fun changeVisitView(visibility: Int) {
+        findViewById<TextView>(R.id.select_organization_label).visibility = visibility
+        findViewById<AutoCompleteTextView>(R.id.select_organization).visibility = visibility
+        findViewById<TextView>(R.id.contact_person_name_label).visibility = visibility
+        findViewById<EditText>(R.id.contact_person_name).visibility = visibility
+        findViewById<TextView>(R.id.contact_person_number_label).visibility = visibility
+        findViewById<EditText>(R.id.contact_person_number).visibility = visibility
+        findViewById<TextView>(R.id.reason_for_visit_label).visibility = visibility
+        findViewById<Spinner>(R.id.reason_for_visit).visibility = visibility
+        findViewById<TextView>(R.id.reason_question_label).visibility = visibility
+        findViewById<RadioGroup>(R.id.done_with_task).visibility = visibility
+        findViewById<TextView>(R.id.reminder_label).visibility = visibility
+        findViewById<RadioGroup>(R.id.set_reminder).visibility = visibility
+        findViewById<CalendarView>(R.id.reminder_calendar).visibility = visibility
+
+        if(visibility == View.VISIBLE) {
+            checkDoneWithTaskEvents()
+            checkSetReminder()
+        }
+    }
+
+    private fun changeOtherView(visibility: Int) {
+        findViewById<TextView>(R.id.subject_label).visibility = visibility
+        findViewById<EditText>(R.id.subject).visibility = visibility
+
+        val constraintSet: ConstraintSet = ConstraintSet()
+        constraintSet.clone(add_new_task_layout)
+        if(visibility == View.VISIBLE) {
+            constraintSet.connect(R.id.remarks_label, ConstraintSet.TOP, R.id.subject, ConstraintSet.BOTTOM,16)
+        } else {
+            constraintSet.connect(R.id.remarks_label, ConstraintSet.TOP, R.id.reminder_calendar, ConstraintSet.BOTTOM,16)
+        }
+        constraintSet.applyTo(add_new_task_layout)
+    }
+
+    private fun validateFields(): Boolean {
+        var retValue: Boolean = true
+        if(task_type.selectedItem.toString() == "Visit") {
+            if(this::selectedOrganization.isInitialized) {
+                val selectedOrg = parties.find{ it.id == selectedOrganization }
+                val nameAndAddress = select_organization.text.toString()
+                if(selectedOrg == null || ("${selectedOrg.name} ${selectedOrg.address}") != nameAndAddress) {
+                    select_organization.error = getString(R.string.select_only_from_list)
+                    retValue = false
+                }
+            } else {
+                select_organization.error = getString(R.string.this_field_is_required)
+                retValue = false
+            }
+
+            if(contact_person_name.text == null || contact_person_name.text.toString() == "") {
+                contact_person_name.error = getString(R.string.this_field_is_required)
+                retValue = false
+            }
+        } else if(task_type.selectedItem.toString() == "Other") {
+            if(subject.text == null || subject.text.toString() == "") {
+                subject.error = getString(R.string.this_field_is_required)
+                retValue = false
+            }
+        }
+
+        return retValue
+    }
+
     fun saveChanges(view: View) {
         //first validate the inputs and then save the data
+
+        val valid:Boolean = validateFields()
     }
 }

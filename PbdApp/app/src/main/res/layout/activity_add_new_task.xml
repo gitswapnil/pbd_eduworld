@@ -200,7 +200,7 @@
                 app:layout_constraintTop_toBottomOf="@+id/reason_for_visit" />
 
             <RadioGroup
-                android:id="@+id/radioGroup"
+                android:id="@+id/done_with_task"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
@@ -210,14 +210,14 @@
                 app:layout_constraintTop_toBottomOf="@+id/reason_question_label">
 
                 <RadioButton
-                    android:id="@+id/radioYes"
+                    android:id="@+id/task_done_yes"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:checked="true"
                     android:text="@string/yes" />
 
                 <RadioButton
-                    android:id="@+id/radioNo"
+                    android:id="@+id/task_done_no"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/no" />
@@ -232,7 +232,31 @@
                 android:layout_marginLeft="16dp"
                 android:layout_marginTop="16dp"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/radioGroup" />
+                app:layout_constraintTop_toBottomOf="@+id/done_with_task" />
+
+            <RadioGroup
+                android:id="@+id/set_reminder"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginLeft="16dp"
+                android:layout_marginTop="8dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/reminder_label" >
+
+                <RadioButton
+                    android:id="@+id/reminder_yes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:text="@string/yes" />
+
+                <RadioButton
+                    android:id="@+id/reminder_no"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/no" />
+            </RadioGroup>
 
             <CalendarView
                 android:id="@+id/reminder_calendar"
@@ -245,7 +269,7 @@
                 android:layout_marginRight="16dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/reminder_label" />
+                app:layout_constraintTop_toBottomOf="@+id/set_reminder" />
 
             <TextView
                 android:id="@+id/remarks_label"

@@ -118,6 +118,25 @@ interface PartiesDAO {
     suspend fun removeParties(ids: List<String>)
 }
 
+//Tasks
+@Entity(indices = [Index(value = ["id"], unique = true)])
+data class Tasks (
+    @PrimaryKey (autoGenerate = true) val id: Long = 0,
+    val type: Int,
+    val organizationId: String?,
+    val contactPersonName: String?,
+    val contactPersonNumber: Long?,
+    val reasonForVisit: Int,
+    val doneWithSampling: Boolean,
+    val reminder: Boolean,
+    val reminderDate: Long?,
+    val remarks: String?,
+    val subject: String?,
+    val serverId: String?,
+    val synced: Boolean,
+    val createdAt: Long
+)
+
 @Database (entities = [UserDetails::class, Locations::class, Parties::class], version = 1)
 abstract class AppDB: RoomDatabase() {
     abstract fun userDetailsDao(): UserDetailsDAO
