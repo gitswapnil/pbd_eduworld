@@ -73,6 +73,15 @@
         <item>To receive order</item>
         <item>To get payment</item>
     </string-array>
+
+    <string-array name="set_reminder_labels">
+        <item>Set a reminder to complete the Sampling</item>
+        <item>Set a reminder to get Order</item>
+        <item>Set a reminder for next follow up for the Order</item>
+        <item>Set a reminder to get Payments</item>
+        <item>Set a reminder for next follow up for the Payment</item>
+    </string-array>
+
     <string name="title_activity_login2">LoginActivity2</string>
     <string name="prompt_email">Email</string>
     <string name="prompt_password">Password</string>

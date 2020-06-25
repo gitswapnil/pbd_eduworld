@@ -113,6 +113,34 @@ class AddNewTaskActivity : AppCompatActivity() {
         taskTypes.onItemSelectedListener = TaskTypeSpinner()
 
         loadParties()
+        loadDoneEvents()
+    }
+
+    private fun loadDoneEvents() {
+        radioGroup.setOnCheckedChangeListener { group, checkedId ->
+            val reasonForVisit = findViewById<Spinner>(R.id.reason_for_visit).selectedItemPosition
+            val reminderLabels = resources.getStringArray(R.array.set_reminder_labels)
+
+            findViewById<TextView>(R.id.reminder_label).visibility = View.VISIBLE
+            findViewById<CalendarView>(R.id.reminder_calendar).visibility = View.VISIBLE
+
+            if(checkedId == R.id.radioNo) {
+                when(reasonForVisit) {
+                    0 -> reminder_label.text = reminderLabels[0]
+                    1 -> reminder_label.text = reminderLabels[2]
+                    2 -> reminder_label.text = reminderLabels[4]
+                }
+            } else if(checkedId == R.id.radioYes) {
+                when(reasonForVisit) {
+                    0 -> reminder_label.text = reminderLabels[1]
+                    1 -> reminder_label.text = reminderLabels[3]
+                    2 -> {
+                        findViewById<TextView>(R.id.reminder_label).visibility = View.GONE
+                        findViewById<CalendarView>(R.id.reminder_calendar).visibility = View.GONE
+                    }
+                }
+            }
+        }
     }
 
     private fun loadParties() {
@@ -146,17 +174,43 @@ class AddNewTaskActivity : AppCompatActivity() {
 
     inner class ReasonSpinner : AdapterView.OnItemSelectedListener {
         override fun onItemSelected(parent: AdapterView<*>, view: View, pos: Int, id: Long) {
-            when(parent.getItemAtPosition(pos)) {
-                resources.getStringArray(R.array.reasons_for_visit)[0] ->
-                    findViewById<TextView>(R.id.reason_question_label).text = getString(R.string.done_with_sampling)
+            val reminderLabels = resources.getStringArray(R.array.set_reminder_labels)
 
-                resources.getStringArray(R.array.reasons_for_visit)[1] ->
-                    findViewById<TextView>(R.id.reason_question_label).text = getString(R.string.done_with_receiving_order)
+            findViewById<TextView>(R.id.reminder_label).visibility = View.VISIBLE
+            findViewById<CalendarView>(R.id.reminder_calendar).visibility = View.VISIBLE
 
-                resources.getStringArray(R.array.reasons_for_visit)[2] ->
-                    findViewById<TextView>(R.id.reason_question_label).text = getString(R.string.done_with_payments)
+            when(pos) {
+                0 -> {
+                    reason_question_label.text = getString(R.string.done_with_sampling)
+
+                    if(radioGroup.checkedRadioButtonId == R.id.radioNo) {
+                        reminder_label.text = reminderLabels[0]
+                    } else if(radioGroup.checkedRadioButtonId == R.id.radioYes) {
+                        reminder_label.text = reminderLabels[1]
+                    }
+                }
+
+                1 -> {
+                    reason_question_label.text = getString(R.string.done_with_receiving_order)
+
+                    if(radioGroup.checkedRadioButtonId == R.id.radioNo) {
+                        reminder_label.text = reminderLabels[2]
+                    } else if(radioGroup.checkedRadioButtonId == R.id.radioYes) {
+                        reminder_label.text = reminderLabels[3]
+                    }
+                }
+
+                2 -> {
+                    reason_question_label.text = getString(R.string.done_with_payments)
+
+                    if(radioGroup.checkedRadioButtonId == R.id.radioNo) {
+                        reminder_label.text = reminderLabels[4]
+                    } else if(radioGroup.checkedRadioButtonId == R.id.radioYes) {
+                        findViewById<TextView>(R.id.reminder_label).visibility = View.GONE
+                        findViewById<CalendarView>(R.id.reminder_calendar).visibility = View.GONE
+                    }
+                }
             }
-
         }
 
         override fun onNothingSelected(parent: AdapterView<*>) {
@@ -175,6 +229,8 @@ class AddNewTaskActivity : AppCompatActivity() {
         findViewById<Spinner>(R.id.reason_for_visit).visibility = visibility
         findViewById<TextView>(R.id.reason_question_label).visibility = visibility
         findViewById<RadioGroup>(R.id.radioGroup).visibility = visibility
+        findViewById<TextView>(R.id.reminder_label).visibility = visibility
+        findViewById<CalendarView>(R.id.reminder_calendar).visibility = visibility
     }
 
     private fun changeOtherView(visibility: Int) {
@@ -186,9 +242,10 @@ class AddNewTaskActivity : AppCompatActivity() {
         if(visibility == View.VISIBLE) {
             constraintSet.connect(R.id.remarks_label, ConstraintSet.TOP, R.id.subject, ConstraintSet.BOTTOM,16)
         } else {
-            constraintSet.connect(R.id.remarks_label, ConstraintSet.TOP, R.id.radioGroup, ConstraintSet.BOTTOM,16)
+            constraintSet.connect(R.id.remarks_label, ConstraintSet.TOP, R.id.reminder_calendar, ConstraintSet.BOTTOM,16)
         }
         constraintSet.applyTo(add_new_task_layout)
+
 
     }
 
