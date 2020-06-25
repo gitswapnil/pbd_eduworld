@@ -50,6 +50,8 @@
     <string name="task_type">Task Type</string>
     <string name="select_organization">Select Organization</string>
     <string name="type_here">Type here...</string>
+    <string name="select_only_from_list">Select only from the list...</string>
+    <string name="subject">Subject</string>
     <string name="contact_person_name">Contact Person Name</string>
     <string name="contact_person_number">Contact Person Number</string>
     <string name="reason_for_visit">Reason for Visit</string>
@@ -57,6 +59,9 @@
     <string name="no">No</string>
     <string name="remarks">Remarks</string>
     <string name="save">Save</string>
+    <string name="done_with_sampling">Done with Sampling?</string>
+    <string name="done_with_receiving_order">Done with Receiving Order?</string>
+    <string name="done_with_payments">Done with Payments?</string>
 
     <string-array name="task_types">
         <item>Visit</item>

@@ -105,6 +105,9 @@ data class Parties (
 
 @Dao
 interface PartiesDAO {
+    @Query("SELECT * FROM Parties")
+    suspend fun getAllParties(): List<Parties>
+
     @Query("SELECT * FROM Parties ORDER BY updatedAt DESC LIMIT 1")
     suspend fun getLastUpdatedParty(): Parties
 

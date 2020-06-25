@@ -29,7 +29,7 @@
         tools:layout_editor_absoluteX="87dp">
 
         <androidx.constraintlayout.widget.ConstraintLayout
-            android:id="@+id/linearLayout3"
+            android:id="@+id/add_new_task_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
@@ -45,7 +45,7 @@
                 app:layout_constraintTop_toTopOf="parent" />
 
             <Spinner
-                android:id="@+id/spinner3"
+                android:id="@+id/task_type"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
@@ -59,7 +59,34 @@
                 app:layout_constraintTop_toBottomOf="@+id/textView5" />
 
             <TextView
-                android:id="@+id/textView16"
+                android:id="@+id/subject_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginLeft="16dp"
+                android:layout_marginTop="16dp"
+                android:text="@string/subject"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/task_type" />
+
+            <EditText
+                android:id="@+id/subject"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginLeft="16dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginRight="16dp"
+                android:ems="10"
+                android:hint="@string/type_here"
+                android:inputType="textPersonName"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/subject_label" />
+
+            <TextView
+                android:id="@+id/select_organization_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
@@ -67,10 +94,10 @@
                 android:layout_marginTop="16dp"
                 android:text="@string/select_organization"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/spinner3" />
+                app:layout_constraintTop_toBottomOf="@+id/task_type" />
 
-            <EditText
-                android:id="@+id/editTextTextPersonName"
+            <AutoCompleteTextView
+                android:id="@+id/select_organization"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
@@ -78,15 +105,13 @@
                 android:layout_marginTop="8dp"
                 android:layout_marginEnd="16dp"
                 android:layout_marginRight="16dp"
-                android:ems="10"
-                android:hint="@string/type_here"
-                android:inputType="textPersonName"
+                android:hint="@string/select_only_from_list"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/textView16" />
+                app:layout_constraintTop_toBottomOf="@+id/select_organization_label" />
 
             <TextView
-                android:id="@+id/textView17"
+                android:id="@+id/contact_person_name_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
@@ -94,10 +119,10 @@
                 android:layout_marginTop="16dp"
                 android:text="@string/contact_person_name"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/editTextTextPersonName" />
+                app:layout_constraintTop_toBottomOf="@+id/select_organization" />
 
             <EditText
-                android:id="@+id/editTextTextPersonName2"
+                android:id="@+id/contact_person_name"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
@@ -110,10 +135,10 @@
                 android:inputType="textPersonName"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/textView17" />
+                app:layout_constraintTop_toBottomOf="@+id/contact_person_name_label" />
 
             <TextView
-                android:id="@+id/textView18"
+                android:id="@+id/contact_person_number_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
@@ -121,10 +146,10 @@
                 android:layout_marginTop="16dp"
                 android:text="@string/contact_person_number"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/editTextTextPersonName2" />
+                app:layout_constraintTop_toBottomOf="@+id/contact_person_name" />
 
             <EditText
-                android:id="@+id/editTextTextPersonName3"
+                android:id="@+id/contact_person_number"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
@@ -134,13 +159,13 @@
                 android:layout_marginRight="16dp"
                 android:ems="10"
                 android:hint="@string/type_here"
-                android:inputType="textPersonName"
+                android:inputType="phone"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/textView18" />
+                app:layout_constraintTop_toBottomOf="@+id/contact_person_number_label" />
 
             <TextView
-                android:id="@+id/textView19"
+                android:id="@+id/reason_for_visit_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
@@ -148,10 +173,10 @@
                 android:layout_marginTop="16dp"
                 android:text="@string/reason_for_visit"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/editTextTextPersonName3" />
+                app:layout_constraintTop_toBottomOf="@+id/contact_person_number" />
 
             <Spinner
-                android:id="@+id/spinner4"
+                android:id="@+id/reason_for_visit"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
@@ -162,18 +187,17 @@
                 android:entries="@array/reasons_for_visit"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/textView19" />
+                app:layout_constraintTop_toBottomOf="@+id/reason_for_visit_label" />
 
             <TextView
-                android:id="@+id/textView20"
+                android:id="@+id/reason_question_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:layout_marginLeft="16dp"
                 android:layout_marginTop="16dp"
-                android:text="TextView"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/spinner4" />
+                app:layout_constraintTop_toBottomOf="@+id/reason_for_visit" />
 
             <RadioGroup
                 android:id="@+id/radioGroup"
@@ -183,7 +207,7 @@
                 android:layout_marginLeft="16dp"
                 android:layout_marginTop="8dp"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/textView20">
+                app:layout_constraintTop_toBottomOf="@+id/reason_question_label">
 
                 <RadioButton
                     android:id="@+id/radioButton"
@@ -199,7 +223,7 @@
             </RadioGroup>
 
             <TextView
-                android:id="@+id/textView21"
+                android:id="@+id/remarks_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
@@ -210,7 +234,7 @@
                 app:layout_constraintTop_toBottomOf="@+id/radioGroup" />
 
             <EditText
-                android:id="@+id/editTextTextMultiLine"
+                android:id="@+id/remarks"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
@@ -226,10 +250,10 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="0.0"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/textView21" />
+                app:layout_constraintTop_toBottomOf="@+id/remarks_label" />
 
             <Button
-                android:id="@+id/button3"
+                android:id="@+id/save_button"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="24dp"
@@ -238,11 +262,12 @@
                 android:layout_marginEnd="24dp"
                 android:layout_marginRight="24dp"
                 android:layout_marginBottom="16dp"
+                android:onClick="saveChanges"
                 android:text="@string/save"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/editTextTextMultiLine" />
+                app:layout_constraintTop_toBottomOf="@+id/remarks" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </ScrollView>
