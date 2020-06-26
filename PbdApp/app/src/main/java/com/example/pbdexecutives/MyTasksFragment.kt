@@ -10,18 +10,23 @@ import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.lifecycle.lifecycleScope
+import androidx.room.Room
 import com.example.pbdexecutives.dummy.DummyContent
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.snackbar.Snackbar
-
-
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
+import kotlin.collections.ArrayList
 
 
 /**
  * A fragment representing a list of Items.
  */
 class MyTasksFragment : Fragment() {
-
+    private lateinit var recyclerViewAdapter: MyTasksRecyclerViewAdapter
+    private lateinit var listItems: MutableList<MyTaskListItemModel>
     private var columnCount = 1
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,28 +38,56 @@ class MyTasksFragment : Fragment() {
 
     }
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_my_tasks_list, container, false)
-
+        //change the action button's onclick
         activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).setOnClickListener { view ->
             createNewTask(view)
         }
 
+        listItems = ArrayList()
+        recyclerViewAdapter = MyTasksRecyclerViewAdapter(listItems)
         // Set the adapter
         if (view is RecyclerView) {
             with(view) {
-                layoutManager = when {
-                    columnCount <= 1 -> LinearLayoutManager(context)
-                    else -> GridLayoutManager(context, columnCount)
-                }
-                adapter = MyTasksRecyclerViewAdapter(listOf(DummyContent.ITEMS[0], DummyContent.ITEMS[1], DummyContent.ITEMS[2]))
+                layoutManager = LinearLayoutManager(context)
+                adapter = recyclerViewAdapter
             }
         }
 
         return view
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        loadData(offset = 0)
+    }
+
+    private fun loadData(offset: Int = 0) {
+        if(offset == 0) {
+            listItems.clear()
+        }
+
+        this.lifecycleScope.launch {
+            val db = this@MyTasksFragment.context?.let { Room.databaseBuilder(it, AppDB::class.java, "PbdDB").build() }
+            val tasks = db?.tasksDao()?.getTasks(limit = 10, offset = 0)?.map {
+                MyTaskListItemModel(
+                    id = "#${it.id.toString()}",
+                    organization = it.organization,
+                    remarks = it.remarks.toString(),
+                    type = if(it.type?.toInt() == 0) "Visited" else "Other",
+                    reason = resources.getStringArray(R.array.reasons_for_visit)[it.reasonForVisit.toInt()],
+                    createdAt = SimpleDateFormat("dd/MM/yy").format(Date(it.createdAt))
+                )
+            }
+
+            Log.i("pbdLog", "tasks: $tasks")
+            if (tasks != null) {
+                listItems.addAll(tasks)
+            }
+            recyclerViewAdapter.notifyDataSetChanged()
+        }
     }
 
     private fun createNewTask(view: View) {

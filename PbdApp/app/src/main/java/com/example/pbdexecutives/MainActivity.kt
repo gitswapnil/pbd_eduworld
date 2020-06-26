@@ -62,13 +62,13 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
     }
 
     private fun gotoLogin() {
-        stopServerSync()
+        PbdExecutivesUtils().stopSyncing(applicationContext)
         startActivity(Intent(this@MainActivity, LoginActivity::class.java))
         finishAffinity()       //remove the current activity from the activity stack so that back button makes it jump out of the application.
     }
 
     private fun gotoHome() {
-        startServerSync()   //Start the background work that syncs the data to the server
+        PbdExecutivesUtils().syncData(applicationContext)   //Start the background work that syncs the data to the server
         startActivity(Intent(this@MainActivity, HomeActivity::class.java))
         finishAffinity()       //remove the current activity from the activity stack so that back button makes it jump out of the application.
     }
@@ -103,24 +103,6 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
             }
 
         }
-    }
-
-    private fun stopServerSync() {
-        WorkManager.getInstance(applicationContext).cancelUniqueWork("serversync")
-    }
-
-    private fun startServerSync() {
-        val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
-//        val serverSyncRequest: OneTimeWorkRequest =
-        val serverSyncRequest: PeriodicWorkRequest =
-            PeriodicWorkRequestBuilder<ServerSyncWorker>(15, TimeUnit.MINUTES)
-//                OneTimeWorkRequestBuilder<ServerSyncWorker>()
-                .setConstraints(constraints)
-                .build()
-
-        WorkManager.getInstance(applicationContext)
-            .enqueueUniquePeriodicWork("serversync", ExistingPeriodicWorkPolicy.KEEP, serverSyncRequest)
-//            .enqueue(serverSyncRequest)
     }
 
     override fun onDestroy() {

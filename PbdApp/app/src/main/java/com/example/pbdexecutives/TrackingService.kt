@@ -169,26 +169,17 @@ class TrackingService : Service() {
     private fun saveLocation(newLocation: Location) {
         Log.i("pbdLog", "Saving location, Latitude: ${newLocation.latitude}, Longitude: ${newLocation.longitude}")
 
-        val self = this
         GlobalScope.launch {
             try {
-                val db: AppDB = Room.databaseBuilder(self, AppDB::class.java, "PbdDB").build()
+                val db: AppDB = Room.databaseBuilder(this@TrackingService, AppDB::class.java, "PbdDB").build()
                 val location = Locations(latitude = newLocation.latitude, longitude = newLocation.longitude, sessionId = sessionId, createdAt = Date().time.toLong(), synced = false)
                 db.locationsDao().saveLocation(location)        //store the apiKey in local database.
                 broadcastLocationUpdate()
-                syncToServer()
+                PbdExecutivesUtils().syncData(applicationContext)
             } catch(e: Exception) {
                 Log.i("pbdLog", "Unable to store the location, exception: ${e}");
             }
         }
-    }
-
-    //enqueue the same worker so that it executes immediately
-    private fun syncToServer() {
-        val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
-        val serverSyncRequest: PeriodicWorkRequest = PeriodicWorkRequestBuilder<ServerSyncWorker>(15, TimeUnit.MINUTES).setConstraints(constraints).build()
-
-        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork("serversync", ExistingPeriodicWorkPolicy.REPLACE, serverSyncRequest)
     }
 
     override fun onDestroy() {

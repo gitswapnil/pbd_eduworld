@@ -122,12 +122,12 @@ interface PartiesDAO {
 @Entity(indices = [Index(value = ["id"], unique = true)])
 data class Tasks (
     @PrimaryKey (autoGenerate = true) val id: Long = 0,
-    val type: Int,
+    val type: Short?,
     val organizationId: String?,
     val contactPersonName: String?,
     val contactPersonNumber: Long?,
-    val reasonForVisit: Int,
-    val doneWithSampling: Boolean,
+    val reasonForVisit: Short,
+    val doneWithTask: Boolean,
     val reminder: Boolean,
     val reminderDate: Long?,
     val remarks: String?,
@@ -137,10 +137,42 @@ data class Tasks (
     val createdAt: Long
 )
 
-@Database (entities = [UserDetails::class, Locations::class, Parties::class], version = 1)
+data class TasksWithOrganizationJoin (
+    @PrimaryKey (autoGenerate = true) val id: Long = 0,
+    val type: Short?,
+    val organizationId: String?,
+    val organization: String,
+    val contactPersonName: String?,
+    val contactPersonNumber: Long?,
+    val reasonForVisit: Short,
+    val doneWithTask: Boolean,
+    val reminder: Boolean,
+    val reminderDate: Long?,
+    val remarks: String?,
+    val subject: String?,
+    val createdAt: Long
+)
+
+@Dao
+interface TasksDAO {
+    @Query("SELECT * FROM Tasks WHERE synced=0")
+    suspend fun getUnsyncedTasks(): List<Tasks>
+
+    @Query("SELECT t.id, t.type, t.organizationId, p.name AS organization, t.contactPersonName, t.contactPersonNumber, t.reasonForVisit, t.doneWithTask, t.reminder, t.reminderDate, t.remarks, t.subject, t.serverId, t.createdAt FROM Tasks AS t INNER JOIN Parties AS p WHERE t.organizationId=p.id ORDER BY createdAt DESC LIMIT :limit OFFSET :offset")
+    suspend fun getTasks(limit: Int, offset: Int): List<TasksWithOrganizationJoin>
+
+    @Query("UPDATE Tasks SET serverId=:serverId, synced=1 WHERE id=:id")
+    suspend fun markTaskSynced(id: Long, serverId: String)
+
+    @Insert
+    suspend fun addTasks(tasks: List<Tasks>)
+}
+
+@Database (entities = [UserDetails::class, Locations::class, Parties::class, Tasks::class], version = 1)
 abstract class AppDB: RoomDatabase() {
     abstract fun userDetailsDao(): UserDetailsDAO
     abstract fun locationsDao(): LocationsDAO
     abstract fun partiesDao(): PartiesDAO
+    abstract fun tasksDao(): TasksDAO
 }
 

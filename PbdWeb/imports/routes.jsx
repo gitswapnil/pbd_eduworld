@@ -252,6 +252,20 @@ if(Meteor.isClient) {
 			],
 			lastUserDetails: timestamp<Long Int>,
 			lastPartyDetails: timestamp<Long Int>,
+			tasks: [
+				{
+					id: Long,
+    				type: Short,
+    				orgId: String,
+    				cpName: String,
+    				cpNumber: Long,
+    				reason: Short,
+    				doneWithTask: Boolean,
+    				reminder: Boolean,
+    				reminderDate: Date,
+    				remarks: Date
+				}, ...
+			]
 			notifications: timestamp<Long Int>
 		}
 		return: {
@@ -277,7 +291,10 @@ if(Meteor.isClient) {
 						...
 					],
 					remove: [HexString, HexString, ...]
-				}
+				},
+				taskIds: [
+					{ id: Long, serverId: String }, ...
+				]
 			}",
 			code: Integer
 		}	if error is false then message is the apiKey for that user.
@@ -482,6 +499,45 @@ if(Meteor.isClient) {
 		return;
 	};
 
+	const storeTasks = async (userId, tasks) => {
+		//if the locations key is defined.
+		if(tasks) {
+			// console.log("locations: " + JSON.stringify(locations));
+			if(!Array.isArray(tasks)) {		//validate the locations array
+				throw new Error("Error in the given tasks Array.");
+				return;
+			}
+
+			return tasks.map((task, index) => {
+				let obj = {
+					type: task.type,
+					orgId: task.orgId,
+					cpName: task.cpName,
+				    cpNumber: task.cpNumber,
+				    reason: task.reason,
+				    doneWithTask: (task.doneWithTask == 1),
+				    reminder: task.reminder,
+				    reminderDate: task.reminderDate,
+				    subject: task.subject,
+				    remarks: task.remarks,
+					userId: userId,
+					createdAt: task.createdAt
+				}
+
+				const serverId = Collections.tasks.insert(obj, (err, res) => {
+					if(err) {
+						throw new Error(err.message);
+					}
+				});
+
+				return { id: task.id, serverId };
+			});
+		}
+
+		return;
+	};
+
+
 	Router.route('/api/syncdata', {where: 'server'}).post(function(req, res, next){
 		console.log("API: syncdata invoked.");
 		const reqBody = req.body;
@@ -533,14 +589,20 @@ if(Meteor.isClient) {
 			return;
 		});
 
+		const tasksApi = storeTasks(user._id, reqBody.tasks).catch(err => {
+			res.end(JSON.stringify({error: true, message: err.message, code: 400}));
+			return;
+		});
+
 		const callAllFuncs = async () => {
-			const values = await Promise.all([locationsApi, userDetailsApi, partyDetailsApi]);
+			const values = await Promise.all([locationsApi, userDetailsApi, partyDetailsApi, tasksApi]);
 
 			console.log(`values: ${JSON.stringify(values)}`);
 			const message = {
 				locationIds: values[0],
 				userDetails: values[1],
-				partyDetails: values[2]
+				partyDetails: values[2],
+				taskIds: values[3]
 			}
 			res.end(JSON.stringify({ error: false, message, code: 200 }));
 		}

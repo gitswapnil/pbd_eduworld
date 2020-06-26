@@ -18,7 +18,9 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.IOException
 import java.lang.Exception
+import java.util.*
 import javax.security.auth.callback.Callback
+import kotlin.collections.ArrayList
 
 data class LocationObject(
     @SerializedName("id") val id: Long,
@@ -28,11 +30,27 @@ data class LocationObject(
     @SerializedName("createdAt") val createdAt: Long
 )
 
+data class TasksObject(
+    @SerializedName("id") val id: Long,
+    @SerializedName("type") val type: Short?,
+    @SerializedName("orgId") val orgId: String?,
+    @SerializedName("cpName") val cpName: String?,
+    @SerializedName("cpNumber") val cpNumber: Long?,
+    @SerializedName("reason") val reason: Short,
+    @SerializedName("doneWithTask") val doneWithTask: Boolean,
+    @SerializedName("reminder") val reminder: Boolean,
+    @SerializedName("reminderDate") val reminderDate: Long?,
+    @SerializedName("subject") val subject: String?,
+    @SerializedName("remarks") val remarks: String?,
+    @SerializedName("createdAt") val createdAt: Long
+)
+
 data class RequestObject(
     @SerializedName("apiKey") val apiKey: String,
     @SerializedName("locations") val locations: List<LocationObject>,
     @SerializedName("lastUserDetails") val lastUserDetails: Long,
-    @SerializedName("lastPartyDetails") val lastPartyDetails: Long
+    @SerializedName("lastPartyDetails") val lastPartyDetails: Long,
+    @SerializedName("tasks") val tasks: List<TasksObject>
 )
 
 data class UserDetailsResponseObject(
@@ -49,10 +67,16 @@ data class PartyDetailsResponseObject(
     @SerializedName("remove") val remove: List<String>
 )
 
+data class TaskIdsResponseObject(
+    @SerializedName("id") val id: Long,
+    @SerializedName("serverId") val serverId: String
+)
+
 data class MessageObject(
     @SerializedName("locationIds") val locationIds: List<Long>?,
     @SerializedName("userDetails") val userDetails: UserDetailsResponseObject?,
-    @SerializedName("partyDetails") val partyDetails: PartyDetailsResponseObject?
+    @SerializedName("partyDetails") val partyDetails: PartyDetailsResponseObject?,
+    @SerializedName("taskIds") val taskIds: List<TaskIdsResponseObject>?
 )
 
 class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): ListenableWorker(appContext, workerParams){
@@ -63,21 +87,25 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                 val db = Room.databaseBuilder(applicationContext, AppDB::class.java, "PbdDB").build()
                 val apiKey: String? = db.userDetailsDao().getApiKey()
                 if (apiKey != null) {            //if the user is not logged in then dont sync anything.
-                    val locations = ArrayList<LocationObject>()
+
+                    //get unsynced locations
+                    val locations: MutableList<LocationObject> = ArrayList()
                     db.locationsDao().getUnsyncedLocations().forEach {
                         locations.add(
                             LocationObject(
-                                it.id,
-                                it.latitude,
-                                it.longitude,
-                                it.sessionId,
-                                it.createdAt
+                                id = it.id,
+                                latitude = it.latitude,
+                                longitude = it.longitude,
+                                sessionId = it.sessionId,
+                                createdAt = it.createdAt
                             )
                         )
                     }
 
+                    //get User details last updatedAt
                     val lastUserDetails: Long = db.userDetailsDao().getCurrentUser().updatedAt
 
+                    //get parties last updatedAt
                     val lastPartyDetails = db.partiesDao().getLastUpdatedParty()
                     var lastPartyUpdatedAt:Long = 1
 
@@ -85,11 +113,32 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                         lastPartyUpdatedAt = lastPartyDetails.updatedAt
                     }
 
+                    //get unsyned tasks
+                    var tasks: MutableList<TasksObject> = ArrayList()
+                    db.tasksDao().getUnsyncedTasks().forEach {
+                        tasks.add(
+                            TasksObject(
+                                id = it.id,
+                                type = it.type,
+                                orgId = it.organizationId,
+                                cpName = it.contactPersonName,
+                                cpNumber = it.contactPersonNumber,
+                                reason = it.reasonForVisit,
+                                doneWithTask = it.doneWithTask,
+                                reminder = it.reminder,
+                                reminderDate = it.reminderDate,
+                                subject = it.subject,
+                                remarks = it.remarks,
+                                createdAt = it.createdAt
+                            )
+                        )
+                    }
+
 //                    if (locations.size != 0 ) {           //If there are no locations to be synced, just ignore
 //                        this.cancel()
 //                    }
 
-                    val requestJSONObject: JSONObject = JSONObject(Gson().toJson(RequestObject(apiKey.toString(), locations, lastUserDetails, lastPartyUpdatedAt)))
+                    val requestJSONObject: JSONObject = JSONObject(Gson().toJson(RequestObject(apiKey.toString(), locations, lastUserDetails, lastPartyUpdatedAt, tasks)))
                     Log.i("pbdLog", "requestJSONObject: $requestJSONObject")
 
                     PbdExecutivesUtils().sendData(
@@ -145,10 +194,16 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                                 }
 
                                 GlobalScope.launch {
-                                    Log.i("pbdLog", "idsToRemove: $idsToRemove")
-                                    Log.i("pbdLog", "partiesToUpsert: $partiesToUpsert")
                                     db.partiesDao().removeParties(idsToRemove)
                                     db.partiesDao().addParties(partiesToUpsert)
+                                }
+                            }
+
+                            if(responseObject.taskIds != null && responseObject.taskIds.isNotEmpty()) {
+                                GlobalScope.launch {
+                                    responseObject.taskIds.forEach {
+                                        db.tasksDao().markTaskSynced(id = it.id, serverId = it.serverId)
+                                    }
                                 }
                             }
 

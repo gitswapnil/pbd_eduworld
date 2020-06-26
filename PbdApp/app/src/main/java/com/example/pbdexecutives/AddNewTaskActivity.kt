@@ -15,6 +15,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.room.Room
 import com.google.gson.annotations.SerializedName
 import kotlinx.android.synthetic.main.activity_add_new_task.*
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.*
 import kotlin.collections.ArrayList
@@ -297,5 +299,44 @@ class AddNewTaskActivity : AppCompatActivity() {
         //first validate the inputs and then save the data
 
         val valid:Boolean = validateFields()
+        if(!valid) {
+            return
+        }
+
+        val type: Int = task_type.selectedItemPosition
+        val organizationId: String? = selectedOrganization
+        val contactPersonName: String? = contact_person_name.text.toString()
+        val contactPersonNumber: Long? = contact_person_number.text.toString().toLong()
+        val reasonForVisit: Int = reason_for_visit.selectedItemPosition
+        val doneWithTask: Boolean = (done_with_task.checkedRadioButtonId == R.id.task_done_yes)
+        val reminder: Boolean = (set_reminder.checkedRadioButtonId == R.id.reminder_yes)
+        val reminderDate: Long? = reminder_calendar.date
+        val remarks: String? = remarks.text.toString()
+        val subject: String? = subject.text.toString()
+
+        lifecycleScope.launch {
+            val db = Room.databaseBuilder(this@AddNewTaskActivity, AppDB::class.java, "PbdDB").build()
+
+            val task = listOf(Tasks(
+                type = type.toShort(),
+                organizationId = organizationId,
+                contactPersonName = contactPersonName,
+                contactPersonNumber = contactPersonNumber,
+                reasonForVisit = reasonForVisit.toShort(),
+                doneWithTask = doneWithTask,
+                reminder = reminder,
+                reminderDate = reminderDate,
+                remarks = remarks,
+                subject = subject,
+                createdAt = Date().time.toLong(),
+                synced = false,
+                serverId = null
+            ))
+
+            db.tasksDao().addTasks(task)
+            PbdExecutivesUtils().syncData(applicationContext)
+
+            finish()
+        }
     }
 }

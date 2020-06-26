@@ -243,25 +243,24 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 //        Log.i("pbdLog", "startOfToday: $startOfToday");
 //        Log.i("pbdLog", "startOfToday: $endOfToday");
 
-        val self = this;
         this.lifecycleScope.launch {
-            val db = Room.databaseBuilder(self, AppDB::class.java, "PbdDB").build();
-            val result = db.locationsDao().getTodaysTimestamps(start = startOfToday, end = endOfToday);     //result contains timestamp strings.
-            var todaysMilliseconds: Long = 0;
+            val db = Room.databaseBuilder(this@HomeActivity, AppDB::class.java, "PbdDB").build()
+            val result = db.locationsDao().getTodaysTimestamps(start = startOfToday, end = endOfToday)     //result contains timestamp strings.
+            var todaysMilliseconds: Long = 0
             result.forEach { tsString ->        //split those strings into arrays.
-                val timestamps = tsString.split(",");
-                var previousTS = timestamps[0].toLong();
+                val timestamps = tsString.split(",")
+                var previousTS = timestamps[0].toLong()
                 timestamps.forEach {
-                    val currentTS = it.toLong();
-                    todaysMilliseconds += previousTS - currentTS;       //add the difference everytime.
+                    val currentTS = it.toLong()
+                    todaysMilliseconds += previousTS - currentTS       //add the difference everytime.
                     previousTS = currentTS
                 }
             }
 //            Log.i("pbdLog", "todaysMilliseconds: $todaysMilliseconds");
-            val todaysHours = TimeUnit.MILLISECONDS.toHours(todaysMilliseconds);
-            val todaysMinutes = TimeUnit.MILLISECONDS.toMinutes(todaysMilliseconds) - (todaysHours * 60);
-            Log.i("pbdLog", "todaysHours: ${todaysHours}, todaysMinutes: ${todaysMinutes}");
-            changeDutyTime(hrs = todaysHours, min = todaysMinutes);
+            val todaysHours = TimeUnit.MILLISECONDS.toHours(todaysMilliseconds)
+            val todaysMinutes = TimeUnit.MILLISECONDS.toMinutes(todaysMilliseconds) - (todaysHours * 60)
+            Log.i("pbdLog", "todaysHours: ${todaysHours}, todaysMinutes: ${todaysMinutes}")
+            changeDutyTime(hrs = todaysHours, min = todaysMinutes)
         }
     }
 

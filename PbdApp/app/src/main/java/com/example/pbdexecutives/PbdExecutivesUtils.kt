@@ -9,10 +9,13 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.NetworkInfo
 import android.os.Build
+import android.util.Log
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.Observer
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.room.Room
-import androidx.work.WorkManager
+import androidx.work.*
 import com.android.volley.DefaultRetryPolicy
 import com.android.volley.Request
 import com.android.volley.Response
@@ -22,6 +25,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 class PbdExecutivesUtils: Application() {
     //global variables go here...
@@ -117,5 +121,28 @@ class PbdExecutivesUtils: Application() {
     fun stopTrackingService(context: Context) {
         val serviceIntent = Intent(context, TrackingService::class.java)
         context.stopService(serviceIntent);
+    }
+
+    fun syncData(context: Context) {
+        var policyOfSyncing: ExistingPeriodicWorkPolicy = ExistingPeriodicWorkPolicy.REPLACE
+
+        val workInfo = WorkManager.getInstance(context).getWorkInfosForUniqueWork("serversync").get()[0]
+
+        if (workInfo.state == WorkInfo.State.RUNNING) {
+            policyOfSyncing = ExistingPeriodicWorkPolicy.KEEP
+        }
+        
+        val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+        val serverSyncRequest: PeriodicWorkRequest =
+            PeriodicWorkRequestBuilder<ServerSyncWorker>(15, TimeUnit.MINUTES)
+                .setConstraints(constraints)
+                .build()
+
+        WorkManager.getInstance(context)
+            .enqueueUniquePeriodicWork("serversync", policyOfSyncing, serverSyncRequest)
+    }
+
+    fun stopSyncing(context: Context) {
+        WorkManager.getInstance(context).cancelUniqueWork("serversync")
     }
 }
