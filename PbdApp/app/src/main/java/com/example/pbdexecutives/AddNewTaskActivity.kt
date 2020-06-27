@@ -1,6 +1,7 @@
 package com.example.pbdexecutives
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -336,6 +337,7 @@ class AddNewTaskActivity : AppCompatActivity() {
             db.tasksDao().addTasks(task)
             PbdExecutivesUtils().syncData(applicationContext)
 
+            setResult(RESULT_OK, Intent().putExtra("someKey", 0))
             finish()
         }
     }
