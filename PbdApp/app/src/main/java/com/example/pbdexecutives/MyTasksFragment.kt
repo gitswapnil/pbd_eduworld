@@ -86,7 +86,7 @@ class MyTasksFragment : Fragment() {
 
             val linearLayoutManager = recyclerView.layoutManager as LinearLayoutManager?
             if (!isLoading) {
-                if (linearLayoutManager != null && linearLayoutManager.findLastCompletelyVisibleItemPosition() == listItems.size - 1) {
+                if (listItems.isNotEmpty() && linearLayoutManager != null && linearLayoutManager.findLastCompletelyVisibleItemPosition() == (listItems.size - 1)) {
                     //bottom of list!
                     loadData()
                 }
@@ -119,13 +119,20 @@ class MyTasksFragment : Fragment() {
 
             //insert it into the list
             tasks.forEach {
+                val type = it.type.toInt()
+
+                Log.i("pbdLog", "type: $type")
                 listItems.add(
                     MyTaskListItemModel(
                         id = "#${it.id.toString()}",
-                        organization = it.organization,
+                        organization = if(type == 0) { it.organization.toString() } else { it.subject },
                         remarks = it.remarks.toString(),
-                        type = if (it.type?.toInt() == 0) "Visited" else "Other",
-                        reason = resources.getStringArray(R.array.reasons_for_visit)[it.reasonForVisit.toInt()],
+                        type = if (type == 0) "Visited" else "Other",
+                        reason = if(type == 0) {
+                            resources.getStringArray(R.array.reasons_for_visit)[it.reasonForVisit.toInt()]
+                        } else {
+                            null
+                        },
                         createdAt = SimpleDateFormat("dd/MM/yy").format(Date(it.createdAt))
                     )
                 )

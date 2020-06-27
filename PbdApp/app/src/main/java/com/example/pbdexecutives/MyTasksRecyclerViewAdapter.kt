@@ -14,7 +14,7 @@ data class MyTaskListItemModel(
     val type: String,
     val organization: String,
     val remarks: String,
-    val reason: String,
+    val reason: String?,
     val createdAt: String
 )
 

@@ -126,12 +126,12 @@ class PbdExecutivesUtils: Application() {
     fun syncData(context: Context) {
         var policyOfSyncing: ExistingPeriodicWorkPolicy = ExistingPeriodicWorkPolicy.REPLACE
 
-        val workInfo = WorkManager.getInstance(context).getWorkInfosForUniqueWork("serversync").get()[0]
+        val workInfos = WorkManager.getInstance(context).getWorkInfosForUniqueWork("serversync").get()
 
-        if (workInfo.state == WorkInfo.State.RUNNING) {
+        if (workInfos.isNotEmpty() && workInfos[0].state == WorkInfo.State.RUNNING) {
             policyOfSyncing = ExistingPeriodicWorkPolicy.KEEP
         }
-        
+
         val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
         val serverSyncRequest: PeriodicWorkRequest =
             PeriodicWorkRequestBuilder<ServerSyncWorker>(15, TimeUnit.MINUTES)

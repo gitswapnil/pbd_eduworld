@@ -305,15 +305,15 @@ class AddNewTaskActivity : AppCompatActivity() {
         }
 
         val type: Int = task_type.selectedItemPosition
-        val organizationId: String? = selectedOrganization
-        val contactPersonName: String? = contact_person_name.text.toString()
-        val contactPersonNumber: Long? = contact_person_number.text.toString().toLong()
+        val organizationId: String? = if(type == 0) selectedOrganization else null
+        val contactPersonName: String? = if(type == 0) contact_person_name.text.toString() else null
+        val contactPersonNumber: Long? = if(type == 0) contact_person_number.text.toString().toLong() else null
         val reasonForVisit: Int = reason_for_visit.selectedItemPosition
         val doneWithTask: Boolean = (done_with_task.checkedRadioButtonId == R.id.task_done_yes)
         val reminder: Boolean = (set_reminder.checkedRadioButtonId == R.id.reminder_yes)
         val reminderDate: Long? = reminder_calendar.date
-        val remarks: String? = remarks.text.toString()
-        val subject: String? = subject.text.toString()
+        val remarks: String = remarks.text.toString()
+        val subject: String = subject.text.toString()
 
         lifecycleScope.launch {
             val db = Room.databaseBuilder(this@AddNewTaskActivity, AppDB::class.java, "PbdDB").build()
