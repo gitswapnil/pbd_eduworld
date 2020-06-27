@@ -1,16 +1,20 @@
 package com.example.pbdexecutives
 
+import android.content.Intent
+import android.util.Log
 import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.app.ActivityCompat.startActivityForResult
 
 import com.example.pbdexecutives.dummy.DummyContent.DummyItem
 
 data class MyTaskListItemModel(
-    val id: String,
+    val id: Long,
     val type: String,
     val organization: String,
     val remarks: String,
@@ -46,22 +50,25 @@ class MyTasksRecyclerViewAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = values[position]
         if(item != null) {
-            holder.taskId.text = item.id
+            holder.taskId.text = "#${item.id.toString()}"
             holder.taskType.text = item.type
             holder.organizationName.text = item.organization
             holder.remark.text = item.remarks
             holder.reason.text = item.reason
             holder.createdAt.text = item.createdAt
 
+            holder.taskItem.setOnClickListener(EditItem(item.id))
             changeDataPlaceholdersVisibility(holder, View.VISIBLE)
         } else {
             changeDataPlaceholdersVisibility(holder, View.GONE)
         }
+
     }
 
     override fun getItemCount(): Int = values.size
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val taskItem: ConstraintLayout = view.findViewById(R.id.my_task_list_layout)
         val taskType: TextView = view.findViewById(R.id.task_lt_type)
         val organizationName: TextView = view.findViewById(R.id.task_lt_organisation_name)
         val remark: TextView = view.findViewById(R.id.task_lt_remark)
@@ -69,5 +76,11 @@ class MyTasksRecyclerViewAdapter(
         val createdAt: TextView = view.findViewById(R.id.task_lt_createdAt)
         val taskId: TextView = view.findViewById(R.id.task_lt_id)
         val loaderCircle: ProgressBar = view.findViewById(R.id.tasks_loader_circle)
+    }
+
+    inner class EditItem(private val itemId: Long): View.OnClickListener {
+        override fun onClick(v: View?) {
+            TODO("Not yet implemented")
+        }
     }
 }

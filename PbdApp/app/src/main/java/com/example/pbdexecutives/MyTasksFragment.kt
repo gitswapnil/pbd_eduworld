@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.NonNull
@@ -124,7 +125,7 @@ class MyTasksFragment : Fragment() {
                 Log.i("pbdLog", "type: $type")
                 listItems.add(
                     MyTaskListItemModel(
-                        id = "#${it.id.toString()}",
+                        id = it.id,
                         organization = if(type == 0) { it.organization.toString() } else { it.subject },
                         remarks = it.remarks.toString(),
                         type = if (type == 0) "Visited" else "Other",
