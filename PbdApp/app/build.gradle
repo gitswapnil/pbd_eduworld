@@ -68,6 +68,9 @@ dependencies {
     //Location
     implementation 'com.google.android.gms:play-services-location:17.0.0'
 
+    //Joda Date
+    implementation 'net.danlew:android.joda:2.10.6'
+
     //Recycler View
     implementation "androidx.recyclerview:recyclerview:1.1.0"
     implementation "androidx.recyclerview:recyclerview-selection:1.1.0-rc01"

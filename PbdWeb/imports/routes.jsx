@@ -262,8 +262,9 @@ if(Meteor.isClient) {
     				reason: Short,
     				doneWithTask: Boolean,
     				reminder: Boolean,
-    				reminderDate: Date,
-    				remarks: Date
+    				reminderDate: Long,
+    				remarks: String,
+    				createdAt: Long,
 				}, ...
 			]
 			notifications: timestamp<Long Int>
@@ -524,11 +525,18 @@ if(Meteor.isClient) {
 					createdAt: task.createdAt
 				}
 
-				const serverId = Collections.tasks.insert(obj, (err, res) => {
-					if(err) {
-						throw new Error(err.message);
-					}
-				});
+				let serverId = task.serverId
+
+				if(typeof serverId === "string") {
+					Collections.tasks.update({ _id: serverId }, {$set: obj}, {multi: false}, (err, docs) => { 
+						if(err) throw new Error(err.message)
+					});
+				} else {
+					serverId = Collections.tasks.insert(obj, (err, res) => { 
+						if(err) throw new Error(err.message)
+					});
+				}
+
 
 				return { id: task.id, serverId };
 			});

@@ -16,9 +16,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.room.Room
 import com.google.gson.annotations.SerializedName
 import kotlinx.android.synthetic.main.activity_add_new_task.*
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import net.danlew.android.joda.JodaTimeAndroid
+import org.joda.time.DateTimeZone
+import org.joda.time.LocalDate
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
@@ -101,6 +102,7 @@ class AddNewTaskActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_new_task)
+        JodaTimeAndroid.init(this)
 
         itemId = intent.getLongExtra("itemId", 0)
         itemPosition = intent.getIntExtra("position", -1)
@@ -128,7 +130,7 @@ class AddNewTaskActivity : AppCompatActivity() {
         val db = Room.databaseBuilder(this, AppDB::class.java, "PbdDB").build()
         lifecycleScope.launch {
             val taskDetails: TasksWithOrganizationJoin = db.tasksDao().getTaskDetails(itemId)
-            findViewById<Spinner>(R.id.task_type).setSelection(taskDetails.type.toInt())
+            task_type.setSelection(taskDetails.type.toInt())
 
             if(taskDetails.type == 0.toShort()) {
                 select_organization.setText("${taskDetails.organizationName} ${taskDetails.organizationAddress}")
@@ -151,6 +153,22 @@ class AddNewTaskActivity : AppCompatActivity() {
             }
 
             remarks.setText(taskDetails.remarks)
+
+            //after setting all the fields, disable them if the current date is greater than yesterday's last date.
+            val isTaskYesterday = (taskDetails.createdAt - LocalDate.now(DateTimeZone.forID("Asia/Kolkata")).toDateTimeAtStartOfDay().millis) < 0
+            if(isTaskYesterday) {
+                task_type.isEnabled = false
+                select_organization.isEnabled = false
+                subject.isEnabled = false
+                contact_person_name.isEnabled = false
+                contact_person_number.isEnabled = false
+                reason_for_visit.isEnabled = false
+                done_with_task.isEnabled = false
+                set_reminder.isEnabled = false
+                reminder_calendar.isEnabled = false
+                remarks.isEnabled = false
+                save_button.isEnabled = false
+            }
         }
     }
 
