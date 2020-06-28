@@ -1,6 +1,7 @@
 package com.example.pbdexecutives
 
 import android.os.Bundle
+import android.util.Log
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -53,6 +54,7 @@ class FollowUpsFragment : Fragment() {
         @JvmStatic
         fun newInstance(columnCount: Int) =
             FollowUpsFragment().apply {
+                Log.i("pbdLog", "Creating new Instance Follow up")
                 arguments = Bundle().apply {
                     putInt(ARG_COLUMN_COUNT, columnCount)
                 }

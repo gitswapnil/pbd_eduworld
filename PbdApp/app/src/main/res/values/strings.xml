@@ -29,6 +29,7 @@
     <string name="search_title">Search</string>
     <string name="search_hint">Search...</string>
     <string name="add_new_task">Add New Task</string>
+    <string name="edit_task">Edit Task</string>
     <string name="location_permission_message">You need to allow this app to have location access in order to assign you on the Duty.</string>
     <string name="location_permission_denied">Location Permission Denied! Please change the settings.</string>
     <string name="location_not_enabled">Location service not enabled!</string>

@@ -1,7 +1,5 @@
 package com.example.pbdexecutives
 
-import android.content.Intent
-import android.util.Log
 import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
@@ -9,20 +7,21 @@ import android.view.ViewGroup
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.app.ActivityCompat.startActivityForResult
-
-import com.example.pbdexecutives.dummy.DummyContent.DummyItem
+import androidx.fragment.app.Fragment
+import kotlin.reflect.KFunction2
 
 data class MyTaskListItemModel(
-    val id: Long,
-    val type: String,
-    val organization: String,
-    val remarks: String,
-    val reason: String?,
-    val createdAt: String
+    var id: Long,
+    var type: String,
+    var organization: String,
+    var remarks: String,
+    var reason: String?,
+    val createdAt: String,
+    val onClick: KFunction2<@ParameterName(name = "itemId") Long, @ParameterName(name = "position") Int, MyTasksFragment.OnItemClick>
 )
 
 class MyTasksRecyclerViewAdapter(
+    private val parentFragment: Fragment,
     private val values: List<MyTaskListItemModel?>
 ) : RecyclerView.Adapter<MyTasksRecyclerViewAdapter.ViewHolder>() {
 
@@ -57,7 +56,7 @@ class MyTasksRecyclerViewAdapter(
             holder.reason.text = item.reason
             holder.createdAt.text = item.createdAt
 
-            holder.taskItem.setOnClickListener(EditItem(item.id))
+            holder.taskItem.setOnClickListener(item.onClick(item.id, position))
             changeDataPlaceholdersVisibility(holder, View.VISIBLE)
         } else {
             changeDataPlaceholdersVisibility(holder, View.GONE)
@@ -78,9 +77,5 @@ class MyTasksRecyclerViewAdapter(
         val loaderCircle: ProgressBar = view.findViewById(R.id.tasks_loader_circle)
     }
 
-    inner class EditItem(private val itemId: Long): View.OnClickListener {
-        override fun onClick(v: View?) {
-            TODO("Not yet implemented")
-        }
-    }
+
 }

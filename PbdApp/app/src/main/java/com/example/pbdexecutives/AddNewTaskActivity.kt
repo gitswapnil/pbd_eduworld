@@ -19,6 +19,7 @@ import kotlinx.android.synthetic.main.activity_add_new_task.*
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -90,12 +91,19 @@ class PartiesListAdapter(context: Context, private val parties: List<PartiesList
 }
 
 class AddNewTaskActivity : AppCompatActivity() {
+    private var itemId: Long = 0
+    private var itemPosition: Int = -1
     private lateinit var parties: List<PartiesListItem>
-    private lateinit var selectedOrganization: String
+    private lateinit var selectedOrganizationId: String
+    private lateinit var selectedOrganizationName: String
+    private var selectedReminderDate: Long? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_new_task)
+
+        itemId = intent.getLongExtra("itemId", 0)
+        itemPosition = intent.getIntExtra("position", -1)
 
         setSupportActionBar(findViewById(R.id.add_new_task_toolbar))
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -109,6 +117,41 @@ class AddNewTaskActivity : AppCompatActivity() {
         loadParties()
         loadDoneWithTaskEvents()
         loadSetReminderEvents()
+
+        if(itemId != 0.toLong()) {
+            add_new_task_toolbar.title = getString(R.string.edit_task)
+            showCurrentData()
+        }
+    }
+
+    private fun showCurrentData() {
+        val db = Room.databaseBuilder(this, AppDB::class.java, "PbdDB").build()
+        lifecycleScope.launch {
+            val taskDetails: TasksWithOrganizationJoin = db.tasksDao().getTaskDetails(itemId)
+            findViewById<Spinner>(R.id.task_type).setSelection(taskDetails.type.toInt())
+
+            if(taskDetails.type == 0.toShort()) {
+                select_organization.setText("${taskDetails.organizationName} ${taskDetails.organizationAddress}")
+                selectedOrganizationId = taskDetails.organizationId.toString()
+                selectedOrganizationName = taskDetails.organizationName.toString()
+                contact_person_name.setText(taskDetails.contactPersonName)
+                contact_person_number.setText(taskDetails.contactPersonNumber.toString())
+                reason_for_visit.setSelection(taskDetails.reasonForVisit.toInt())
+                if(taskDetails.doneWithTask)
+                    task_done_yes.isChecked = true
+                else
+                    task_done_no.isChecked = true
+                if(taskDetails.reminder)
+                    reminder_yes.isChecked = true
+                else
+                    reminder_no.isChecked = true
+                taskDetails.reminderDate?.let { reminder_calendar.date = it }
+            } else {
+                subject.setText(taskDetails.subject)
+            }
+
+            remarks.setText(taskDetails.remarks)
+        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -119,7 +162,7 @@ class AddNewTaskActivity : AppCompatActivity() {
 
         return super.onOptionsItemSelected(item);
     }
-
+    
     inner class TaskTypeSpinner : AdapterView.OnItemSelectedListener {
         override fun onItemSelected(parent: AdapterView<*>, view: View, pos: Int, id: Long) {
             when(parent.getItemAtPosition(pos)) {
@@ -156,7 +199,8 @@ class AddNewTaskActivity : AppCompatActivity() {
 //                Log.i("pbdLog", "clicked Item, ${parent.getItemAtPosition(position)}")
                 val ListItem = (parent.getItemAtPosition(position) as PartiesListItem)
                 select_organization.error = null
-                selectedOrganization = ListItem.id
+                selectedOrganizationId = ListItem.id
+                selectedOrganizationName = ListItem.name
                 select_organization.setText("${ListItem.name} ${ListItem.address}")
             }
         }
@@ -221,31 +265,35 @@ class AddNewTaskActivity : AppCompatActivity() {
         val minDate = (System.currentTimeMillis() + 86399000)
         reminder_calendar.minDate = minDate
         reminder_calendar.date = minDate
+
+        reminder_calendar.setOnDateChangeListener { view, year, month, dayOfMonth ->
+            selectedReminderDate = SimpleDateFormat("dd/MM/yyyy").parse("${dayOfMonth}/${month + 1}/${year}")?.time
+        }
     }
 
     private fun checkSetReminder() {
         val checkedId = set_reminder.checkedRadioButtonId
         if(checkedId == R.id.reminder_yes) {
-            findViewById<CalendarView>(R.id.reminder_calendar).visibility = View.VISIBLE
+            reminder_calendar.visibility = View.VISIBLE
         } else if(checkedId == R.id.reminder_no) {
-            findViewById<CalendarView>(R.id.reminder_calendar).visibility = View.GONE
+            reminder_calendar.visibility = View.GONE
         }
     }
 
     private fun changeVisitView(visibility: Int) {
-        findViewById<TextView>(R.id.select_organization_label).visibility = visibility
-        findViewById<AutoCompleteTextView>(R.id.select_organization).visibility = visibility
-        findViewById<TextView>(R.id.contact_person_name_label).visibility = visibility
-        findViewById<EditText>(R.id.contact_person_name).visibility = visibility
-        findViewById<TextView>(R.id.contact_person_number_label).visibility = visibility
-        findViewById<EditText>(R.id.contact_person_number).visibility = visibility
-        findViewById<TextView>(R.id.reason_for_visit_label).visibility = visibility
-        findViewById<Spinner>(R.id.reason_for_visit).visibility = visibility
-        findViewById<TextView>(R.id.reason_question_label).visibility = visibility
-        findViewById<RadioGroup>(R.id.done_with_task).visibility = visibility
-        findViewById<TextView>(R.id.reminder_label).visibility = visibility
-        findViewById<RadioGroup>(R.id.set_reminder).visibility = visibility
-        findViewById<CalendarView>(R.id.reminder_calendar).visibility = visibility
+        select_organization_label.visibility = visibility
+        select_organization.visibility = visibility
+        contact_person_name_label.visibility = visibility
+        contact_person_name.visibility = visibility
+        contact_person_number_label.visibility = visibility
+        contact_person_number.visibility = visibility
+        reason_for_visit_label.visibility = visibility
+        reason_for_visit.visibility = visibility
+        reason_question_label.visibility = visibility
+        done_with_task.visibility = visibility
+        reminder_label.visibility = visibility
+        set_reminder.visibility = visibility
+        reminder_calendar.visibility = visibility
 
         if(visibility == View.VISIBLE) {
             checkDoneWithTaskEvents()
@@ -254,8 +302,8 @@ class AddNewTaskActivity : AppCompatActivity() {
     }
 
     private fun changeOtherView(visibility: Int) {
-        findViewById<TextView>(R.id.subject_label).visibility = visibility
-        findViewById<EditText>(R.id.subject).visibility = visibility
+        subject_label.visibility = visibility
+        subject.visibility = visibility
 
         val constraintSet: ConstraintSet = ConstraintSet()
         constraintSet.clone(add_new_task_layout)
@@ -270,8 +318,8 @@ class AddNewTaskActivity : AppCompatActivity() {
     private fun validateFields(): Boolean {
         var retValue: Boolean = true
         if(task_type.selectedItem.toString() == "Visit") {
-            if(this::selectedOrganization.isInitialized) {
-                val selectedOrg = parties.find{ it.id == selectedOrganization }
+            if(this::selectedOrganizationId.isInitialized) {
+                val selectedOrg = parties.find{ it.id == selectedOrganizationId }
                 val nameAndAddress = select_organization.text.toString()
                 if(selectedOrg == null || ("${selectedOrg.name} ${selectedOrg.address}") != nameAndAddress) {
                     select_organization.error = getString(R.string.select_only_from_list)
@@ -305,39 +353,66 @@ class AddNewTaskActivity : AppCompatActivity() {
         }
 
         val type: Int = task_type.selectedItemPosition
-        val organizationId: String? = if(type == 0) selectedOrganization else null
+        val organizationId: String? = if(type == 0) selectedOrganizationId else null
         val contactPersonName: String? = if(type == 0) contact_person_name.text.toString() else null
         val contactPersonNumber: Long? = if(type == 0) contact_person_number.text.toString().toLong() else null
         val reasonForVisit: Int = reason_for_visit.selectedItemPosition
         val doneWithTask: Boolean = (done_with_task.checkedRadioButtonId == R.id.task_done_yes)
         val reminder: Boolean = (set_reminder.checkedRadioButtonId == R.id.reminder_yes)
-        val reminderDate: Long? = reminder_calendar.date
         val remarks: String = remarks.text.toString()
         val subject: String = subject.text.toString()
+        val createdAt: Long = Date().time.toLong()
 
         lifecycleScope.launch {
             val db = Room.databaseBuilder(this@AddNewTaskActivity, AppDB::class.java, "PbdDB").build()
 
-            val task = listOf(Tasks(
-                type = type.toShort(),
-                organizationId = organizationId,
-                contactPersonName = contactPersonName,
-                contactPersonNumber = contactPersonNumber,
-                reasonForVisit = reasonForVisit.toShort(),
-                doneWithTask = doneWithTask,
-                reminder = reminder,
-                reminderDate = reminderDate,
-                remarks = remarks,
-                subject = subject,
-                createdAt = Date().time.toLong(),
-                synced = false,
-                serverId = null
-            ))
+            if(itemId == 0.toLong()) {
+                val task: Tasks = Tasks(
+                    type = type.toShort(),
+                    organizationId = organizationId,
+                    contactPersonName = contactPersonName,
+                    contactPersonNumber = contactPersonNumber,
+                    reasonForVisit = reasonForVisit.toShort(),
+                    doneWithTask = doneWithTask,
+                    reminder = reminder,
+                    reminderDate = selectedReminderDate,
+                    remarks = remarks,
+                    subject = subject,
+                    createdAt = createdAt,
+                    serverId = null,
+                    synced = false
+                )
+                db.tasksDao().addTask(task)
+            } else {
+                db.tasksDao().updateTask(
+                    id = itemId,
+                    type = type.toShort(),
+                    organizationId = organizationId,
+                    contactPersonName = contactPersonName,
+                    contactPersonNumber = contactPersonNumber,
+                    reasonForVisit = reasonForVisit.toShort(),
+                    doneWithTask = doneWithTask,
+                    reminder = reminder,
+                    reminderDate = selectedReminderDate,
+                    remarks = remarks,
+                    subject = subject
+                )
+            }
 
-            db.tasksDao().addTasks(task)
             PbdExecutivesUtils().syncData(applicationContext)
 
-            setResult(RESULT_OK, Intent().putExtra("someKey", 0))
+            val intent = Intent()
+            intent.putExtra("itemId", itemId)
+
+            if(itemId != 0.toLong()) {
+                intent.putExtra("position", itemPosition)
+                intent.putExtra("type", type)
+                intent.putExtra("organizationName", if(type == 0) selectedOrganizationName else subject)
+                intent.putExtra("remarks", remarks)
+                intent.putExtra("reasonForVisit", reasonForVisit)
+            }
+
+            setResult(RESULT_OK, intent)
             finish()
         }
     }

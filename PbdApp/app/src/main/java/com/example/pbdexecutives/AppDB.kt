@@ -141,7 +141,8 @@ data class TasksWithOrganizationJoin (
     @PrimaryKey (autoGenerate = true) val id: Long = 0,
     val type: Short,
     val organizationId: String?,
-    val organization: String?,
+    val organizationName: String?,
+    val organizationAddress: String?,
     val contactPersonName: String?,
     val contactPersonNumber: Long?,
     val reasonForVisit: Short,
@@ -158,14 +159,20 @@ interface TasksDAO {
     @Query("SELECT * FROM Tasks WHERE synced=0")
     suspend fun getUnsyncedTasks(): List<Tasks>
 
-    @Query("SELECT t.id, t.type, t.organizationId, p.name AS organization, t.contactPersonName, t.contactPersonNumber, t.reasonForVisit, t.doneWithTask, t.reminder, t.reminderDate, t.remarks, t.subject, t.serverId, t.createdAt FROM Tasks AS t LEFT JOIN Parties AS p ON t.organizationId=p.id ORDER BY createdAt DESC LIMIT :limit OFFSET :offset")
+    @Query("SELECT t.id, t.type, t.organizationId, p.name AS organizationName, p.address as organizationAddress, t.contactPersonName, t.contactPersonNumber, t.reasonForVisit, t.doneWithTask, t.reminder, t.reminderDate, t.remarks, t.subject, t.serverId, t.createdAt FROM Tasks AS t LEFT JOIN Parties AS p ON t.organizationId=p.id WHERE t.id=:itemId")
+    suspend fun getTaskDetails(itemId: Long): TasksWithOrganizationJoin
+
+    @Query("SELECT t.id, t.type, t.organizationId, p.name AS organizationName, p.address as organizationAddress, t.contactPersonName, t.contactPersonNumber, t.reasonForVisit, t.doneWithTask, t.reminder, t.reminderDate, t.remarks, t.subject, t.serverId, t.createdAt FROM Tasks AS t LEFT JOIN Parties AS p ON t.organizationId=p.id ORDER BY createdAt DESC LIMIT :limit OFFSET :offset")
     suspend fun getTasks(limit: Int, offset: Int): List<TasksWithOrganizationJoin>
 
     @Query("UPDATE Tasks SET serverId=:serverId, synced=1 WHERE id=:id")
     suspend fun markTaskSynced(id: Long, serverId: String)
 
     @Insert
-    suspend fun addTasks(tasks: List<Tasks>)
+    suspend fun addTask(tasks: Tasks)
+
+    @Query("UPDATE Tasks SET type=:type, organizationId=:organizationId, contactPersonName=:contactPersonName, contactPersonNumber=:contactPersonNumber, reasonForVisit=:reasonForVisit, doneWithTask=:doneWithTask, reminder=:reminder, reminderDate=:reminderDate, remarks=:remarks, subject=:subject, synced=0 WHERE id=:id")
+    suspend fun updateTask(id:Long, type: Short, organizationId: String?, contactPersonName: String?, contactPersonNumber: Long?, reasonForVisit: Short, doneWithTask: Boolean, reminder: Boolean, reminderDate: Long?, remarks: String, subject: String)
 }
 
 @Database (entities = [UserDetails::class, Locations::class, Parties::class, Tasks::class], version = 1)

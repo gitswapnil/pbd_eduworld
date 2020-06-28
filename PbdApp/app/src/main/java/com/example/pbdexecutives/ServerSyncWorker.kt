@@ -42,6 +42,7 @@ data class TasksObject(
     @SerializedName("reminderDate") val reminderDate: Long?,
     @SerializedName("subject") val subject: String?,
     @SerializedName("remarks") val remarks: String?,
+    @SerializedName("serverId") val serverId: String?,
     @SerializedName("createdAt") val createdAt: Long
 )
 
@@ -129,6 +130,7 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                                 reminderDate = it.reminderDate,
                                 subject = it.subject,
                                 remarks = it.remarks,
+                                serverId = it.serverId,
                                 createdAt = it.createdAt
                             )
                         )

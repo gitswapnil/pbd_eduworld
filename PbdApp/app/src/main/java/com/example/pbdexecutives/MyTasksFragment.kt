@@ -6,18 +6,14 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import androidx.annotation.NonNull
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.room.Room
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import kotlinx.android.synthetic.main.activity_login.view.*
 import kotlinx.android.synthetic.main.fragment_my_tasks_list.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -33,6 +29,7 @@ class MyTasksFragment : Fragment() {
     private lateinit var recyclerViewAdapter: MyTasksRecyclerViewAdapter
     private lateinit var listItems: MutableList<MyTaskListItemModel?>
     private var columnCount = 1
+    private var limit = 20
     private var offset: Int = 0
     private var isLoading = true
 
@@ -53,7 +50,7 @@ class MyTasksFragment : Fragment() {
         }
 
         listItems = ArrayList()
-        recyclerViewAdapter = MyTasksRecyclerViewAdapter(listItems)
+        recyclerViewAdapter = MyTasksRecyclerViewAdapter(this, listItems)
         // Set the adapter
         if (view is RecyclerView) {
             with(view) {
@@ -75,9 +72,29 @@ class MyTasksFragment : Fragment() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
+        Log.i("pbdLog", "requestCode: $requestCode, resultCode: $resultCode, data: $data")
         if (requestCode == 43 && resultCode == RESULT_OK && data != null) {
-//            val resultKey = data.getIntExtra("someKey")
             reloadData()
+        } else if(requestCode == 54 && resultCode == RESULT_OK && data != null) {
+            val editItemId = data.getLongExtra("itemId", 0)
+            val editItemPosition = data.getIntExtra("position", -1)
+            val editItemType = data.getIntExtra("type", -1)
+            val editItemOrganizationName = data.getStringExtra("organizationName")
+            val editItemRemarks = data.getStringExtra("remarks")
+            val editItemReasonForVisit = data.getIntExtra("reasonForVisit", -1)
+
+            if(editItemId != 0.toLong() && editItemPosition != -1) {
+                val index = listItems.indexOfFirst { it?.id == editItemId }
+                listItems[index]?.id = editItemId
+                listItems[index]?.organization = editItemOrganizationName.toString()
+                listItems[index]?.remarks = editItemRemarks
+                listItems[index]?.type = if (editItemType == 0) "Visited" else "Other"
+                listItems[index]?.reason = if(editItemType == 0) {
+                    resources.getStringArray(R.array.reasons_for_visit)[editItemReasonForVisit.toInt()]
+                } else null
+
+                recyclerViewAdapter.notifyItemChanged(editItemPosition)
+            }
         }
     }
 
@@ -111,7 +128,7 @@ class MyTasksFragment : Fragment() {
         isLoading = true
         val db = Room.databaseBuilder(this@MyTasksFragment.context as Context, AppDB::class.java, "PbdDB").build()
         lifecycleScope.launch {
-            val tasks = db.tasksDao().getTasks(20, offset)
+            val tasks = db.tasksDao().getTasks(limit, offset)
             //remove the loading from the list
             if(listItems[listItems.size - 1] == null) {
                 listItems.removeAt(listItems.size - 1)
@@ -122,19 +139,17 @@ class MyTasksFragment : Fragment() {
             tasks.forEach {
                 val type = it.type.toInt()
 
-                Log.i("pbdLog", "type: $type")
                 listItems.add(
                     MyTaskListItemModel(
                         id = it.id,
-                        organization = if(type == 0) { it.organization.toString() } else { it.subject },
+                        organization = if(type == 0) { it.organizationName.toString() } else { it.subject },
                         remarks = it.remarks.toString(),
                         type = if (type == 0) "Visited" else "Other",
                         reason = if(type == 0) {
                             resources.getStringArray(R.array.reasons_for_visit)[it.reasonForVisit.toInt()]
-                        } else {
-                            null
-                        },
-                        createdAt = SimpleDateFormat("dd/MM/yy").format(Date(it.createdAt))
+                        } else null,
+                        createdAt = SimpleDateFormat("dd/MM/yy").format(Date(it.createdAt)),
+                        onClick = ::OnItemClick
                     )
                 )
                 recyclerViewAdapter.notifyItemInserted(listItems.size - 1)
@@ -144,7 +159,7 @@ class MyTasksFragment : Fragment() {
                 offset += tasks.size
             }
 
-            if(tasks.size == 20) {
+            if(tasks.size == limit) {
                 listItems.add(null)
                 recyclerViewAdapter.notifyItemInserted(listItems.size - 1)
             }
@@ -162,8 +177,16 @@ class MyTasksFragment : Fragment() {
     }
 
     private fun createNewTask(view: View) {
-        Log.i("pbdLog", "Starting AddNewTaskActivity")
         startActivityForResult(Intent(activity, AddNewTaskActivity::class.java), 43)
+    }
+
+    inner class OnItemClick(private val itemId: Long, private val position: Int): View.OnClickListener {
+        override fun onClick(v: View?) {
+            val intent = Intent(activity, AddNewTaskActivity::class.java)
+            intent.putExtra("itemId", itemId)
+            intent.putExtra("position", position)
+            startActivityForResult(intent, 54)
+        }
     }
 
     companion object {
@@ -175,6 +198,7 @@ class MyTasksFragment : Fragment() {
         @JvmStatic
         fun newInstance(columnCount: Int) =
             MyTasksFragment().apply {
+//                Log.i("pbdLog", "Creating new Instance My Task")
                 arguments = Bundle().apply {
                     putInt(ARG_COLUMN_COUNT, columnCount)
                 }
