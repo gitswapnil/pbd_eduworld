@@ -10,6 +10,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import com.example.pbdexecutives.dummy.DummyContent
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 /**
  * A fragment representing a list of Items.
@@ -43,6 +44,15 @@ class ReceiptsFragment : Fragment() {
             }
         }
         return view
+    }
+
+    override fun onResume() {
+        super.onResume()
+        activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).visibility = View.VISIBLE
+    }
+
+    override fun onPause() {
+        super.onPause()
     }
 
     companion object {

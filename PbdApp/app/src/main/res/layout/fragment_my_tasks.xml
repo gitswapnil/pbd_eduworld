@@ -21,7 +21,7 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
-        android:id="@+id/task_lt_organisation_name"
+        android:id="@+id/task_lt_party_name"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
@@ -47,7 +47,7 @@
         android:text="TextView"
         android:textSize="12sp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/task_lt_organisation_name" />
+        app:layout_constraintTop_toBottomOf="@+id/task_lt_party_name" />
 
     <TextView
         android:id="@+id/task_lt_reason"
@@ -59,7 +59,8 @@
         android:layout_marginBottom="8dp"
         android:text="TextView"
         android:textColor="@color/design_default_color_on_secondary"
-        android:textSize="10sp"
+        android:textSize="12sp"
+        android:textStyle="italic"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/task_lt_remark" />
@@ -83,9 +84,18 @@
         android:layout_marginEnd="8dp"
         android:layout_marginRight="8dp"
         android:text="TextView"
-        android:textSize="10sp"
+        android:textSize="12sp"
         app:layout_constraintBaseline_toBaselineOf="@+id/task_lt_reason"
         app:layout_constraintEnd_toEndOf="parent" />
+
+    <TextView
+        android:id="@+id/textView3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="#"
+        android:textSize="12sp"
+        app:layout_constraintBaseline_toBaselineOf="@+id/task_lt_id"
+        app:layout_constraintEnd_toStartOf="@+id/task_lt_id" />
 
     <ProgressBar
         android:id="@+id/tasks_loader_circle"

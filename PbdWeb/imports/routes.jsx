@@ -256,7 +256,7 @@ if(Meteor.isClient) {
 				{
 					id: Long,
     				type: Short,
-    				orgId: String,
+    				partyId: String,
     				cpName: String,
     				cpNumber: Long,
     				reason: Short,
@@ -264,6 +264,16 @@ if(Meteor.isClient) {
     				reminder: Boolean,
     				reminderDate: Long,
     				remarks: String,
+    				serverId: String?,
+    				createdAt: Long,
+				}, ...
+			],
+			followUps: [
+				{
+					id: Long,
+    				partyId: String,
+    				reminderDate: Long,
+    				serverId: String?,
     				createdAt: Long,
 				}, ...
 			]
@@ -295,7 +305,10 @@ if(Meteor.isClient) {
 				},
 				taskIds: [
 					{ id: Long, serverId: String }, ...
-				]
+				],
+				followUpIds: [
+					{ id: Long, serverId: String }, ...
+				],
 			}",
 			code: Integer
 		}	if error is false then message is the apiKey for that user.
@@ -512,13 +525,12 @@ if(Meteor.isClient) {
 			return tasks.map((task, index) => {
 				let obj = {
 					type: task.type,
-					orgId: task.orgId,
+					partyId: task.partyId,
 					cpName: task.cpName,
 				    cpNumber: task.cpNumber,
 				    reason: task.reason,
 				    doneWithTask: (task.doneWithTask == 1),
 				    reminder: task.reminder,
-				    reminderDate: task.reminderDate,
 				    subject: task.subject,
 				    remarks: task.remarks,
 					userId: userId,
@@ -539,6 +551,45 @@ if(Meteor.isClient) {
 
 
 				return { id: task.id, serverId };
+			});
+		}
+
+		return;
+	};
+
+	const storeFollowUps = async (userId, followUps) => {
+		//if the locations key is defined.
+		if(followUps) {
+			// console.log("locations: " + JSON.stringify(locations));
+			if(!Array.isArray(followUps)) {		//validate the locations array
+				throw new Error("Error in the given followUps Array.");
+				return;
+			}
+
+			return followUps.map((followUp, index) => {
+				// console.log("followUp: " + JSON.stringify(followUp));
+				let obj = {
+					partyId: followUp.partyId,
+					reminderDate: followUp.reminderDate,
+					followUpFor: followUp.followUpFor,
+					userId: userId,
+					createdAt: followUp.createdAt
+				}
+
+				let serverId = followUp.serverId
+
+				if(typeof serverId === "string") {
+					Collections.followUps.update({ _id: serverId }, {$set: obj}, {multi: false}, (err, docs) => { 
+						if(err) throw new Error(err.message)
+					});
+				} else {
+					serverId = Collections.followUps.insert(obj, (err, res) => { 
+						if(err) throw new Error(err.message)
+					});
+				}
+
+
+				return { id: followUp.id, serverId };
 			});
 		}
 
@@ -602,15 +653,21 @@ if(Meteor.isClient) {
 			return;
 		});
 
+		const followUpsApi = storeFollowUps(user._id, reqBody.followUps).catch(err => {
+			res.end(JSON.stringify({error: true, message: err.message, code: 400}));
+			return;
+		});
+
 		const callAllFuncs = async () => {
-			const values = await Promise.all([locationsApi, userDetailsApi, partyDetailsApi, tasksApi]);
+			const values = await Promise.all([locationsApi, userDetailsApi, partyDetailsApi, tasksApi, followUpsApi]);
 
 			console.log(`values: ${JSON.stringify(values)}`);
 			const message = {
 				locationIds: values[0],
 				userDetails: values[1],
 				partyDetails: values[2],
-				taskIds: values[3]
+				taskIds: values[3],
+				followUpIds: values[4]
 			}
 			res.end(JSON.stringify({ error: false, message, code: 200 }));
 		}

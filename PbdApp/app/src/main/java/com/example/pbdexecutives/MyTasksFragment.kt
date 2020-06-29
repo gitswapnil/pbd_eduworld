@@ -31,7 +31,7 @@ class MyTasksFragment : Fragment() {
     private var columnCount = 1
     private var limit = 20
     private var offset: Int = 0
-    private var isLoading = true
+    private var isLoading = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,17 +76,17 @@ class MyTasksFragment : Fragment() {
         if (requestCode == 43 && resultCode == RESULT_OK && data != null) {
             reloadData()
         } else if(requestCode == 54 && resultCode == RESULT_OK && data != null) {
-            val editItemId = data.getLongExtra("itemId", 0)
+            val editTaskId = data.getLongExtra("taskId", 0)
             val editItemPosition = data.getIntExtra("position", -1)
             val editItemType = data.getIntExtra("type", -1)
-            val editItemOrganizationName = data.getStringExtra("organizationName")
+            val editItemPartyName = data.getStringExtra("partyName")
             val editItemRemarks = data.getStringExtra("remarks")
             val editItemReasonForVisit = data.getIntExtra("reasonForVisit", -1)
 
-            if(editItemId != 0.toLong() && editItemPosition != -1) {
-                val index = listItems.indexOfFirst { it?.id == editItemId }
-                listItems[index]?.id = editItemId
-                listItems[index]?.organization = editItemOrganizationName.toString()
+            if(editTaskId != 0.toLong() && editItemPosition != -1) {
+                val index = listItems.indexOfFirst { it?.id == editTaskId }
+                listItems[index]?.id = editTaskId
+                listItems[index]?.party = editItemPartyName.toString()
                 listItems[index]?.remarks = editItemRemarks
                 listItems[index]?.type = if (editItemType == 0) "Visited" else "Other"
                 listItems[index]?.reason = if(editItemType == 0) {
@@ -101,6 +101,10 @@ class MyTasksFragment : Fragment() {
     inner class OnScrollListener: RecyclerView.OnScrollListener() {
         override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
             super.onScrolled(recyclerView, dx, dy)
+
+            if(dy == 0) {
+                return
+            }
 
             val linearLayoutManager = recyclerView.layoutManager as LinearLayoutManager?
             if (!isLoading) {
@@ -118,6 +122,7 @@ class MyTasksFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).visibility = View.VISIBLE
     }
 
     override fun onPause() {
@@ -125,14 +130,23 @@ class MyTasksFragment : Fragment() {
     }
 
     private fun loadData() {
+        if(isLoading) {
+            return
+        }
+
         isLoading = true
         val db = Room.databaseBuilder(this@MyTasksFragment.context as Context, AppDB::class.java, "PbdDB").build()
         lifecycleScope.launch {
-            val tasks = db.tasksDao().getTasks(limit, offset)
             //remove the loading from the list
             if(listItems[listItems.size - 1] == null) {
                 listItems.removeAt(listItems.size - 1)
                 recyclerViewAdapter.notifyItemRemoved(listItems.size)
+            }
+
+            val tasks = db.tasksDao().getTasks(limit, offset)
+            if(tasks.isEmpty()) {
+                isLoading = false
+                return@launch
             }
 
             //insert it into the list
@@ -142,7 +156,7 @@ class MyTasksFragment : Fragment() {
                 listItems.add(
                     MyTaskListItemModel(
                         id = it.id,
-                        organization = if(type == 0) { it.organizationName.toString() } else { it.subject },
+                        party = if(type == 0) { it.partyName.toString() } else { it.subject },
                         remarks = it.remarks.toString(),
                         type = if (type == 0) "Visited" else "Other",
                         reason = if(type == 0) {
@@ -180,10 +194,10 @@ class MyTasksFragment : Fragment() {
         startActivityForResult(Intent(activity, AddNewTaskActivity::class.java), 43)
     }
 
-    inner class OnItemClick(private val itemId: Long, private val position: Int): View.OnClickListener {
+    inner class OnItemClick(private val taskId: Long, private val position: Int): View.OnClickListener {
         override fun onClick(v: View?) {
             val intent = Intent(activity, AddNewTaskActivity::class.java)
-            intent.putExtra("itemId", itemId)
+            intent.putExtra("taskId", taskId)
             intent.putExtra("position", position)
             startActivityForResult(intent, 54)
         }

@@ -5,6 +5,7 @@ import android.telecom.Call
 import android.util.Base64
 import android.util.Log
 import androidx.concurrent.futures.CallbackToFutureAdapter
+import androidx.room.PrimaryKey
 import androidx.room.Room
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
@@ -33,15 +34,23 @@ data class LocationObject(
 data class TasksObject(
     @SerializedName("id") val id: Long,
     @SerializedName("type") val type: Short?,
-    @SerializedName("orgId") val orgId: String?,
+    @SerializedName("partyId") val partyId: String?,
     @SerializedName("cpName") val cpName: String?,
     @SerializedName("cpNumber") val cpNumber: Long?,
     @SerializedName("reason") val reason: Short,
     @SerializedName("doneWithTask") val doneWithTask: Boolean,
     @SerializedName("reminder") val reminder: Boolean,
-    @SerializedName("reminderDate") val reminderDate: Long?,
     @SerializedName("subject") val subject: String?,
     @SerializedName("remarks") val remarks: String?,
+    @SerializedName("serverId") val serverId: String?,
+    @SerializedName("createdAt") val createdAt: Long
+)
+
+data class FollowUpsObject(
+    @SerializedName("id") val id: Long,
+    @SerializedName("reminderDate") val reminderDate: Long?,
+    @SerializedName("partyId") val partyId: String,
+    @SerializedName("followUpFor") val followUpFor: Short?,
     @SerializedName("serverId") val serverId: String?,
     @SerializedName("createdAt") val createdAt: Long
 )
@@ -51,7 +60,8 @@ data class RequestObject(
     @SerializedName("locations") val locations: List<LocationObject>,
     @SerializedName("lastUserDetails") val lastUserDetails: Long,
     @SerializedName("lastPartyDetails") val lastPartyDetails: Long,
-    @SerializedName("tasks") val tasks: List<TasksObject>
+    @SerializedName("tasks") val tasks: List<TasksObject>,
+    @SerializedName("followUps") val followUps: List<FollowUpsObject>
 )
 
 data class UserDetailsResponseObject(
@@ -73,11 +83,17 @@ data class TaskIdsResponseObject(
     @SerializedName("serverId") val serverId: String
 )
 
+data class FollowUpIdsResponseObject(
+    @SerializedName("id") val id: Long,
+    @SerializedName("serverId") val serverId: String
+)
+
 data class MessageObject(
     @SerializedName("locationIds") val locationIds: List<Long>?,
     @SerializedName("userDetails") val userDetails: UserDetailsResponseObject?,
     @SerializedName("partyDetails") val partyDetails: PartyDetailsResponseObject?,
-    @SerializedName("taskIds") val taskIds: List<TaskIdsResponseObject>?
+    @SerializedName("taskIds") val taskIds: List<TaskIdsResponseObject>?,
+    @SerializedName("followUpIds") val followUpIds: List<FollowUpIdsResponseObject>?
 )
 
 class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): ListenableWorker(appContext, workerParams){
@@ -121,15 +137,29 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                             TasksObject(
                                 id = it.id,
                                 type = it.type,
-                                orgId = it.organizationId,
+                                partyId = it.partyId,
                                 cpName = it.contactPersonName,
                                 cpNumber = it.contactPersonNumber,
                                 reason = it.reasonForVisit,
                                 doneWithTask = it.doneWithTask,
                                 reminder = it.reminder,
-                                reminderDate = it.reminderDate,
                                 subject = it.subject,
                                 remarks = it.remarks,
+                                serverId = it.serverId,
+                                createdAt = it.createdAt
+                            )
+                        )
+                    }
+
+                    //get unsyned followUps
+                    var followUps: MutableList<FollowUpsObject> = ArrayList()
+                    db.followUpsDao().getUnsyncedFollowUps().forEach {
+                        followUps.add(
+                            FollowUpsObject(
+                                id = it.id,
+                                partyId = it.partyId,
+                                reminderDate = it.reminderDate,
+                                followUpFor = it.followUpFor,
                                 serverId = it.serverId,
                                 createdAt = it.createdAt
                             )
@@ -140,7 +170,14 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
 //                        this.cancel()
 //                    }
 
-                    val requestJSONObject: JSONObject = JSONObject(Gson().toJson(RequestObject(apiKey.toString(), locations, lastUserDetails, lastPartyUpdatedAt, tasks)))
+                    val requestJSONObject: JSONObject = JSONObject(Gson().toJson(RequestObject(
+                        apiKey = apiKey.toString(),
+                        locations = locations,
+                        lastUserDetails = lastUserDetails,
+                        lastPartyDetails = lastPartyUpdatedAt,
+                        tasks = tasks,
+                        followUps = followUps
+                    )))
                     Log.i("pbdLog", "requestJSONObject: $requestJSONObject")
 
                     PbdExecutivesUtils().sendData(
@@ -205,6 +242,14 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                                 GlobalScope.launch {
                                     responseObject.taskIds.forEach {
                                         db.tasksDao().markTaskSynced(id = it.id, serverId = it.serverId)
+                                    }
+                                }
+                            }
+
+                            if(responseObject.followUpIds != null && responseObject.followUpIds.isNotEmpty()) {
+                                GlobalScope.launch {
+                                    responseObject.followUpIds.forEach {
+                                        db.followUpsDao().markFollowUpsSynced(id = it.id, serverId = it.serverId)
                                     }
                                 }
                             }

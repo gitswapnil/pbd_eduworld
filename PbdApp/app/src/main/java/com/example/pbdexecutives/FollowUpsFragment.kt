@@ -1,5 +1,7 @@
 package com.example.pbdexecutives
 
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.fragment.app.Fragment
@@ -9,40 +11,178 @@ import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.lifecycle.lifecycleScope
+import androidx.room.Room
+import androidx.room.RoomDatabase
 import com.example.pbdexecutives.dummy.DummyContent
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import kotlinx.android.synthetic.main.fragment_follow_ups_list.*
+import kotlinx.android.synthetic.main.fragment_my_tasks_list.*
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  * A fragment representing a list of Items.
  */
 class FollowUpsFragment : Fragment() {
-
+    private var linearLayoutManager: LinearLayoutManager = LinearLayoutManager(context)
+    private lateinit var recyclerViewAdapter: FollowUpsRecyclerViewAdapter
+    private lateinit var listItems: MutableList<FollowUpsListItemModel?>
+    private var listForComparing: MutableList<FollowUpsWithJoins> = ArrayList()
     private var columnCount = 1
+    private var limit = 20
+    private var offset: Int = 0
+    private var isLoading = false
+    private lateinit var db: AppDB
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        db = Room.databaseBuilder(this@FollowUpsFragment.context as Context, AppDB::class.java, "PbdDB").build()
 
         arguments?.let {
             columnCount = it.getInt(ARG_COLUMN_COUNT)
         }
     }
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_follow_ups_list, container, false)
 
         // Set the adapter
+        listItems = ArrayList()
+        recyclerViewAdapter = FollowUpsRecyclerViewAdapter(this, listItems)
+        // Set the adapter
         if (view is RecyclerView) {
             with(view) {
-                layoutManager = when {
-                    columnCount <= 1 -> LinearLayoutManager(context)
-                    else -> GridLayoutManager(context, columnCount)
-                }
-                adapter = FollowUpsRecyclerViewAdapter(DummyContent.ITEMS)
+                layoutManager = linearLayoutManager
+                adapter = recyclerViewAdapter
             }
         }
+
         return view
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        follow_ups_list.addOnScrollListener(OnScrollListener())
+        reloadData()
+    }
+
+    inner class OnScrollListener: RecyclerView.OnScrollListener() {
+        override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+            super.onScrolled(recyclerView, dx, dy)
+
+            if(dy == 0) {
+                return
+            }
+
+            val linearLayoutManager = recyclerView.layoutManager as LinearLayoutManager?
+            if (!isLoading) {
+                if (listItems.isNotEmpty() && linearLayoutManager != null && linearLayoutManager.findLastCompletelyVisibleItemPosition() == (listItems.size - 1)) {
+                    //bottom of list!
+                    loadData()
+                }
+            }
+        }
+
+        override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+            super.onScrollStateChanged(recyclerView, newState)
+        }
+    }
+
+    private fun loadData() {
+        if(isLoading) {
+            return
+        }
+
+        isLoading = true
+        lifecycleScope.launch {
+            //remove the loading from the list
+            if(listItems[listItems.size - 1] == null) {
+                listItems.removeAt(listItems.size - 1)
+                recyclerViewAdapter.notifyItemRemoved(listItems.size)
+            }
+
+            val followUps = db.followUpsDao().getFollowUps(limit = limit, offset = offset)
+            if(followUps.isEmpty()) {
+                isLoading = false
+                return@launch
+            }
+
+            listForComparing.addAll(followUps)
+
+            //insert it into the list
+            listForComparing.forEach {
+                listItems.add(
+                    FollowUpsListItemModel(
+                        id = it.id,
+                        partyName = it.partyName,
+                        partyAddress = it.partyAddress,
+                        cpName = it.cpName,
+                        cpNumber = it.cpNumber.toString(),
+                        reminderDate = if(it.reminderDate != null) SimpleDateFormat("dd/MM/yy").format(Date(it.reminderDate)) else getString(R.string.reminder_not_set),
+                        followUpFor = if(it.followUpFor != null) resources.getStringArray(R.array.reasons_for_visit)[it.followUpFor.toInt()] else getString(R.string.follow_up_completed),
+                        onClick = ::OnItemClick
+                    )
+                )
+                recyclerViewAdapter.notifyItemInserted(listItems.size - 1)
+            }
+
+            Log.i("pbdLog", "listForComparison.isNotEmpty(): ${listForComparing.isNotEmpty()}")
+            if(listForComparing.isNotEmpty()) {
+                offset += listForComparing.size
+            }
+
+            if(listForComparing.size == limit) {
+                listItems.add(null)
+                recyclerViewAdapter.notifyItemInserted(listItems.size - 1)
+            }
+
+            isLoading = false
+        }
+    }
+
+    private fun reloadData() {
+        offset = 0
+        listItems.clear()
+        listItems.add(null)
+        listForComparing.clear()
+        recyclerViewAdapter.notifyDataSetChanged()
+        loadData()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).visibility = View.GONE
+
+        if(listForComparing.isEmpty() || isLoading) {
+            return
+        }
+
+        lifecycleScope.launch {
+            val updatedList = db.followUpsDao().getFollowUps(limit = offset + limit, offset = 0)
+            updatedList.forEachIndexed { index, followUpsWithJoins ->
+                if((followUpsWithJoins.taskId != listForComparing[index].taskId) || (followUpsWithJoins.reminderDate != listForComparing[index].reminderDate)) {
+                    reloadData()
+                    return@launch
+                }
+            }
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+    }
+
+    inner class OnItemClick(private val itemId: Long, private val position: Int): View.OnClickListener {
+        override fun onClick(v: View?) {
+            val intent = Intent(activity, AddNewTaskActivity::class.java)
+            intent.putExtra("itemId", itemId)
+            intent.putExtra("position", position)
+            startActivityForResult(intent, 54)
+        }
     }
 
     companion object {

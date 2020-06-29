@@ -13,11 +13,11 @@ import kotlin.reflect.KFunction2
 data class MyTaskListItemModel(
     var id: Long,
     var type: String,
-    var organization: String,
+    var party: String,
     var remarks: String,
     var reason: String?,
     val createdAt: String,
-    val onClick: KFunction2<@ParameterName(name = "itemId") Long, @ParameterName(name = "position") Int, MyTasksFragment.OnItemClick>
+    val onClick: KFunction2<@ParameterName(name = "taskId") Long, @ParameterName(name = "position") Int, MyTasksFragment.OnItemClick>
 )
 
 class MyTasksRecyclerViewAdapter(
@@ -34,7 +34,7 @@ class MyTasksRecyclerViewAdapter(
     private fun changeDataPlaceholdersVisibility(holder: ViewHolder, visibility: Int) {
         holder.taskId.visibility = visibility
         holder.taskType.visibility = visibility
-        holder.organizationName.visibility = visibility
+        holder.partyName.visibility = visibility
         holder.remark.visibility = visibility
         holder.reason.visibility = visibility
         holder.createdAt.visibility = visibility
@@ -49,14 +49,14 @@ class MyTasksRecyclerViewAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = values[position]
         if(item != null) {
-            holder.taskId.text = "#${item.id.toString()}"
+            holder.taskId.text = item.id.toString()
             holder.taskType.text = item.type
-            holder.organizationName.text = item.organization
+            holder.partyName.text = item.party
             holder.remark.text = item.remarks
             holder.reason.text = item.reason
             holder.createdAt.text = item.createdAt
-
             holder.taskItem.setOnClickListener(item.onClick(item.id, position))
+
             changeDataPlaceholdersVisibility(holder, View.VISIBLE)
         } else {
             changeDataPlaceholdersVisibility(holder, View.GONE)
@@ -69,7 +69,7 @@ class MyTasksRecyclerViewAdapter(
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val taskItem: ConstraintLayout = view.findViewById(R.id.my_task_list_layout)
         val taskType: TextView = view.findViewById(R.id.task_lt_type)
-        val organizationName: TextView = view.findViewById(R.id.task_lt_organisation_name)
+        val partyName: TextView = view.findViewById(R.id.task_lt_party_name)
         val remark: TextView = view.findViewById(R.id.task_lt_remark)
         val reason: TextView = view.findViewById(R.id.task_lt_reason)
         val createdAt: TextView = view.findViewById(R.id.task_lt_createdAt)

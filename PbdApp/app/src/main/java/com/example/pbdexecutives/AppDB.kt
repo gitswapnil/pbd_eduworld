@@ -123,13 +123,12 @@ interface PartiesDAO {
 data class Tasks (
     @PrimaryKey (autoGenerate = true) val id: Long = 0,
     val type: Short,
-    val organizationId: String?,
+    val partyId: String?,
     val contactPersonName: String?,
     val contactPersonNumber: Long?,
     val reasonForVisit: Short,
     val doneWithTask: Boolean,
     val reminder: Boolean,
-    val reminderDate: Long?,
     val remarks: String,
     val subject: String,
     val serverId: String?,
@@ -137,12 +136,12 @@ data class Tasks (
     val createdAt: Long
 )
 
-data class TasksWithOrganizationJoin (
+data class TasksWithJoins (
     @PrimaryKey (autoGenerate = true) val id: Long = 0,
     val type: Short,
-    val organizationId: String?,
-    val organizationName: String?,
-    val organizationAddress: String?,
+    val partyId: String?,
+    val partyName: String?,
+    val partyAddress: String?,
     val contactPersonName: String?,
     val contactPersonNumber: Long?,
     val reasonForVisit: Short,
@@ -150,6 +149,7 @@ data class TasksWithOrganizationJoin (
     val reminder: Boolean,
     val reminderDate: Long?,
     val remarks: String,
+    val serverId: String?,
     val subject: String,
     val createdAt: Long
 )
@@ -159,27 +159,68 @@ interface TasksDAO {
     @Query("SELECT * FROM Tasks WHERE synced=0")
     suspend fun getUnsyncedTasks(): List<Tasks>
 
-    @Query("SELECT t.id, t.type, t.organizationId, p.name AS organizationName, p.address as organizationAddress, t.contactPersonName, t.contactPersonNumber, t.reasonForVisit, t.doneWithTask, t.reminder, t.reminderDate, t.remarks, t.subject, t.serverId, t.createdAt FROM Tasks AS t LEFT JOIN Parties AS p ON t.organizationId=p.id WHERE t.id=:itemId")
-    suspend fun getTaskDetails(itemId: Long): TasksWithOrganizationJoin
+    @Query("SELECT t.id, t.type, t.partyId, p.name AS partyName, p.address as partyAddress, t.contactPersonName, t.contactPersonNumber, t.reasonForVisit, t.doneWithTask, t.reminder, f.reminderDate, t.remarks, t.subject, t.serverId, t.createdAt FROM Tasks AS t LEFT JOIN Parties AS p ON t.partyId=p.id LEFT JOIN FollowUps AS f ON t.id=f.taskId WHERE t.id=:itemId")
+    suspend fun getTaskDetails(itemId: Long): TasksWithJoins
 
-    @Query("SELECT t.id, t.type, t.organizationId, p.name AS organizationName, p.address as organizationAddress, t.contactPersonName, t.contactPersonNumber, t.reasonForVisit, t.doneWithTask, t.reminder, t.reminderDate, t.remarks, t.subject, t.serverId, t.createdAt FROM Tasks AS t LEFT JOIN Parties AS p ON t.organizationId=p.id ORDER BY createdAt DESC LIMIT :limit OFFSET :offset")
-    suspend fun getTasks(limit: Int, offset: Int): List<TasksWithOrganizationJoin>
+    @Query("SELECT t.id, t.type, t.partyId, p.name AS partyName, p.address as partyAddress, t.contactPersonName, t.contactPersonNumber, t.reasonForVisit, t.doneWithTask, t.reminder, f.reminderDate, t.remarks, t.subject, t.serverId, t.createdAt FROM Tasks AS t LEFT JOIN Parties AS p ON t.partyId=p.id LEFT JOIN FollowUps AS f ON t.id=f.taskId ORDER BY t.createdAt DESC LIMIT :limit OFFSET :offset")
+    suspend fun getTasks(limit: Int, offset: Int): List<TasksWithJoins>
 
     @Query("UPDATE Tasks SET serverId=:serverId, synced=1 WHERE id=:id")
     suspend fun markTaskSynced(id: Long, serverId: String)
 
     @Insert
-    suspend fun addTask(tasks: Tasks)
+    suspend fun addTask(tasks: Tasks): Long
 
-    @Query("UPDATE Tasks SET type=:type, organizationId=:organizationId, contactPersonName=:contactPersonName, contactPersonNumber=:contactPersonNumber, reasonForVisit=:reasonForVisit, doneWithTask=:doneWithTask, reminder=:reminder, reminderDate=:reminderDate, remarks=:remarks, subject=:subject, synced=0 WHERE id=:id")
-    suspend fun updateTask(id:Long, type: Short, organizationId: String?, contactPersonName: String?, contactPersonNumber: Long?, reasonForVisit: Short, doneWithTask: Boolean, reminder: Boolean, reminderDate: Long?, remarks: String, subject: String)
+    @Query("UPDATE Tasks SET type=:type, partyId=:partyId, contactPersonName=:contactPersonName, contactPersonNumber=:contactPersonNumber, reasonForVisit=:reasonForVisit, doneWithTask=:doneWithTask, reminder=:reminder, remarks=:remarks, subject=:subject, synced=0 WHERE id=:id")
+    suspend fun updateTask(id:Long, type: Short, partyId: String?, contactPersonName: String?, contactPersonNumber: Long?, reasonForVisit: Short, doneWithTask: Boolean, reminder: Boolean, remarks: String, subject: String)
 }
 
-@Database (entities = [UserDetails::class, Locations::class, Parties::class, Tasks::class], version = 1)
+//Follow ups
+@Entity(indices = [Index(value = ["id"], unique = true)])
+data class FollowUps(
+    @PrimaryKey (autoGenerate = true) val id: Long = 0,
+    val reminderDate: Long?,
+    val partyId: String,
+    val taskId: Long,
+    val followUpFor: Short?,
+    val serverId: String?,
+    val synced: Boolean,
+    val createdAt: Long
+)
+
+data class FollowUpsWithJoins(
+    @PrimaryKey (autoGenerate = true) val id: Long = 0,
+    val reminderDate: Long?,
+    val partyId: String,
+    val partyName: String,
+    val partyAddress: String,
+    val taskId: Long,
+    val cpName: String,
+    val cpNumber: Long?,
+    val followUpFor: Short?
+)
+
+@Dao
+interface FollowUpsDAO {
+    @Query("SELECT * FROM FollowUps WHERE synced=0")
+    suspend fun getUnsyncedFollowUps(): List<FollowUps>
+
+    @Query("SELECT f.id, f.reminderDate, f.followUpFor, p.id as partyId, t.id as taskId, p.name as partyName, p.address as partyAddress, t.contactPersonName as cpName, t.contactPersonNumber as cpNumber FROM FollowUps AS f LEFT JOIN Tasks AS t ON f.taskId=t.id LEFT JOIN Parties AS p ON f.partyId=p.id ORDER BY f.createdAt DESC LIMIT :limit OFFSET :offset")
+    suspend fun getFollowUps(limit: Int, offset: Int): List<FollowUpsWithJoins>
+
+    @Query("UPDATE FollowUps SET synced=1, serverId=:serverId WHERE id=:id")
+    suspend fun markFollowUpsSynced(id: Long, serverId: String)
+
+    @Insert
+    suspend fun addFollowUp(followUps: FollowUps)
+}
+
+@Database (entities = [UserDetails::class, Locations::class, Parties::class, Tasks::class, FollowUps::class], version = 1)
 abstract class AppDB: RoomDatabase() {
     abstract fun userDetailsDao(): UserDetailsDAO
     abstract fun locationsDao(): LocationsDAO
     abstract fun partiesDao(): PartiesDAO
     abstract fun tasksDao(): TasksDAO
+    abstract fun followUpsDao(): FollowUpsDAO
 }
 
