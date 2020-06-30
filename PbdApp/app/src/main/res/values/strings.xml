@@ -62,7 +62,6 @@
     <string name="remarks">Remarks</string>
     <string name="save">Save</string>
     <string name="reminder_not_set">Reminder not set</string>
-    <string name="follow_up_completed">Follow up completed</string>
 
     <string-array name="task_done_questions">
         <item>Done with Sampling?</item>

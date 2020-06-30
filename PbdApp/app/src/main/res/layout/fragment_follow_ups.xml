@@ -26,7 +26,7 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
-        android:id="@+id/follow_up_lt_party_address"
+        android:id="@+id/follow_up_lt_cp_name"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
@@ -37,7 +37,7 @@
         android:lines="1"
         android:text="TextView"
         android:textSize="12sp"
-        app:layout_constraintEnd_toStartOf="@+id/textView21"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/follow_up_lt_party_name" />
 
@@ -48,42 +48,10 @@
         android:layout_marginTop="8dp"
         android:layout_marginBottom="8dp"
         android:text="TextView"
-        android:textColor="@color/design_default_color_on_secondary"
-        android:textSize="14sp"
+        android:textSize="12sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toEndOf="@+id/imageView4"
-        app:layout_constraintTop_toBottomOf="@+id/follow_up_lt_party_address" />
-
-    <LinearLayout
-        android:id="@+id/linearLayout3"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:layout_marginRight="8dp"
-        app:layout_constraintBottom_toBottomOf="@+id/follow_up_lt_cp_phone"
-        app:layout_constraintEnd_toStartOf="@+id/imageView7"
-        app:layout_constraintStart_toEndOf="@+id/follow_up_lt_cp_phone"
-        app:layout_constraintTop_toTopOf="@+id/follow_up_lt_cp_phone">
-
-        <TextView
-            android:id="@+id/textView23"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="(" />
-
-        <TextView
-            android:id="@+id/follow_up_lt_cp_name"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:lines="1"
-            android:text="TextView" />
-
-        <TextView
-            android:id="@+id/textView24"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text=")" />
-    </LinearLayout>
+        app:layout_constraintTop_toBottomOf="@+id/follow_up_lt_cp_name" />
 
     <ImageView
         android:id="@+id/imageView4"
@@ -94,7 +62,7 @@
         app:layout_constraintBottom_toBottomOf="@+id/follow_up_lt_cp_phone"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/follow_up_lt_cp_phone"
-        app:srcCompat="@drawable/ic_baseline_local_phone_14" />
+        app:srcCompat="@drawable/ic_baseline_phone_12" />
 
     <TextView
         android:id="@+id/follow_up_lt_reminder_date"
@@ -104,6 +72,7 @@
         android:layout_marginEnd="8dp"
         android:layout_marginRight="8dp"
         android:text="TextView"
+        android:textSize="12sp"
         android:textStyle="italic"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -118,40 +87,6 @@
         app:srcCompat="@drawable/ic_outline_alarm_14" />
 
     <TextView
-        android:id="@+id/textView21"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="#"
-        android:textColor="@android:color/darker_gray"
-        android:textSize="12sp"
-        app:layout_constraintBottom_toBottomOf="@+id/follow_up_lt_id"
-        app:layout_constraintEnd_toStartOf="@+id/follow_up_lt_id"
-        app:layout_constraintTop_toTopOf="@+id/follow_up_lt_id" />
-
-    <TextView
-        android:id="@+id/follow_up_lt_id"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginRight="8dp"
-        android:text="TextView"
-        android:textColor="@android:color/darker_gray"
-        android:textSize="12sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/follow_up_lt_reminder_date" />
-
-    <ImageView
-        android:id="@+id/imageView7"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="@+id/follow_up_lt_reason"
-        app:layout_constraintEnd_toStartOf="@+id/follow_up_lt_reason"
-        app:layout_constraintTop_toTopOf="@+id/follow_up_lt_reason"
-        app:srcCompat="@drawable/ic_baseline_check_14" />
-
-    <TextView
         android:id="@+id/follow_up_lt_reason"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -159,6 +94,8 @@
         android:layout_marginRight="8dp"
         android:layout_marginBottom="8dp"
         android:text="TextView"
+        android:textColor="@color/colorPrimaryDark"
+        android:textSize="12sp"
         android:textStyle="bold|italic"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />

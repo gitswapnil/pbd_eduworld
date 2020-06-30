@@ -205,7 +205,7 @@ interface FollowUpsDAO {
     @Query("SELECT * FROM FollowUps WHERE synced=0")
     suspend fun getUnsyncedFollowUps(): List<FollowUps>
 
-    @Query("SELECT f.id, f.reminderDate, f.followUpFor, p.id as partyId, t.id as taskId, p.name as partyName, p.address as partyAddress, t.contactPersonName as cpName, t.contactPersonNumber as cpNumber FROM FollowUps AS f LEFT JOIN Tasks AS t ON f.taskId=t.id LEFT JOIN Parties AS p ON f.partyId=p.id ORDER BY f.createdAt DESC LIMIT :limit OFFSET :offset")
+    @Query("SELECT f.id, f.reminderDate, f.followUpFor, p.id as partyId, t.id as taskId, p.name as partyName, p.address as partyAddress, t.contactPersonName as cpName, t.contactPersonNumber as cpNumber FROM (SELECT * FROM (SELECT * FROM FollowUps ORDER BY createdAt ASC) GROUP BY partyId) AS f LEFT JOIN Tasks AS t ON f.taskId=t.id LEFT JOIN Parties AS p ON f.partyId=p.id WHERE f.followUpFor IN (0,1,2) ORDER BY f.createdAt DESC LIMIT :limit OFFSET :offset")
     suspend fun getFollowUps(limit: Int, offset: Int): List<FollowUpsWithJoins>
 
     @Query("UPDATE FollowUps SET synced=1, serverId=:serverId WHERE id=:id")

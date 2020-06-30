@@ -119,11 +119,14 @@ class FollowUpsFragment : Fragment() {
                     FollowUpsListItemModel(
                         id = it.id,
                         partyName = it.partyName,
-                        partyAddress = it.partyAddress,
                         cpName = it.cpName,
                         cpNumber = it.cpNumber.toString(),
-                        reminderDate = if(it.reminderDate != null) SimpleDateFormat("dd/MM/yy").format(Date(it.reminderDate)) else getString(R.string.reminder_not_set),
-                        followUpFor = if(it.followUpFor != null) resources.getStringArray(R.array.reasons_for_visit)[it.followUpFor.toInt()] else getString(R.string.follow_up_completed),
+                        reminderDate = if(it.reminderDate != null) {
+                            "${if(Date().time < it.reminderDate) "green" else "red" },${SimpleDateFormat("dd/MM/yy").format(Date(it.reminderDate))}"
+                        } else {
+                            getString(R.string.reminder_not_set)
+                        },
+                        followUpFor = resources.getStringArray(R.array.reasons_for_visit)[it.followUpFor?.toInt()!!],
                         onClick = ::OnItemClick
                     )
                 )
