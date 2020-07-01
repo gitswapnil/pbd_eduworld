@@ -1,15 +1,16 @@
 package com.example.pbdexecutives
 
+import android.app.SearchManager
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
+import android.util.AttributeSet
 import android.util.Log
-import android.view.LayoutInflater
-import android.view.MenuItem
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import android.widget.*
 import androidx.annotation.NonNull
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.lifecycle.lifecycleScope
@@ -98,6 +99,52 @@ class AddNewTaskActivity : AppCompatActivity() {
     private lateinit var selectedPartyId: String
     private lateinit var selectedPartyName: String
     private var selectedReminderDate: Long? = null
+    private var isTaskYesterday: Boolean = false
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        if(taskId != 0.toLong() && !isTaskYesterday) {
+            val inflater: MenuInflater = menuInflater
+            inflater.inflate(R.menu.delete_button_menu, menu)
+        }
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
+        R.id.task_delete -> {
+            val alertDialog: AlertDialog? = this.let {
+                val builder = AlertDialog.Builder(it)
+                builder.apply {
+                    setPositiveButton(R.string.ok,
+                        DialogInterface.OnClickListener { dialog, id ->
+                            // User clicked OK button
+                            deleteTask()
+                        })
+                    setNegativeButton(R.string.cancel,
+                        DialogInterface.OnClickListener { dialog, id ->
+                            // User cancelled the dialog
+                        })
+                }
+                // Set other dialog properties
+                builder.setTitle(R.string.confirm).setMessage(R.string.confirm_delete_task)
+
+                // Create the AlertDialog
+                builder.create()
+            }
+
+            alertDialog?.show()
+            true
+        }
+
+        else -> {
+            // If we got here, the user's action was not recognized.
+            // Invoke the superclass to handle it.
+            if (item.itemId == android.R.id.home) {
+                finish();
+            }
+
+            super.onOptionsItemSelected(item)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -123,6 +170,53 @@ class AddNewTaskActivity : AppCompatActivity() {
         if(taskId != 0.toLong()) {
             add_new_task_toolbar.title = getString(R.string.edit_task)
             showCurrentData()
+        }
+
+    }
+
+    private fun deleteTask() {
+        if(taskId != 0.toLong()) {
+            val db = Room.databaseBuilder(this, AppDB::class.java, "PbdDB").build()
+
+            lifecycleScope.launch {
+                val attachedFollowUp = db.followUpsDao().getTaskAttachedFollowUp(taskId)
+                val taskDetails = db.tasksDao().getTaskDetails(taskId)
+                db.followUpsDao().deleteFollowUp(taskId)
+                db.tasksDao().deleteTask(taskId)
+
+                if(taskDetails.serverId != null){
+                    db.deletedIdsDao().recordDeleteId(
+                        DeletedIds(
+                            from = "tasks",
+                            serverId = taskDetails.serverId,
+                            synced = false,
+                            createdAt = Date().time
+                    ))
+                }
+
+                if(attachedFollowUp?.serverId != null) {
+                    db.deletedIdsDao().recordDeleteId(
+                        DeletedIds(
+                            from = "followUps",
+                            serverId = attachedFollowUp.serverId,
+                            synced = false,
+                            createdAt = Date().time
+                    ))
+                }
+
+                PbdExecutivesUtils().syncData(applicationContext)
+
+                val intent = Intent()
+                intent.putExtra("taskId", taskId)
+
+                if(taskId != 0.toLong()) {
+                    intent.putExtra("position", itemPosition)
+                    intent.putExtra("removed", true)
+                }
+
+                setResult(RESULT_OK, intent)
+                finish()
+            }
         }
     }
 
@@ -158,7 +252,7 @@ class AddNewTaskActivity : AppCompatActivity() {
             remarks.setText(taskDetails.remarks)
 
             //after setting all the fields, disable them if the current date is greater than yesterday's last date.
-            val isTaskYesterday = (taskDetails.createdAt - LocalDate.now(DateTimeZone.forID("Asia/Kolkata")).toDateTimeAtStartOfDay().millis) < 0
+            isTaskYesterday = (taskDetails.createdAt - LocalDate.now(DateTimeZone.forID("Asia/Kolkata")).toDateTimeAtStartOfDay().millis) < 0
             if(isTaskYesterday) {
                 task_type.isEnabled = false
                 select_party.isEnabled = false
@@ -170,20 +264,11 @@ class AddNewTaskActivity : AppCompatActivity() {
                 task_done_yes.isEnabled = false
                 reminder_no.isEnabled = false
                 reminder_yes.isEnabled = false
-                reminder_calendar.isEnabled = false
+//                reminder_calendar.
                 remarks.isEnabled = false
                 save_button.isEnabled = false
             }
         }
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == android.R.id.home) {
-            finish();
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
     }
     
     inner class TaskTypeSpinner : AdapterView.OnItemSelectedListener {
@@ -487,6 +572,7 @@ class AddNewTaskActivity : AppCompatActivity() {
                 intent.putExtra("partyName", if(type == 0) selectedPartyName else subject)
                 intent.putExtra("remarks", remarks)
                 intent.putExtra("reasonForVisit", reasonForVisit)
+                intent.putExtra("removed", false)
             }
 
             setResult(RESULT_OK, intent)

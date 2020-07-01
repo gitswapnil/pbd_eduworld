@@ -181,8 +181,8 @@ interface TasksDAO {
     @Query("SELECT * FROM Tasks WHERE synced=0")
     suspend fun getUnsyncedTasks(): List<Tasks>
 
-    @Query("SELECT t.id, t.type, t.partyId, p.name AS partyName, p.address as partyAddress, t.contactPersonName, t.contactPersonNumber, t.reasonForVisit, t.doneWithTask, t.reminder, f.reminderDate, t.remarks, t.subject, t.serverId, t.createdAt FROM Tasks AS t LEFT JOIN Parties AS p ON t.partyId=p.id LEFT JOIN FollowUps AS f ON t.id=f.taskId WHERE t.id=:itemId")
-    suspend fun getTaskDetails(itemId: Long): TasksWithJoins
+    @Query("SELECT t.id, t.type, t.partyId, p.name AS partyName, p.address as partyAddress, t.contactPersonName, t.contactPersonNumber, t.reasonForVisit, t.doneWithTask, t.reminder, f.reminderDate, t.remarks, t.subject, t.serverId, t.createdAt FROM Tasks AS t LEFT JOIN Parties AS p ON t.partyId=p.id LEFT JOIN FollowUps AS f ON t.id=f.taskId WHERE t.id=:taskId")
+    suspend fun getTaskDetails(taskId: Long): TasksWithJoins
 
     @Query("SELECT t.id, t.type, t.partyId, p.name AS partyName, p.address as partyAddress, t.contactPersonName, t.contactPersonNumber, t.reasonForVisit, t.doneWithTask, t.reminder, f.reminderDate, t.remarks, t.subject, t.serverId, t.createdAt FROM Tasks AS t LEFT JOIN Parties AS p ON t.partyId=p.id LEFT JOIN FollowUps AS f ON t.id=f.taskId ORDER BY t.createdAt DESC LIMIT :limit OFFSET :offset")
     suspend fun getTasks(limit: Int, offset: Int): List<TasksWithJoins>
@@ -192,6 +192,9 @@ interface TasksDAO {
 
     @Insert
     suspend fun addTask(tasks: Tasks): Long
+
+    @Query("DELETE FROM Tasks WHERE id=:taskId")
+    suspend fun deleteTask(taskId: Long)
 
     @Query("UPDATE Tasks SET type=:type, partyId=:partyId, contactPersonName=:contactPersonName, contactPersonNumber=:contactPersonNumber, reasonForVisit=:reasonForVisit, doneWithTask=:doneWithTask, reminder=:reminder, remarks=:remarks, subject=:subject, synced=0 WHERE id=:id")
     suspend fun updateTask(id:Long, type: Short, partyId: String?, contactPersonName: String?, contactPersonNumber: Long?, reasonForVisit: Short, doneWithTask: Boolean, reminder: Boolean, remarks: String, subject: String)

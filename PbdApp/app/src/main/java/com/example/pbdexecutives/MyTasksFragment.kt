@@ -82,18 +82,24 @@ class MyTasksFragment : Fragment() {
             val editItemPartyName = data.getStringExtra("partyName")
             val editItemRemarks = data.getStringExtra("remarks")
             val editItemReasonForVisit = data.getIntExtra("reasonForVisit", -1)
+            val isItemRemoved = data.getBooleanExtra("removed", false)
 
             if(editTaskId != 0.toLong() && editItemPosition != -1) {
                 val index = listItems.indexOfFirst { it?.id == editTaskId }
-                listItems[index]?.id = editTaskId
-                listItems[index]?.party = editItemPartyName.toString()
-                listItems[index]?.remarks = editItemRemarks
-                listItems[index]?.type = if (editItemType == 0) "Visited" else "Other"
-                listItems[index]?.reason = if(editItemType == 0) {
-                    resources.getStringArray(R.array.reasons_for_visit)[editItemReasonForVisit.toInt()]
-                } else null
+                if(isItemRemoved) {
+                    listItems.removeAt(index)
+                    recyclerViewAdapter.notifyItemRemoved(editItemPosition)
+                } else {
+                    listItems[index]?.id = editTaskId
+                    listItems[index]?.party = editItemPartyName.toString()
+                    listItems[index]?.remarks = editItemRemarks
+                    listItems[index]?.type = if (editItemType == 0) "Visited" else "Other"
+                    listItems[index]?.reason = if(editItemType == 0) {
+                        resources.getStringArray(R.array.reasons_for_visit)[editItemReasonForVisit.toInt()]
+                    } else null
 
-                recyclerViewAdapter.notifyItemChanged(editItemPosition)
+                    recyclerViewAdapter.notifyItemChanged(editItemPosition)
+                }
             }
         }
     }
