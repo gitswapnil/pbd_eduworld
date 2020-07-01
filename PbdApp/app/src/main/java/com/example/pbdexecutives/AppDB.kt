@@ -8,6 +8,28 @@ import java.nio.ByteBuffer
 import java.util.*
 import kotlin.collections.ArrayList
 
+//DeletedIds
+@Entity(indices = [Index(value = ["id"], unique = true)])
+data class DeletedIds (
+    @PrimaryKey (autoGenerate = true) val id: Long = 0,
+    val from: String,
+    val serverId: String,
+    val synced: Boolean,
+    val createdAt: Long
+)
+
+@Dao
+interface DeletedIdsDAO {
+    @Query("SELECT * FROM DeletedIds WHERE synced=0")
+    suspend fun getUnsyncedDeletedIds(): List<DeletedIds>
+
+    @Query("UPDATE DeletedIds SET synced=1 WHERE id IN (:ids)")
+    suspend fun markSynced(ids: List<Long>)
+
+    @Insert
+    suspend fun recordDeleteId(data: DeletedIds)
+}
+
 //UserDetails
 @Entity(indices = [Index(value = ["id"], unique = true)])
 data class UserDetails (
@@ -175,7 +197,7 @@ interface TasksDAO {
     suspend fun updateTask(id:Long, type: Short, partyId: String?, contactPersonName: String?, contactPersonNumber: Long?, reasonForVisit: Short, doneWithTask: Boolean, reminder: Boolean, remarks: String, subject: String)
 }
 
-//Follow ups
+//FollowUps
 @Entity(indices = [Index(value = ["id"], unique = true)])
 data class FollowUps(
     @PrimaryKey (autoGenerate = true) val id: Long = 0,
@@ -197,7 +219,8 @@ data class FollowUpsWithJoins(
     val taskId: Long,
     val cpName: String,
     val cpNumber: Long?,
-    val followUpFor: Short?
+    val followUpFor: Short?,
+    val createdAt: Long
 )
 
 @Dao
@@ -205,7 +228,7 @@ interface FollowUpsDAO {
     @Query("SELECT * FROM FollowUps WHERE synced=0")
     suspend fun getUnsyncedFollowUps(): List<FollowUps>
 
-    @Query("SELECT f.id, f.reminderDate, f.followUpFor, p.id as partyId, t.id as taskId, p.name as partyName, p.address as partyAddress, t.contactPersonName as cpName, t.contactPersonNumber as cpNumber FROM (SELECT * FROM (SELECT * FROM FollowUps ORDER BY createdAt ASC) GROUP BY partyId) AS f LEFT JOIN Tasks AS t ON f.taskId=t.id LEFT JOIN Parties AS p ON f.partyId=p.id WHERE f.followUpFor IN (0,1,2) ORDER BY f.createdAt DESC LIMIT :limit OFFSET :offset")
+    @Query("SELECT f.id, f.reminderDate, f.followUpFor, p.id as partyId, t.id as taskId, p.name as partyName, p.address as partyAddress, t.contactPersonName as cpName, t.contactPersonNumber as cpNumber, f.createdAt as createdAt FROM (SELECT * FROM (SELECT * FROM FollowUps ORDER BY createdAt ASC) GROUP BY partyId) AS f LEFT JOIN Tasks AS t ON f.taskId=t.id LEFT JOIN Parties AS p ON f.partyId=p.id WHERE f.followUpFor IN (0,1,2) ORDER BY f.createdAt DESC LIMIT :limit OFFSET :offset")
     suspend fun getFollowUps(limit: Int, offset: Int): List<FollowUpsWithJoins>
 
     @Query("UPDATE FollowUps SET synced=1, serverId=:serverId WHERE id=:id")
@@ -213,10 +236,26 @@ interface FollowUpsDAO {
 
     @Insert
     suspend fun addFollowUp(followUps: FollowUps)
+
+    @Query("SELECT f.id, f.reminderDate, f.followUpFor, p.id as partyId, t.id as taskId, p.name as partyName, p.address as partyAddress, t.contactPersonName as cpName, t.contactPersonNumber as cpNumber, f.createdAt as createdAt FROM (SELECT * FROM (SELECT * FROM FollowUps ORDER BY createdAt ASC) GROUP BY partyId) AS f LEFT JOIN Tasks AS t ON f.taskId=t.id LEFT JOIN Parties AS p ON f.partyId=p.id WHERE f.id=:id")
+    suspend fun getFollowUp(id: Long): FollowUpsWithJoins?
+
+    @Query("SELECT f.id, f.reminderDate, f.followUpFor, p.id as partyId, t.id as taskId, p.name as partyName, p.address as partyAddress, t.contactPersonName as cpName, t.contactPersonNumber as cpNumber, f.createdAt as createdAt FROM FollowUps AS f LEFT JOIN (SELECT CASE WHEN COUNT(1) > 0 THEN createdAt ELSE NULL END as constCreatedAt FROM FollowUps WHERE followUpFor IS NULL AND partyId=:partyId ORDER BY constCreatedAt DESC LIMIT 1) LEFT JOIN Tasks AS t ON f.taskId=t.id LEFT JOIN Parties AS p ON f.partyId=p.id WHERE f.partyId=:partyId AND f.createdAt>0 ORDER BY f.createdAt DESC")
+    suspend fun getFollowUpHistory(partyId: String): List<FollowUpsWithJoins>
+
+    @Query("SELECT * FROM FollowUps WHERE taskId=:taskId")
+    suspend fun getTaskAttachedFollowUp(taskId: Long): FollowUps?
+
+    @Query("UPDATE FollowUps SET synced=0, reminderDate=:reminderDate, partyId=:partyId, followUpFor=:followUpFor WHERE id=:id")
+    suspend fun updateFollowUp(id: Long, reminderDate: Long?, partyId: String, followUpFor: Short?)
+
+    @Query("DELETE FROM FollowUps WHERE taskId=:taskId")
+    suspend fun deleteFollowUp(taskId: Long)
 }
 
-@Database (entities = [UserDetails::class, Locations::class, Parties::class, Tasks::class, FollowUps::class], version = 1)
+@Database (entities = [DeletedIds::class, UserDetails::class, Locations::class, Parties::class, Tasks::class, FollowUps::class], version = 1)
 abstract class AppDB: RoomDatabase() {
+    abstract fun deletedIdsDao(): DeletedIdsDAO
     abstract fun userDetailsDao(): UserDetailsDAO
     abstract fun locationsDao(): LocationsDAO
     abstract fun partiesDao(): PartiesDAO

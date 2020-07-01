@@ -23,6 +23,12 @@ import java.util.*
 import javax.security.auth.callback.Callback
 import kotlin.collections.ArrayList
 
+data class DeletedIdsObject(
+    @SerializedName("id") val id: Long,
+    @SerializedName("from") val from: String,
+    @SerializedName("serverId") val serverId: String
+)
+
 data class LocationObject(
     @SerializedName("id") val id: Long,
     @SerializedName("latitude") val latitude: Double,
@@ -57,6 +63,7 @@ data class FollowUpsObject(
 
 data class RequestObject(
     @SerializedName("apiKey") val apiKey: String,
+    @SerializedName("deletedIds") val deletedIds: List<DeletedIdsObject>,
     @SerializedName("locations") val locations: List<LocationObject>,
     @SerializedName("lastUserDetails") val lastUserDetails: Long,
     @SerializedName("lastPartyDetails") val lastPartyDetails: Long,
@@ -89,6 +96,7 @@ data class FollowUpIdsResponseObject(
 )
 
 data class MessageObject(
+    @SerializedName("deletedIds") val deletedIds: List<Long>?,
     @SerializedName("locationIds") val locationIds: List<Long>?,
     @SerializedName("userDetails") val userDetails: UserDetailsResponseObject?,
     @SerializedName("partyDetails") val partyDetails: PartyDetailsResponseObject?,
@@ -104,6 +112,18 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                 val db = Room.databaseBuilder(applicationContext, AppDB::class.java, "PbdDB").build()
                 val apiKey: String? = db.userDetailsDao().getApiKey()
                 if (apiKey != null) {            //if the user is not logged in then dont sync anything.
+
+                    //get unsynced DeletedIds
+                    val deletedIds: MutableList<DeletedIdsObject> = ArrayList()
+                    db.deletedIdsDao().getUnsyncedDeletedIds().forEach {
+                        deletedIds.add(
+                            DeletedIdsObject(
+                                id = it.id,
+                                from = it.from,
+                                serverId = it.serverId
+                            )
+                        )
+                    }
 
                     //get unsynced locations
                     val locations: MutableList<LocationObject> = ArrayList()
@@ -172,6 +192,7 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
 
                     val requestJSONObject: JSONObject = JSONObject(Gson().toJson(RequestObject(
                         apiKey = apiKey.toString(),
+                        deletedIds = deletedIds,
                         locations = locations,
                         lastUserDetails = lastUserDetails,
                         lastPartyDetails = lastPartyUpdatedAt,
@@ -191,8 +212,19 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                                 MessageObject::class.java
                             );      //convert the response back into JSON Object from the response string
 //                            Log.i("pbdLog", "responseObject: $responseObject")
-                            //if the response object has location ids then only update them from the local database
 
+                            if(responseObject.deletedIds != null && responseObject.deletedIds.isNotEmpty()) {
+                                var updateIds: MutableList<Long> = ArrayList()
+                                responseObject.deletedIds.forEach {
+                                    updateIds.add(it);
+                                }
+
+                                GlobalScope.launch {
+                                    db.deletedIdsDao().markSynced(updateIds)     //update the locations as synced to database
+                                }
+                            }
+
+                            //if the response object has location ids then only update them from the local database
                             if(responseObject.locationIds != null && responseObject.locationIds.isNotEmpty()) {
                                 var updateIds: MutableList<Long> = ArrayList()
                                 responseObject.locationIds.forEach {

@@ -35,6 +35,7 @@ class FollowUpsFragment : Fragment() {
     private var limit = 20
     private var offset: Int = 0
     private var isLoading = false
+    private var initializing = true
     private lateinit var db: AppDB
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -160,14 +161,26 @@ class FollowUpsFragment : Fragment() {
         super.onResume()
         activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).visibility = View.GONE
 
-        if(listForComparing.isEmpty() || isLoading) {
+        if(initializing || isLoading) {
+            initializing = false
             return
         }
 
         lifecycleScope.launch {
             val updatedList = db.followUpsDao().getFollowUps(limit = offset + limit, offset = 0)
+
+            if(updatedList.size != listForComparing.size) {
+                reloadData()
+                return@launch
+            }
+
             updatedList.forEachIndexed { index, followUpsWithJoins ->
-                if((followUpsWithJoins.taskId != listForComparing[index].taskId) || (followUpsWithJoins.reminderDate != listForComparing[index].reminderDate)) {
+                if( (followUpsWithJoins.taskId != listForComparing[index].taskId) ||
+                    (followUpsWithJoins.partyId != listForComparing[index].partyId) ||
+                    (followUpsWithJoins.cpName != listForComparing[index].cpName) ||
+                    (followUpsWithJoins.cpNumber != listForComparing[index].cpNumber) ||
+                    (followUpsWithJoins.followUpFor != listForComparing[index].followUpFor) ||
+                    (followUpsWithJoins.reminderDate != listForComparing[index].reminderDate)) {
                     reloadData()
                     return@launch
                 }
@@ -179,12 +192,12 @@ class FollowUpsFragment : Fragment() {
         super.onPause()
     }
 
-    inner class OnItemClick(private val itemId: Long, private val position: Int): View.OnClickListener {
+    inner class OnItemClick(private val followUpId: Long, private val position: Int): View.OnClickListener {
         override fun onClick(v: View?) {
-            val intent = Intent(activity, AddNewTaskActivity::class.java)
-            intent.putExtra("itemId", itemId)
+            val intent = Intent(activity, FollowUpDetailActivity::class.java)
+            intent.putExtra("followUpId", followUpId)
             intent.putExtra("position", position)
-            startActivityForResult(intent, 54)
+            startActivityForResult(intent, 21)
         }
     }
 

@@ -241,6 +241,13 @@ if(Meteor.isClient) {
 	/*
 		params: {
 			apiKey: String, 
+			deletedIds: [
+				{
+					id: Int,
+					from: String,
+					serverId: String
+				}
+			],
 			locations: [
 				{
 					id: Int,
@@ -282,7 +289,8 @@ if(Meteor.isClient) {
 		return: {
 			error: Boolean, 
 			message: "{
-				locationIds: [Int, Int, ...]			//these are the ids which are saved in the database
+				deletedIds: [Long, Long, ...]
+				locationIds: [Long, Long, ...]			//these are the ids which are saved in the database
 				userDetails: {
 					name: String,
 					phoneNo: String,
@@ -313,6 +321,29 @@ if(Meteor.isClient) {
 			code: Integer
 		}	if error is false then message is the apiKey for that user.
 	*/
+
+	const removeDocuments = async (userId, deletedIds) => {
+		if(deletedIds) {
+			if(!Array.isArray(deletedIds)) {		//validate the locations array
+				throw new Error("Error in the given deletedIds Array.");
+				return;
+			}
+
+			return deletedIds.map((deletedDoc, index) => {
+				switch(deletedDoc.from) {
+					case "followUps" : Collections.followUps.remove({ id: deletedDoc.serverId });
+							break;
+
+					case "tasks" : Collections.tasks.remove({ id: deletedDoc.serverId });
+							break;
+				}
+
+				return deletedDoc.id;
+			})
+		}
+
+		return;
+	};
 
 	const storeLocations = async (userId, locations) => {
 		//if the locations key is defined.
@@ -632,7 +663,12 @@ if(Meteor.isClient) {
 		}
 
 		let returnObj = {};
-
+		
+		const deleteDocsApi = removeDocuments(user._id, reqBody.deletedIds).catch(err => {
+			res.end(JSON.stringify({error: true, message: err.message, code: 400}));
+			return;
+		});
+		
 		const locationsApi = storeLocations(user._id, reqBody.locations).catch(err => {
 			res.end(JSON.stringify({error: true, message: err.message, code: 400}));
 			return;
@@ -659,15 +695,16 @@ if(Meteor.isClient) {
 		});
 
 		const callAllFuncs = async () => {
-			const values = await Promise.all([locationsApi, userDetailsApi, partyDetailsApi, tasksApi, followUpsApi]);
+			const values = await Promise.all([deleteDocsApi, locationsApi, userDetailsApi, partyDetailsApi, tasksApi, followUpsApi]);
 
 			console.log(`values: ${JSON.stringify(values)}`);
 			const message = {
-				locationIds: values[0],
-				userDetails: values[1],
-				partyDetails: values[2],
-				taskIds: values[3],
-				followUpIds: values[4]
+				deletedIds: values[0],
+				locationIds: values[1],
+				userDetails: values[2],
+				partyDetails: values[3],
+				taskIds: values[4],
+				followUpIds: values[5]
 			}
 			res.end(JSON.stringify({ error: false, message, code: 200 }));
 		}

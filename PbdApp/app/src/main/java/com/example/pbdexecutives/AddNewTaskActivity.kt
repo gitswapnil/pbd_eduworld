@@ -147,7 +147,10 @@ class AddNewTaskActivity : AppCompatActivity() {
                     reminder_yes.isChecked = true
                 else
                     reminder_no.isChecked = true
-                taskDetails.reminderDate?.let { reminder_calendar.date = it }
+                taskDetails.reminderDate?.let {
+                    reminder_calendar.date = it
+                    selectedReminderDate = it
+                }
             } else {
                 subject.setText(taskDetails.subject)
             }
@@ -364,6 +367,15 @@ class AddNewTaskActivity : AppCompatActivity() {
         return retValue
     }
 
+    private fun getFollowUpForId(reasonForVisit: Int, doneWithTask: Boolean): Int? {
+        return if(reasonForVisit == 0 && !doneWithTask) 0
+        else if(reasonForVisit == 0 && doneWithTask) 1
+        else if(reasonForVisit == 1 && !doneWithTask) 1
+        else if(reasonForVisit == 1 && doneWithTask) 2
+        else if(reasonForVisit == 2 && !doneWithTask) 2
+        else null
+    }
+
     fun saveChanges(view: View) {
         //first validate the inputs and then save the data
 
@@ -404,24 +416,15 @@ class AddNewTaskActivity : AppCompatActivity() {
                 val newTaskId = db.tasksDao().addTask(task)
 
                 if(type == 0) {
-                    var followUpFor =
-                        if(reasonForVisit == 0 && !doneWithTask) 0
-                    else if(reasonForVisit == 0 && doneWithTask) 1
-                    else if(reasonForVisit == 1 && !doneWithTask) 1
-                    else if(reasonForVisit == 1 && doneWithTask) 2
-                    else if(reasonForVisit == 2 && !doneWithTask) 2
-                    else null
-
                     db.followUpsDao().addFollowUp(FollowUps(
                         reminderDate = if(reminder) selectedReminderDate else null,
                         partyId = partyId.toString(),
                         taskId = newTaskId,
-                        followUpFor = followUpFor?.toShort(),
+                        followUpFor = getFollowUpForId(reasonForVisit, doneWithTask)?.toShort(),
                         synced = false,
                         createdAt = Date().time,
                         serverId = null
                     ))
-
                 }
             } else {
                 db.tasksDao().updateTask(
@@ -436,6 +439,41 @@ class AddNewTaskActivity : AppCompatActivity() {
                     remarks = remarks,
                     subject = subject
                 )
+
+                if(type == 0) {
+                    val id = db.followUpsDao().getTaskAttachedFollowUp(taskId = taskId)?.id
+
+                    if(id != null) {
+                        db.followUpsDao().updateFollowUp(
+                            id = id,
+                            reminderDate = if(reminder) selectedReminderDate else null,
+                            partyId = partyId.toString(),
+                            followUpFor = getFollowUpForId(reasonForVisit, doneWithTask)?.toShort()
+                        )
+                    } else {
+                        db.followUpsDao().addFollowUp(FollowUps(
+                            reminderDate = if(reminder) selectedReminderDate else null,
+                            partyId = partyId.toString(),
+                            taskId = taskId,
+                            followUpFor = getFollowUpForId(reasonForVisit, doneWithTask)?.toShort(),
+                            synced = false,
+                            createdAt = Date().time,
+                            serverId = null
+                        ))
+                    }
+                } else {
+                    val serverId = db.followUpsDao().getTaskAttachedFollowUp(taskId = taskId)?.serverId
+                    if(serverId != null) {
+                        db.deletedIdsDao().recordDeleteId(
+                            DeletedIds(
+                                from = "followUps",
+                                serverId = serverId,
+                                synced = false,
+                                createdAt = Date().time
+                            ))
+                    }
+                    db.followUpsDao().deleteFollowUp(taskId = taskId)
+                }
             }
 
             PbdExecutivesUtils().syncData(applicationContext)

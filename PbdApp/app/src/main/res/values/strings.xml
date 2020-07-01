@@ -62,6 +62,13 @@
     <string name="remarks">Remarks</string>
     <string name="save">Save</string>
     <string name="reminder_not_set">Reminder not set</string>
+    <string name="follow_up_details">Follow Up Details</string>
+    <string name="party_name">Party Name</string>
+    <string name="party_address">Party Address</string>
+    <string name="reminder_on">Reminder On</string>
+    <string name="follow_up_for">Follow Up For</string>
+    <string name="completed_on">Completed on</string>
+    <string name="history">History:</string>
 
     <string-array name="task_done_questions">
         <item>Done with Sampling?</item>

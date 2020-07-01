@@ -63,17 +63,22 @@ class FollowUpsRecyclerViewAdapter(
 
             changeDataPlaceholdersVisibility(holder, View.VISIBLE)
 
-            val reminderInfo = item.reminderDate.split(",")
-            holder.reminderDate.text = reminderInfo[1]
-
-            if(reminderInfo[1] == "Reminder not set") {
+            var reminderDate: String
+            if(item.reminderDate == "Reminder not set") {
                 holder.imageView6.visibility = View.GONE
+                reminderDate = item.reminderDate
             } else {
+                val reminderInfo = item.reminderDate.split(",")
+
                 if(reminderInfo[0] == "green")
                 holder.reminderDate.setTextColor(Color.rgb(40, 167, 69))
                 else
                 holder.reminderDate.setTextColor(Color.rgb(220, 53, 69))
+
+                reminderDate = reminderInfo[1]
             }
+
+            holder.reminderDate.text = reminderDate
         } else {
             changeDataPlaceholdersVisibility(holder, View.GONE)
         }
