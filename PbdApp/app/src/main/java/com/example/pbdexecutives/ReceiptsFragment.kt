@@ -1,5 +1,6 @@
 package com.example.pbdexecutives
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.fragment.app.Fragment
@@ -49,10 +50,18 @@ class ReceiptsFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).visibility = View.VISIBLE
+        activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).setOnClickListener { view ->
+            createNewReceipt(view)
+        }
     }
 
     override fun onPause() {
         super.onPause()
+        activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).setOnClickListener(null)
+    }
+
+    private fun createNewReceipt(view: View) {
+        startActivityForResult(Intent(activity, AddNewReceiptActivity::class.java), 89)
     }
 
     companion object {

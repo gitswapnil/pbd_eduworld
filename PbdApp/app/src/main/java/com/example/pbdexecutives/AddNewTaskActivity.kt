@@ -136,12 +136,7 @@ class AddNewTaskActivity : AppCompatActivity() {
         }
 
         else -> {
-            // If we got here, the user's action was not recognized.
-            // Invoke the superclass to handle it.
-            if (item.itemId == android.R.id.home) {
-                finish();
-            }
-
+            finish()
             super.onOptionsItemSelected(item)
         }
     }

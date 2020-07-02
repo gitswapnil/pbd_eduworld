@@ -1,9 +1,6 @@
 package com.example.pbdexecutives
 
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
+import android.content.*
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
@@ -14,6 +11,7 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import androidx.core.net.toUri
@@ -94,7 +92,27 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     fun logout(view: View) {
-        PbdExecutivesUtils().logoutUser(applicationContext)
+        val alertDialog: AlertDialog? = this.let {
+            val builder = AlertDialog.Builder(it)
+            builder.apply {
+                setPositiveButton(R.string.yes,
+                    DialogInterface.OnClickListener { dialog, id ->
+                        // User clicked OK button
+                        PbdExecutivesUtils().logoutUser(applicationContext)
+                    })
+                setNegativeButton(R.string.no,
+                    DialogInterface.OnClickListener { dialog, id ->
+                        // User cancelled the dialog
+                    })
+            }
+            // Set other dialog properties
+            builder.setTitle(R.string.warning).setMessage(R.string.confirm_logout_user)
+
+            // Create the AlertDialog
+            builder.create()
+        }
+
+        alertDialog?.show()
     }
 
 }

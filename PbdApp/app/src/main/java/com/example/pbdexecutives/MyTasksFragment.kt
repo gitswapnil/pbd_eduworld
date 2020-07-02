@@ -45,10 +45,6 @@ class MyTasksFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_my_tasks_list, container, false)
         //change the action button's onclick
-        activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).setOnClickListener { view ->
-            createNewTask(view)
-        }
-
         listItems = ArrayList()
         recyclerViewAdapter = MyTasksRecyclerViewAdapter(this, listItems)
         // Set the adapter
@@ -129,10 +125,15 @@ class MyTasksFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).visibility = View.VISIBLE
+        activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).setOnClickListener { view ->
+            createNewTask(view)
+        }
     }
 
     override fun onPause() {
         super.onPause()
+
+        activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).setOnClickListener(null)
     }
 
     private fun loadData() {

@@ -2,15 +2,10 @@ package com.example.pbdexecutives
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Log
 import android.view.MenuItem
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import androidx.room.Room
 import kotlinx.android.synthetic.main.activity_follow_up_detail.*
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -60,7 +55,7 @@ class FollowUpDetailActivity : AppCompatActivity() {
             if(followUp != null) {
                 party_name.text = followUp.partyName
                 party_address.text = followUp.partyAddress
-                cp_name.text = followUp.cpName
+                cp_number.text = followUp.cpName
                 cp_number.text = followUp.cpNumber.toString()
                 reminder_date.text = if(followUp.reminderDate != null) SimpleDateFormat("dd/MM/yy").format(Date(followUp.reminderDate)) else null
                 follow_up_for.text = if(followUp.followUpFor != null) {

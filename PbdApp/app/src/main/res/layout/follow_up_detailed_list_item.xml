@@ -65,7 +65,7 @@
                 android:text="@string/contact_person_name" />
 
             <TextView
-                android:id="@+id/cp_name"
+                android:id="@+id/cp_number"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
