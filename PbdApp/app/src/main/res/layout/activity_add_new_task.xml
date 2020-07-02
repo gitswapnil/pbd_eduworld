@@ -103,7 +103,7 @@
                 app:layout_constraintTop_toBottomOf="@+id/task_type" />
 
             <AutoCompleteTextView
-                android:id="@+id/select_party"
+                android:id="@+id/select_party_for_receipts"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
@@ -127,7 +127,7 @@
                 android:layout_marginTop="16dp"
                 android:text="@string/contact_person_name"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/select_party" />
+                app:layout_constraintTop_toBottomOf="@+id/select_party_for_receipts" />
 
             <EditText
                 android:id="@+id/contact_person_name"

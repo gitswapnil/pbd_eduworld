@@ -1,11 +1,9 @@
 package com.example.pbdexecutives
 
-import android.app.SearchManager
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
-import android.util.AttributeSet
 import android.util.Log
 import android.view.*
 import android.widget.*
@@ -222,7 +220,7 @@ class AddNewTaskActivity : AppCompatActivity() {
             task_type.setSelection(taskDetails.type.toInt())
 
             if(taskDetails.type == 0.toShort()) {
-                select_party.setText("${taskDetails.partyName} ${taskDetails.partyAddress}")
+                select_party_for_receipts.setText("${taskDetails.partyName} ${taskDetails.partyAddress}")
                 selectedPartyId = taskDetails.partyId.toString()
                 selectedPartyName = taskDetails.partyName.toString()
                 contact_person_name.setText(taskDetails.contactPersonName)
@@ -250,7 +248,7 @@ class AddNewTaskActivity : AppCompatActivity() {
             isTaskYesterday = (taskDetails.createdAt - LocalDate.now(DateTimeZone.forID("Asia/Kolkata")).toDateTimeAtStartOfDay().millis) < 0
             if(isTaskYesterday) {
                 task_type.isEnabled = false
-                select_party.isEnabled = false
+                select_party_for_receipts.isEnabled = false
                 subject.isEnabled = false
                 contact_person_name.isEnabled = false
                 contact_person_number.isEnabled = false
@@ -296,15 +294,15 @@ class AddNewTaskActivity : AppCompatActivity() {
             }
 
 //            val partiesAdapter: ArrayAdapter<String> = ArrayAdapter<String>(this@AddNewTaskActivity, android.R.layout.simple_spinner_dropdown_item, parties)
-            select_party.threshold = 1
-            select_party.setAdapter(PartiesListAdapter(this@AddNewTaskActivity, parties))
-            select_party.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
+            select_party_for_receipts.threshold = 1
+            select_party_for_receipts.setAdapter(PartiesListAdapter(this@AddNewTaskActivity, parties))
+            select_party_for_receipts.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
 //                Log.i("pbdLog", "clicked Item, ${parent.getItemAtPosition(position)}")
                 val ListItem = (parent.getItemAtPosition(position) as PartiesListItem)
-                select_party.error = null
+                select_party_for_receipts.error = null
                 selectedPartyId = ListItem.id
                 selectedPartyName = ListItem.name
-                select_party.setText("${ListItem.name} ${ListItem.address}")
+                select_party_for_receipts.setText("${ListItem.name} ${ListItem.address}")
             }
         }
 
@@ -385,7 +383,7 @@ class AddNewTaskActivity : AppCompatActivity() {
 
     private fun changeVisitView(visibility: Int) {
         select_party_label.visibility = visibility
-        select_party.visibility = visibility
+        select_party_for_receipts.visibility = visibility
         contact_person_name_label.visibility = visibility
         contact_person_name.visibility = visibility
         contact_person_number_label.visibility = visibility
@@ -423,13 +421,13 @@ class AddNewTaskActivity : AppCompatActivity() {
         if(task_type.selectedItem.toString() == "Visit") {
             if(this::selectedPartyId.isInitialized) {
                 val selectedParty = parties.find{ it.id == selectedPartyId }
-                val nameAndAddress = select_party.text.toString()
+                val nameAndAddress = select_party_for_receipts.text.toString()
                 if(selectedParty == null || ("${selectedParty.name} ${selectedParty.address}") != nameAndAddress) {
-                    select_party.error = getString(R.string.select_only_from_list)
+                    select_party_for_receipts.error = getString(R.string.select_only_from_list)
                     retValue = false
                 }
             } else {
-                select_party.error = getString(R.string.this_field_is_required)
+                select_party_for_receipts.error = getString(R.string.this_field_is_required)
                 retValue = false
             }
 
