@@ -90,6 +90,28 @@
     <string name="next">Next</string>
     <string name="cannot_generate_the_receipt">Cannot generate the receipt.</string>
     <string name="no_internet_connection">No internet connection</string>
+    <string name="receipt_preview">Receipt Preview</string>
+    <string name="receipt_company_header">M/S. PBD Eduworld PVT. LTD.</string>
+    <string name="receipt_company_address">"Prasad Arcade" 4th floor, Mahatma Phule Road, Opp. Shree Datta Mandir, Shahapur, Belgavi - 03, KARNATAKA</string>
+    <string name="receipt_company_email">prasadbookdist@gmail.com</string>
+    <string name="phone">Phone:\u0020</string>
+    <string name="receipt_company_phone">0831-4208621, 4208622</string>
+    <string name="mobile">Mobile:\u0020</string>
+    <string name="receipt_company_mobile">9341108584, 9845646605</string>
+    <string name="receipt_representative">Representative:</string>
+    <string name="date">Date:</string>
+    <string name="customer_code">Customer Code:</string>
+    <string name="cust_contact">Customer Contact:</string>
+    <string name="receipt_paid_by">Paid By:</string>
+    <string name="receipt_cheque_no">Cheque No:</string>
+    <string name="receipt_dd_no">Demand Draft No:</string>
+    <string name="receipt_payment">Payment:</string>
+    <string name="paid">Paid:</string>
+    <string name="rupee">₹</string>
+    <string name="receipt_condition">Receipt valid subject to realization of Cheque</string>
+    <string name="send_receipt">Send Receipt</string>
+    <string name="confirm_send_receipt">Are you sure, you want to send this receipt to </string>
+    <string name="this_receipt_is_sent_to">This receipt is sent to, </string>
 
     <string-array name="task_done_questions">
         <item>Done with Sampling?</item>

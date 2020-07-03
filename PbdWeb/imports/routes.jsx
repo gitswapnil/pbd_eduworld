@@ -305,6 +305,7 @@ if(Meteor.isClient) {
 							id: HexString, 
 							code: String, 
 							name: String, 
+							cNumber: Long,
 							address: String, 
 							updatedAt: timestamp<Long Int> 
 						},
@@ -431,6 +432,7 @@ if(Meteor.isClient) {
 				            active: 1,
 				            code: "$username",
 				            name: "$profile.name",
+				            cNumber: "$profile.phoneNumber",
 				            address: "$profile.address",
 				            available: { $in: [userId, { $ifNull: ["$availableTo", []] }] }
 				        }
@@ -453,6 +455,7 @@ if(Meteor.isClient) {
 				            "parties.updatedAt": 1,
 				            "parties.code": 1,
 				            "parties.name": 1,
+				            "parties.cNumber": 1,
 				            "parties.address": 1,
 				        }
 				    },
@@ -477,6 +480,7 @@ if(Meteor.isClient) {
                                         "id": "$parties._id",
                                         "code": "$parties.code",
                                         "name": "$parties.name",
+                                        "cNumber": "$parties.cNumber",
                                         "address": "$parties.address",
                                         "updatedAt": { $subtract: [ "$parties.updatedAt", new Date("1970-01-01") ] }
                                     }
@@ -722,8 +726,8 @@ if(Meteor.isClient) {
 				partyId: String,
 				cpName: String,
 				cpNumber: Long,
-				email: String,
-				amount: BigDecimal,
+				cpEmail: String,
+				amount: Double,
 				paidBy: 0, 1, 2
 				chequeNo: String,
 				ddNo: String,
@@ -738,11 +742,12 @@ if(Meteor.isClient) {
 				cpName: String,
 				cpNumber: Long,
 				email: String,
-				amount: BigDecimal,
+				amount: Double,
 				paidBy: 0, 1, 2
 				chequeNo: String,
 				ddNo: String,
-				payment: 0, 1
+				payment: 0, 1,
+				serverId: String
 			}",
 			code: Integer
 		}	if error is false then message is the apiKey for that user.
@@ -764,9 +769,9 @@ if(Meteor.isClient) {
 			return;
 		}
 
-		if(receiptDetails.email && (receiptDetails.email != "")) {
-			const schema = new SimpleSchema({ email: String, regEx: SimpleSchema.RegEx.Email }).newContext()
-			if(!schema.validate({ email: receiptDetails.email })) {
+		if(receiptDetails.cpEmail && (receiptDetails.cpEmail != "")) {
+			const validationContext = new SimpleSchema({ cpEmail: { type: String, regEx: SimpleSchema.RegEx.Email }}).newContext();
+			if(!validationContext.validate({ cpEmail: receiptDetails.cpEmail })) {
 				throw new Error("Invalid email.");
 				return;
 			}
@@ -815,7 +820,7 @@ if(Meteor.isClient) {
 		        	partyId: receiptDetails.partyId,
 		        	cpName: receiptDetails.cpName,
 		        	cpNumber: receiptDetails.cpNumber,
-		        	cpEmail: receiptDetails.email,
+		        	cpEmail: receiptDetails.cpEmail,
 		        	amount: receiptDetails.amount,
 		        	paidBy: receiptDetails.paidBy,
 		        	chequeNo: receiptDetails.chequeNo,
@@ -827,7 +832,7 @@ if(Meteor.isClient) {
 			        console.log("result: " + JSON.stringify(result));
 			        if(result.ops && result.ops[0]){
 				        const retObj = {
-				        	id: result.ops[0].id,
+				        	serverId: result.ops[0]._id,
 				        	receiptNo: result.ops[0].receiptNo,
 				        	partyId: result.ops[0].partyId,
 				        	cpName: result.ops[0].cpName,
@@ -838,7 +843,7 @@ if(Meteor.isClient) {
 				        	chequeNo: result.ops[0].chequeNo,
 				        	ddNo: result.ops[0].ddNo,
 				        	payment: result.ops[0].payment,
-				        	createdAt: result.ops[0].createdAt
+				        	createdAt: moment(result.ops[0].createdAt).valueOf()
 				        }
 
 				        resolve(retObj);

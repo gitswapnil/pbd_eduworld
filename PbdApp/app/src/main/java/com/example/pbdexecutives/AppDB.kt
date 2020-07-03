@@ -4,6 +4,7 @@ import androidx.lifecycle.LiveData
 import androidx.room.*
 import androidx.sqlite.db.SupportSQLiteQuery
 import com.google.gson.annotations.SerializedName
+import java.math.BigDecimal
 import java.nio.ByteBuffer
 import java.util.*
 import kotlin.collections.ArrayList
@@ -121,6 +122,7 @@ data class Parties (
     @SerializedName("id") @PrimaryKey val id: String,
     @SerializedName("code") val code: String,
     @SerializedName("name") val name: String,
+    @SerializedName("cNumber") val cNumber: Long,
     @SerializedName("address") val address: String,
     @SerializedName("updatedAt") val updatedAt: Long
 )
@@ -132,6 +134,9 @@ interface PartiesDAO {
 
     @Query("SELECT * FROM Parties ORDER BY updatedAt DESC LIMIT 1")
     suspend fun getLastUpdatedParty(): Parties
+
+    @Query("SELECT * FROM Parties WHERE id=:id")
+    suspend fun getPartyDetails(id: String): Parties
 
     @Insert
     suspend fun addParties(parties: List<Parties>)
@@ -256,7 +261,37 @@ interface FollowUpsDAO {
     suspend fun deleteFollowUp(taskId: Long)
 }
 
-@Database (entities = [DeletedIds::class, UserDetails::class, Locations::class, Parties::class, Tasks::class, FollowUps::class], version = 1)
+//Receipts
+@Entity(indices = [Index(value = ["id"], unique = true)])
+data class Receipts(
+    @PrimaryKey (autoGenerate = true) val id: Long = 0,
+    @SerializedName("receiptNo") val receiptNo: Long,
+    @SerializedName("partyId") val partyId: String,
+    @SerializedName("cpName") val cpName: String,
+    @SerializedName("cpNumber") val cpNumber: Long,
+    @SerializedName("cpEmail") val cpEmail: String?,
+    @SerializedName("amount") val amount: String,
+    @SerializedName("paidBy") val paidBy: Byte,
+    @SerializedName("chequeNo") val chequeNo: String?,
+    @SerializedName("ddNo") val ddNo: String?,
+    @SerializedName("payment") val payment: Byte,
+    @SerializedName("serverId") val serverId: String?,
+    @SerializedName("createdAt") val createdAt: Long
+)
+
+@Dao
+interface ReceiptsDAO{
+    @Insert
+    suspend fun addReceipt(receipts: Receipts)
+}
+
+@Database (entities = [ DeletedIds::class,
+                        UserDetails::class,
+                        Locations::class,
+                        Parties::class,
+                        Tasks::class,
+                        FollowUps::class,
+                        Receipts::class], version = 1)
 abstract class AppDB: RoomDatabase() {
     abstract fun deletedIdsDao(): DeletedIdsDAO
     abstract fun userDetailsDao(): UserDetailsDAO
@@ -264,5 +299,6 @@ abstract class AppDB: RoomDatabase() {
     abstract fun partiesDao(): PartiesDAO
     abstract fun tasksDao(): TasksDAO
     abstract fun followUpsDao(): FollowUpsDAO
+    abstract fun receiptsDao(): ReceiptsDAO
 }
 

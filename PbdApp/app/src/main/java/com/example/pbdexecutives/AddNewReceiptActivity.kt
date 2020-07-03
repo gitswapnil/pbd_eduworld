@@ -1,5 +1,6 @@
 package com.example.pbdexecutives
 
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
@@ -146,24 +147,7 @@ class AddNewReceiptActivity : AppCompatActivity() {
         return retValue
     }
 
-    data class ReceiptDetailsObject (
-        @SerializedName("partyId") val partyId: String,
-        @SerializedName("cpName") val cpName: String,
-        @SerializedName("cpNumber") val cpNumber: Long,
-        @SerializedName("cpEmail") val cpEmail: String,
-        @SerializedName("amount") val amount: BigDecimal,
-        @SerializedName("paidBy") val paidBy: Byte,
-        @SerializedName("chequeNo") val chequeNo: String,
-        @SerializedName("ddNo") val ddNo: String,
-        @SerializedName("payment") val payment: Byte
-    )
-
-    data class RequestObject(
-        @SerializedName("apiKey") val apiKey: String,
-        @SerializedName("receiptDetails") val receiptDetails: ReceiptDetailsObject
-    )
-
-    fun saveChanges(view: View) {
+    fun gotoNext(view: View) {
         //first validate the inputs and then save the data
 
         val valid: Boolean = validateFields()
@@ -174,7 +158,7 @@ class AddNewReceiptActivity : AppCompatActivity() {
         val cpName = cp_name.text.toString()
         val cpNumber = cp_number.text.toString().toLong()
         val cpEmail = cpEmail.text.toString()
-        val amount = amount.text.toString().toBigDecimal()
+        val amount = amount.text.toString()
         val paidBy =   if(paid_by_radio_group.checkedRadioButtonId == R.id.paid_by_radio_cheque) 1
                             else if(paid_by_radio_group.checkedRadioButtonId == R.id.paid_by_radio_dd) 2 else 0
         val chequeNo = if(paidBy == 1) cheque_no.text.toString() else ""
@@ -186,37 +170,16 @@ class AddNewReceiptActivity : AppCompatActivity() {
             return
         }
 
-        lifecycleScope.launch {
-            val db = Room.databaseBuilder(this@AddNewReceiptActivity, AppDB::class.java, "PbdDB").build()
-            val apiKey = db.userDetailsDao().getApiKey()
-            val requestJSONObject = JSONObject(Gson().toJson(RequestObject(
-                apiKey = apiKey,
-                receiptDetails = ReceiptDetailsObject(
-                    partyId = selectedPartyId,
-                    cpName = cpName,
-                    cpNumber = cpNumber,
-                    cpEmail = cpEmail,
-                    amount = amount,
-                    paidBy = paidBy.toByte(),
-                    chequeNo = chequeNo,
-                    ddNo = ddNo,
-                    payment = payment.toByte()
-                ))))
-
-            PbdExecutivesUtils().sendData(this@AddNewReceiptActivity, "generatereceipt", requestJSONObject,
-                { code, response ->
-                    Log.i("pbdLog", "response: $response")
-                },
-                { code, error ->
-                    Snackbar.make(add_new_receipt_layout, "${getString(R.string.cannot_generate_the_receipt)} ${error}", Snackbar.LENGTH_LONG).show()
-                },
-                DefaultRetryPolicy(
-                    DefaultRetryPolicy.DEFAULT_TIMEOUT_MS,
-                    DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
-                    DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
-                )
-            )
-        }
-
+        val intent = Intent(this, ReceiptPreviewActivity::class.java)
+        intent.putExtra("partyId", selectedPartyId)
+        intent.putExtra("cpName", cpName)
+        intent.putExtra("cpNumber", cpNumber)
+        intent.putExtra("cpEmail", cpEmail)
+        intent.putExtra("amount", amount)
+        intent.putExtra("paidBy", paidBy.toByte())
+        intent.putExtra("chequeNo", chequeNo)
+        intent.putExtra("ddNo", ddNo)
+        intent.putExtra("payment", payment.toByte())
+        startActivity(intent)
     }
 }
