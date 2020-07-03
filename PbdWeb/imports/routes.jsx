@@ -167,6 +167,7 @@ if(Meteor.isClient) {
 	export default routes;
 } else if(Meteor.isServer) {
 	import { Accounts } from 'meteor/accounts-base';
+	const autoIncrement = require('mongodb-autoincrement');
 
 	Router.route('/api/testroute', {where: 'server'}).get(function(req, res, next) {
 		console.log("This is testroute.");
@@ -710,6 +711,198 @@ if(Meteor.isClient) {
 		}
 
 		callAllFuncs().catch(error => {
+			res.end(JSON.stringify({ error: true, message: error.message, code: 500 }));
+		})
+	});
+
+	/*
+		params: {
+			apiKey: String, 
+			receiptDetails: {
+				partyId: String,
+				cpName: String,
+				cpNumber: Long,
+				email: String,
+				amount: BigDecimal,
+				paidBy: 0, 1, 2
+				chequeNo: String,
+				ddNo: String,
+				payment: 0, 1
+			}
+		}
+		return: {
+			error: Boolean, 
+			message: "{
+				receiptNo: Long,
+				partyId: String,
+				cpName: String,
+				cpNumber: Long,
+				email: String,
+				amount: BigDecimal,
+				paidBy: 0, 1, 2
+				chequeNo: String,
+				ddNo: String,
+				payment: 0, 1
+			}",
+			code: Integer
+		}	if error is false then message is the apiKey for that user.
+	*/
+
+	const generateReceipt = async (userId, receiptDetails) => {
+		if(!receiptDetails.partyId || (receiptDetails.partyId.length == 32)) {
+			throw new Error("Invalid partyId.");
+			return;
+		}
+
+		if(!receiptDetails.cpName || (receiptDetails.cpName == "")) {
+			throw new Error("Invalid contact Person Name.");
+			return;
+		}
+
+		if(!receiptDetails.cpNumber || (receiptDetails.cpNumber == "")) {
+			throw new Error("Invalid contact Person Number.");
+			return;
+		}
+
+		if(receiptDetails.email && (receiptDetails.email != "")) {
+			const schema = new SimpleSchema({ email: String, regEx: SimpleSchema.RegEx.Email }).newContext()
+			if(!schema.validate({ email: receiptDetails.email })) {
+				throw new Error("Invalid email.");
+				return;
+			}
+		}
+
+		if(!receiptDetails.amount || (receiptDetails.amount == "")) {
+			throw new Error("The paid amount is neccessary to generate the receipt.");
+			return;
+		}
+
+		if((typeof receiptDetails.paidBy !== "number") || (receiptDetails.paidBy > 2 && receiptDetails.paidBy < 0)) {
+			throw new Error("Invalid PaidBy option.");
+			return;
+		}
+
+		if(receiptDetails.paidBy == 1) {
+			if(!receiptDetails.chequeNo || receiptDetails.chequeNo == "") {
+				throw new Error("The Cheque Number is required.");
+				return;
+			}
+		}
+
+		if(receiptDetails.paidBy == 2) {
+			if(!receiptDetails.ddNo || receiptDetails.ddNo == "") {
+				throw new Error("The Demand Draft Number is required.");
+				return;
+			}
+		}
+
+		if((typeof receiptDetails.payment !== "number") || (receiptDetails.payment > 1 && receiptDetails.payment < 0)) {
+			throw new Error("Please enter whether the payment is full or part.");
+			return;
+		}
+
+		let details = new Promise((resolve, reject) => {
+			const db = Collections.receipts.rawDatabase();
+			autoIncrement.getNextSequence(db, "receipts", function (err, autoIndex) {
+				if(err) {
+					reject(new Error(err.message));
+					return;
+				}
+
+		        var collection = db.collection("receipts");
+		        collection.insert({
+		        	receiptNo: autoIndex,
+		        	partyId: receiptDetails.partyId,
+		        	cpName: receiptDetails.cpName,
+		        	cpNumber: receiptDetails.cpNumber,
+		        	cpEmail: receiptDetails.email,
+		        	amount: receiptDetails.amount,
+		        	paidBy: receiptDetails.paidBy,
+		        	chequeNo: receiptDetails.chequeNo,
+		        	ddNo: receiptDetails.ddNo,
+		        	payment: receiptDetails.payment,
+		        	userId,
+		        	createdAt: new Date()
+		        }).then(result => {
+			        console.log("result: " + JSON.stringify(result));
+			        if(result.ops && result.ops[0]){
+				        const retObj = {
+				        	id: result.ops[0].id,
+				        	receiptNo: result.ops[0].receiptNo,
+				        	partyId: result.ops[0].partyId,
+				        	cpName: result.ops[0].cpName,
+				        	cpNumber: result.ops[0].cpNumber,
+				        	cpEmail: result.ops[0].cpEmail,
+				        	amount: result.ops[0].amount,
+				        	paidBy: result.ops[0].paidBy,
+				        	chequeNo: result.ops[0].chequeNo,
+				        	ddNo: result.ops[0].ddNo,
+				        	payment: result.ops[0].payment,
+				        	createdAt: result.ops[0].createdAt
+				        }
+
+				        resolve(retObj);
+			        } else {
+			        	reject(new Error("Problem in insertion of receipt, please check the database."))
+			        }
+		        })
+		    });
+		})
+		
+		return await details;
+	};
+
+	Router.route('/api/generatereceipt', {where: 'server'}).post(function(req, res, next){
+		console.log("API: generatereceipt invoked.");
+		const reqBody = req.body;
+
+		//if request body is not defined, then return error
+		if(!reqBody) {
+			res.end(JSON.stringify({error: true, message: "reqBody must have atleast an apiKey. requset body is null.", code: 400}));
+			return;
+		}
+
+		console.log("syncdata reqBody: " + JSON.stringify(reqBody));
+		//first check for the APIkey;
+		console.log("apiKey: " + reqBody.apiKey);
+		if(!reqBody.apiKey || (typeof reqBody.apiKey !== "string") || reqBody.apiKey.length !== 32) {
+			res.end(JSON.stringify({error: true, message: "Invalid API key. Please check and try again.", code: 400}));
+			return;
+		}
+
+		const user = Meteor.users.findOne({"apiKey": reqBody.apiKey});
+		if(!user) {
+			res.end(JSON.stringify({error: true, message: "Unkonwn API key.", code: 401}));
+			return;
+		}
+
+		if(!user.active) {		//the user should be an active user
+			res.end(JSON.stringify({error: true, message: "Inactive User.", code: 401}));
+			return;
+		}
+
+		if(!Roles.userIsInRole(user._id, "executive", Roles.GLOBAL_GROUP)){		//if the user does not have administrative rights.
+			res.end(JSON.stringify({error: true, message: "User does not have the rights to access mobile app.", code: 400}));
+			return;
+		}
+
+		let returnObj = {};
+		
+		const generateReceiptApi = generateReceipt(user._id, reqBody.receiptDetails).catch(err => {
+			res.end(JSON.stringify({error: true, message: err.message, code: 400}));
+			return;
+		});
+
+		const callAllFuncs = async () => {
+			const values = await Promise.all([generateReceiptApi]);
+
+			console.log(`values: ${JSON.stringify(values)}`);
+			const message = { ...values[0] }
+			res.end(JSON.stringify({ error: false, message, code: 200 }));
+		}
+
+		callAllFuncs().catch(error => {
+			console.log("error: " + error);
 			res.end(JSON.stringify({ error: true, message: error.message, code: 500 }));
 		})
 	})
