@@ -88,6 +88,8 @@
     <string name="part">Part</string>
     <string name="full">Full</string>
     <string name="next">Next</string>
+    <string name="cannot_generate_the_receipt">Cannot generate the receipt.</string>
+    <string name="no_internet_connection">No internet connection</string>
 
     <string-array name="task_done_questions">
         <item>Done with Sampling?</item>

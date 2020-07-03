@@ -2,15 +2,21 @@ package com.example.pbdexecutives
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.view.*
 import android.widget.AdapterView
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.lifecycle.lifecycleScope
 import androidx.room.Room
+import com.android.volley.DefaultRetryPolicy
+import com.google.android.material.snackbar.Snackbar
+import com.google.gson.Gson
+import com.google.gson.annotations.SerializedName
 import kotlinx.android.synthetic.main.activity_add_new_receipt.*
 import kotlinx.android.synthetic.main.activity_add_new_receipt.select_party_for_receipts
-import kotlinx.android.synthetic.main.activity_add_new_task.*
 import kotlinx.coroutines.launch
+import org.json.JSONObject
+import java.math.BigDecimal
 
 class AddNewReceiptActivity : AppCompatActivity() {
     private lateinit var parties: List<PartiesListItem>
@@ -140,6 +146,23 @@ class AddNewReceiptActivity : AppCompatActivity() {
         return retValue
     }
 
+    data class ReceiptDetailsObject (
+        @SerializedName("partyId") val partyId: String,
+        @SerializedName("cpName") val cpName: String,
+        @SerializedName("cpNumber") val cpNumber: Long,
+        @SerializedName("cpEmail") val cpEmail: String,
+        @SerializedName("amount") val amount: BigDecimal,
+        @SerializedName("paidBy") val paidBy: Byte,
+        @SerializedName("chequeNo") val chequeNo: String,
+        @SerializedName("ddNo") val ddNo: String,
+        @SerializedName("payment") val payment: Byte
+    )
+
+    data class RequestObject(
+        @SerializedName("apiKey") val apiKey: String,
+        @SerializedName("receiptDetails") val receiptDetails: ReceiptDetailsObject
+    )
+
     fun saveChanges(view: View) {
         //first validate the inputs and then save the data
 
@@ -148,6 +171,52 @@ class AddNewReceiptActivity : AppCompatActivity() {
             return
         }
 
-        
+        val cpName = cp_name.text.toString()
+        val cpNumber = cp_number.text.toString().toLong()
+        val cpEmail = cpEmail.text.toString()
+        val amount = amount.text.toString().toBigDecimal()
+        val paidBy =   if(paid_by_radio_group.checkedRadioButtonId == R.id.paid_by_radio_cheque) 1
+                            else if(paid_by_radio_group.checkedRadioButtonId == R.id.paid_by_radio_dd) 2 else 0
+        val chequeNo = if(paidBy == 1) cheque_no.text.toString() else ""
+        val ddNo = if(paidBy == 2) dd_no.text.toString() else ""
+        val payment = if(payment_radio_group.checkedRadioButtonId == R.id.payment_full) 1 else 0
+
+        if(!PbdExecutivesUtils().isInternetExists(this)) {
+            Snackbar.make(add_new_receipt_layout, "${getString(R.string.cannot_generate_the_receipt)} ${getString(R.string.no_internet_connection)}", Snackbar.LENGTH_LONG).show()
+            return
+        }
+
+        lifecycleScope.launch {
+            val db = Room.databaseBuilder(this@AddNewReceiptActivity, AppDB::class.java, "PbdDB").build()
+            val apiKey = db.userDetailsDao().getApiKey()
+            val requestJSONObject = JSONObject(Gson().toJson(RequestObject(
+                apiKey = apiKey,
+                receiptDetails = ReceiptDetailsObject(
+                    partyId = selectedPartyId,
+                    cpName = cpName,
+                    cpNumber = cpNumber,
+                    cpEmail = cpEmail,
+                    amount = amount,
+                    paidBy = paidBy.toByte(),
+                    chequeNo = chequeNo,
+                    ddNo = ddNo,
+                    payment = payment.toByte()
+                ))))
+
+            PbdExecutivesUtils().sendData(this@AddNewReceiptActivity, "generatereceipt", requestJSONObject,
+                { code, response ->
+                    Log.i("pbdLog", "response: $response")
+                },
+                { code, error ->
+                    Snackbar.make(add_new_receipt_layout, "${getString(R.string.cannot_generate_the_receipt)} ${error}", Snackbar.LENGTH_LONG).show()
+                },
+                DefaultRetryPolicy(
+                    DefaultRetryPolicy.DEFAULT_TIMEOUT_MS,
+                    DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                    DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
+                )
+            )
+        }
+
     }
 }
