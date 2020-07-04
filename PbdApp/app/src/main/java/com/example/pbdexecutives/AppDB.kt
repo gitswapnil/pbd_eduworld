@@ -122,7 +122,7 @@ data class Parties (
     @SerializedName("id") @PrimaryKey val id: String,
     @SerializedName("code") val code: String,
     @SerializedName("name") val name: String,
-    @SerializedName("cNumber") val cNumber: Long,
+    @SerializedName("cNumber") val cNumber: String,
     @SerializedName("address") val address: String,
     @SerializedName("updatedAt") val updatedAt: Long
 )
@@ -152,7 +152,7 @@ data class Tasks (
     val type: Short,
     val partyId: String?,
     val contactPersonName: String?,
-    val contactPersonNumber: Long?,
+    val contactPersonNumber: String?,
     val reasonForVisit: Short,
     val doneWithTask: Boolean,
     val reminder: Boolean,
@@ -170,7 +170,7 @@ data class TasksWithJoins (
     val partyName: String?,
     val partyAddress: String?,
     val contactPersonName: String?,
-    val contactPersonNumber: Long?,
+    val contactPersonNumber: String?,
     val reasonForVisit: Short,
     val doneWithTask: Boolean,
     val reminder: Boolean,
@@ -202,7 +202,7 @@ interface TasksDAO {
     suspend fun deleteTask(taskId: Long)
 
     @Query("UPDATE Tasks SET type=:type, partyId=:partyId, contactPersonName=:contactPersonName, contactPersonNumber=:contactPersonNumber, reasonForVisit=:reasonForVisit, doneWithTask=:doneWithTask, reminder=:reminder, remarks=:remarks, subject=:subject, synced=0 WHERE id=:id")
-    suspend fun updateTask(id:Long, type: Short, partyId: String?, contactPersonName: String?, contactPersonNumber: Long?, reasonForVisit: Short, doneWithTask: Boolean, reminder: Boolean, remarks: String, subject: String)
+    suspend fun updateTask(id:Long, type: Short, partyId: String?, contactPersonName: String?, contactPersonNumber: String?, reasonForVisit: Short, doneWithTask: Boolean, reminder: Boolean, remarks: String, subject: String)
 }
 
 //FollowUps
@@ -261,6 +261,13 @@ interface FollowUpsDAO {
     suspend fun deleteFollowUp(taskId: Long)
 }
 
+data class cpDetails(
+    @SerializedName("cpName") val cpName: String,
+    @SerializedName("cpNumber") val cpNumber: String,
+    @SerializedName("cpEmail") val cpEmail: String?,
+    @SerializedName("cpCreatedAt") val cpCreatedAt: Long
+)
+
 //Receipts
 @Entity(indices = [Index(value = ["id"], unique = true)])
 data class Receipts(
@@ -268,9 +275,29 @@ data class Receipts(
     @SerializedName("receiptNo") val receiptNo: Long,
     @SerializedName("partyId") val partyId: String,
     @SerializedName("cpName") val cpName: String,
-    @SerializedName("cpNumber") val cpNumber: Long,
-    @SerializedName("cpEmail") val cpEmail: String?,
-    @SerializedName("amount") val amount: String,
+    @SerializedName("cpNumber") val cpNumber: String,
+    @SerializedName("cpEmail") val cpEmail: String,
+    @SerializedName("amount") val amount: Double,
+    @SerializedName("paidBy") val paidBy: Byte,
+    @SerializedName("chequeNo") val chequeNo: String?,
+    @SerializedName("ddNo") val ddNo: String?,
+    @SerializedName("payment") val payment: Byte,
+    @SerializedName("serverId") val serverId: String?,
+    @SerializedName("createdAt") val createdAt: Long
+)
+
+data class ReceiptsWithJoins(
+    @PrimaryKey (autoGenerate = true) val id: Long = 0,
+    @SerializedName("receiptNo") val receiptNo: Long,
+    @SerializedName("partyId") val partyId: String,
+    @SerializedName("partyCode") val partyCode: String,
+    @SerializedName("partyName") val partyName: String,
+    @SerializedName("partyAddress") val partyAddress: String,
+    @SerializedName("partyPhNumber") val partyPhNumber: String,
+    @SerializedName("cpName") val cpName: String,
+    @SerializedName("cpNumber") val cpNumber: String,
+    @SerializedName("cpEmail") val cpEmail: String,
+    @SerializedName("amount") val amount: Double,
     @SerializedName("paidBy") val paidBy: Byte,
     @SerializedName("chequeNo") val chequeNo: String?,
     @SerializedName("ddNo") val ddNo: String?,
@@ -283,6 +310,12 @@ data class Receipts(
 interface ReceiptsDAO{
     @Insert
     suspend fun addReceipt(receipts: Receipts)
+
+    @Query("SELECT r.id, r.receiptNo, r.partyId, p.code as partyCode, p.name as partyName, p.address as partyAddress, p.cNumber as partyPhNumber, group_concat(r.cpName) as cpName, group_concat(r.cpNumber) as cpNumber, group_concat(r.cpEmail) as cpEmail, r.amount, r.paidBy, r.chequeNo, r.ddNo, r.payment, r.createdAt, r.serverId FROM Receipts AS r LEFT JOIN Parties AS p ON r.partyId=p.id GROUP BY r.serverId ORDER BY r.createdAt DESC LIMIT :limit OFFSET :offset")
+    suspend fun getReceipts(limit: Int, offset: Int): List<ReceiptsWithJoins>
+
+    @Query("SELECT r.id, r.receiptNo, r.partyId, p.code as partyCode, p.name as partyName, p.address as partyAddress, p.cNumber as partyPhNumber, group_concat(r.cpName) as cpName, group_concat(r.cpNumber) as cpNumber, group_concat(r.cpEmail) as cpEmail, r.amount, r.paidBy, r.chequeNo, r.ddNo, r.payment, r.createdAt, r.serverId FROM Receipts AS r LEFT JOIN Parties AS p ON r.partyId=p.id WHERE r.id=:id GROUP BY r.serverId")
+    suspend fun getReceiptDetails(id: Long): ReceiptsWithJoins
 }
 
 @Database (entities = [ DeletedIds::class,

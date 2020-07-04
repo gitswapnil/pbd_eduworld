@@ -17,8 +17,9 @@ tasks.attachSchema(new SimpleSchema({
 		optional: true
 	},
 	cpNumber: { 
-		type: Number, 
-		optional: true 
+		type: String,
+		regEx: SimpleSchema.RegEx.Phone,
+		optional: true
 	},
 	reason: { 
 		type: Number,

@@ -42,7 +42,7 @@ data class TasksObject(
     @SerializedName("type") val type: Short?,
     @SerializedName("partyId") val partyId: String?,
     @SerializedName("cpName") val cpName: String?,
-    @SerializedName("cpNumber") val cpNumber: Long?,
+    @SerializedName("cpNumber") val cpNumber: String?,
     @SerializedName("reason") val reason: Short,
     @SerializedName("doneWithTask") val doneWithTask: Boolean,
     @SerializedName("reminder") val reminder: Boolean,

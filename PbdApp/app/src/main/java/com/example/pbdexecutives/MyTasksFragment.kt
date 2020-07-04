@@ -68,7 +68,7 @@ class MyTasksFragment : Fragment() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
-        Log.i("pbdLog", "requestCode: $requestCode, resultCode: $resultCode, data: $data")
+//        Log.i("pbdLog", "requestCode: $requestCode, resultCode: $resultCode, data: $data")
         if (requestCode == 43 && resultCode == RESULT_OK && data != null) {
             reloadData()
         } else if(requestCode == 54 && resultCode == RESULT_OK && data != null) {

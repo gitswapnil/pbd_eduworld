@@ -88,7 +88,7 @@
     <string name="part">Part</string>
     <string name="full">Full</string>
     <string name="next">Next</string>
-    <string name="cannot_generate_the_receipt">Cannot generate the receipt.</string>
+    <string name="cannot_generate_the_receipt">Cannot generate the receipt. Please try again.</string>
     <string name="no_internet_connection">No internet connection</string>
     <string name="receipt_preview">Receipt Preview</string>
     <string name="receipt_company_header">M/S. PBD Eduworld PVT. LTD.</string>
@@ -99,6 +99,7 @@
     <string name="mobile">Mobile:\u0020</string>
     <string name="receipt_company_mobile">9341108584, 9845646605</string>
     <string name="receipt_representative">Representative:</string>
+    <string name="receipt_no">Receipt No.:</string>
     <string name="date">Date:</string>
     <string name="customer_code">Customer Code:</string>
     <string name="cust_contact">Customer Contact:</string>
@@ -111,7 +112,11 @@
     <string name="receipt_condition">Receipt valid subject to realization of Cheque</string>
     <string name="send_receipt">Send Receipt</string>
     <string name="confirm_send_receipt">Are you sure, you want to send this receipt to </string>
-    <string name="this_receipt_is_sent_to">This receipt is sent to, </string>
+    <string name="this_receipt_is_sent_to">This receipt is sent to \u0020</string>
+    <string name="send_to_name">Name</string>
+    <string name="send_receipt_to">Send Receipt to</string>
+    <string name="please_wait">Please Wait</string>
+    <string name="sending_receipt">Sending the Receipt...</string>
 
     <string-array name="task_done_questions">
         <item>Done with Sampling?</item>

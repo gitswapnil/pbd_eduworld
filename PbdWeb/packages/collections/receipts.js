@@ -3,48 +3,56 @@ import SimpleSchema from 'simpl-schema';
 const receipts = new Mongo.Collection("receipts");
 
 receipts.attachSchema(new SimpleSchema({
-	receiptNo: {
+	"receiptNo": {
 		type: Number,
 	},
-	partyId: {
+	"partyId": {
 		type: String,
 		regEx: SimpleSchema.RegEx.Id
 	},
-	cpName: {
-		type: String,
-
+	"cpList": {
+		type: Array
 	},
-	cpNumber: {
+	"cpList.$": {
+		type: Object
+	},
+	"cpList.$.cpName": {
+		type: String
+	},
+	"cpList.$.cpNumber": {
 		type: String,
 		regEx: SimpleSchema.RegEx.Phone
 	},
-	cpEmail: {
+	"cpList.$.cpEmail": {
 		type: String,
 		regEx: SimpleSchema.RegEx.Email,
 		optional: true
 	},
-	amount: {
+	"cpList.$.createdAt": {
+		type: Date,
+	},
+	"amount": {
 		type: Number
 	},
-	paidBy: {
+	"paidBy": {
 		type: Number
 	},
-	chequeNo: {
+	"chequeNo": {
 		type: String,
 		optional: true
 	},
-	ddNo: {
+	"ddNo": {
 		type: String,
 		optional: true
 	},
-	payment: {
+	"payment": {
 		type: Number
 	},
-	userId: { 
+	"userId": { 
 		type: String, 
 		regEx: SimpleSchema.RegEx.Id 
 	},
-	createdAt: { 
+	"createdAt": { 
 		type: Date
 	}
 }))

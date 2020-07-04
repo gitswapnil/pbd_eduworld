@@ -1,5 +1,6 @@
 package com.example.pbdexecutives
 
+import android.app.Activity
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -23,6 +24,14 @@ class AddNewReceiptActivity : AppCompatActivity() {
     private lateinit var parties: List<PartiesListItem>
     private lateinit var selectedPartyId: String
     private lateinit var selectedPartyName: String
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == 34 && resultCode == Activity.RESULT_OK) {
+            finish()
+        }
+    }
 
     override fun onOptionsItemSelected(item: MenuItem) =
         when (item.itemId) {
@@ -117,16 +126,6 @@ class AddNewReceiptActivity : AppCompatActivity() {
             retValue = false
         }
 
-        if(cp_name.text == null || cp_name.text.toString() == "") {
-            cp_name.error = getString(R.string.this_field_is_required)
-            retValue = false
-        }
-
-        if(cp_number.text == null || cp_number.text.toString() == "") {
-            cp_number.error = getString(R.string.this_field_is_required)
-            retValue = false
-        }
-
         if(amount.text == null || amount.text.toString() == "") {
             amount.error = getString(R.string.this_field_is_required)
             retValue = false
@@ -155,9 +154,6 @@ class AddNewReceiptActivity : AppCompatActivity() {
             return
         }
 
-        val cpName = cp_name.text.toString()
-        val cpNumber = cp_number.text.toString().toLong()
-        val cpEmail = cpEmail.text.toString()
         val amount = amount.text.toString()
         val paidBy =   if(paid_by_radio_group.checkedRadioButtonId == R.id.paid_by_radio_cheque) 1
                             else if(paid_by_radio_group.checkedRadioButtonId == R.id.paid_by_radio_dd) 2 else 0
@@ -172,14 +168,11 @@ class AddNewReceiptActivity : AppCompatActivity() {
 
         val intent = Intent(this, ReceiptPreviewActivity::class.java)
         intent.putExtra("partyId", selectedPartyId)
-        intent.putExtra("cpName", cpName)
-        intent.putExtra("cpNumber", cpNumber)
-        intent.putExtra("cpEmail", cpEmail)
         intent.putExtra("amount", amount)
         intent.putExtra("paidBy", paidBy.toByte())
         intent.putExtra("chequeNo", chequeNo)
         intent.putExtra("ddNo", ddNo)
         intent.putExtra("payment", payment.toByte())
-        startActivity(intent)
+        startActivityForResult(intent, 34)
     }
 }

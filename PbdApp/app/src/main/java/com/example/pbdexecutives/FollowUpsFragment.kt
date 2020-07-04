@@ -36,6 +36,7 @@ class FollowUpsFragment : Fragment() {
     private var offset: Int = 0
     private var isLoading = false
     private var initializing = true
+
     private lateinit var db: AppDB
 
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -465,7 +465,7 @@ class AddNewTaskActivity : AppCompatActivity() {
         val type: Int = task_type.selectedItemPosition
         val partyId: String? = if(type == 0) selectedPartyId else null
         val contactPersonName: String? = if(type == 0) contact_person_name.text.toString() else null
-        val contactPersonNumber: Long? = if(type == 0) contact_person_number.text.toString().toLong() else null
+        val contactPersonNumber: String? = if(type == 0) contact_person_number.text.toString() else null
         val reasonForVisit: Int = reason_for_visit.selectedItemPosition
         val doneWithTask: Boolean = (done_with_task.checkedRadioButtonId == R.id.task_done_yes)
         val reminder: Boolean = (set_reminder.checkedRadioButtonId == R.id.reminder_yes)

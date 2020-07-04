@@ -1,11 +1,17 @@
 package com.example.pbdexecutives
 
+import android.app.Activity
 import android.content.DialogInterface
+import android.content.DialogInterface.OnShowListener
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.text.Editable
 import android.util.Log
 import android.view.MenuItem
 import android.view.View
+import android.widget.Button
+import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import androidx.room.Room
@@ -14,6 +20,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import kotlinx.android.synthetic.main.activity_receipt_preview.*
+import kotlinx.android.synthetic.main.receipt_receiver_details.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -23,15 +30,17 @@ import java.util.*
 import kotlin.properties.Delegates
 
 class ReceiptPreviewActivity : AppCompatActivity() {
+    private var receiptId by Delegates.notNull<Long>()
     private lateinit var partyId: String
     private lateinit var cpName: String
-    private var cpNumber by Delegates.notNull<Long>()
+    private lateinit var cpNumber: String
     private lateinit var cpEmail: String
-    private lateinit var amount: BigDecimal
+    private lateinit var amount: String
     private var paidBy by Delegates.notNull<Byte>()
     private lateinit var chequeNo: String
     private lateinit var ddNo: String
     private var payment by Delegates.notNull<Byte>()
+    private lateinit var alertDialog: AlertDialog
 
     override fun onOptionsItemSelected(item: MenuItem) =
         when (item.itemId) {
@@ -53,16 +62,6 @@ class ReceiptPreviewActivity : AppCompatActivity() {
 
         setSupportActionBar(findViewById(R.id.receipt_preview_toolbar))
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-
-        partyId = intent.getStringExtra("partyId")
-        cpName = intent.getStringExtra("cpName")
-        cpNumber = intent.getLongExtra("cpNumber", 0)
-        cpEmail = intent.getStringExtra("cpEmail")
-        amount = intent.getStringExtra("amount").toBigDecimal()
-        paidBy = intent.getByteExtra("paidBy", 0)
-        chequeNo = intent.getStringExtra("chequeNo")
-        ddNo = intent.getStringExtra("ddNo")
-        payment = intent.getByteExtra("payment", 0)
     }
 
     override fun onResume() {
@@ -70,29 +69,116 @@ class ReceiptPreviewActivity : AppCompatActivity() {
 
         val db = Room.databaseBuilder(this@ReceiptPreviewActivity, AppDB::class.java, "PbdDB").build()
         GlobalScope.launch {
+            receiptId = intent.getLongExtra("receiptId", 0)
             val thisUser = db.userDetailsDao().getCurrentUser()
-            val partyDetails = db.partiesDao().getPartyDetails(id = partyId)
             representative.text = thisUser.name
-            receipt_date.text = SimpleDateFormat("dd/MM/yy").format(Date())
-            customer_code.text = partyDetails.code
-            customer_name.text = partyDetails.name
-            customer_address.text = partyDetails.address
-            customer_contact.text = partyDetails.cNumber.toString()
+
+            if(receiptId == 0.toLong()) {
+                partyId = intent.getStringExtra("partyId")
+                amount = intent.getStringExtra("amount")
+                paidBy = intent.getByteExtra("paidBy", 0)
+                chequeNo = intent.getStringExtra("chequeNo")
+                ddNo = intent.getStringExtra("ddNo")
+                payment = intent.getByteExtra("payment", 0)
+
+                val partyDetails = db.partiesDao().getPartyDetails(id = partyId)
+                receipt_date.text = SimpleDateFormat("dd/MM/yy").format(Date())
+                customer_code.text = partyDetails.code
+                customer_name.text = partyDetails.name
+                customer_address.text = partyDetails.address
+                customer_contact.text = partyDetails.cNumber.toString()
+
+                receipt_no_row.visibility = View.GONE
+                this_receipt_sent_to.visibility = View.GONE
+                receipt_sent_to.visibility = View.GONE
+
+            } else {
+                val receiptDetails = db.receiptsDao().getReceiptDetails(id = receiptId)
+
+                partyId = receiptDetails.partyId
+                amount = receiptDetails.amount.toString()
+                paidBy = receiptDetails.paidBy
+                chequeNo = receiptDetails.chequeNo.toString()
+                ddNo = receiptDetails.ddNo.toString()
+                payment = receiptDetails.payment
+
+                receipt_date.text = SimpleDateFormat("dd/MM/yy").format(Date())
+                customer_code.text = receiptDetails.partyCode
+                customer_name.text = receiptDetails.partyName
+                customer_address.text = receiptDetails.partyAddress
+                customer_contact.text = receiptDetails.partyPhNumber
+
+                receipt_no_row.visibility = View.VISIBLE
+                receipt_no.text = receiptDetails.receiptNo.toString()
+
+                this_receipt_sent_to.visibility = View.VISIBLE
+                receipt_sent_to.visibility = View.VISIBLE
+                receipt_sent_to.text = "${receiptDetails.cpNumber} (${receiptDetails.cpName})"
+            }
+
             paid_by.text = if(paidBy == 1.toByte()) getString(R.string.cheque)
                             else if(paidBy == 2.toByte()) getString(R.string.demand_draft) else getString(R.string.cash)
             cheque_no.text = if(chequeNo != null && chequeNo != "") chequeNo else ""
             dd_no.text = if(ddNo != null && ddNo != "") ddNo else ""
             receipt_payment.text = if(payment == 1.toByte()) getString(R.string.full) else getString(R.string.part)
-            paid_amount.text = amount.toString()
-            receipt_sent_to.text = "${cpName} (${cpNumber}), ${cpEmail}"
+            paid_amount.text = "${getString(R.string.rupee)} $amount"
         }
 
+    }
+
+    private fun validateDialogInputs(view: View): Boolean {
+        var retValue: Boolean = true
+
+        val receipt_send_to_dialog_ph_number = view.findViewById<EditText>(R.id.receipt_send_to_dialog_ph_number)
+        val receipt_send_to_dialog_cp_name = view.findViewById<EditText>(R.id.receipt_send_to_dialog_cp_name)
+
+        if(receipt_send_to_dialog_ph_number.text == null || receipt_send_to_dialog_ph_number.text.toString() == "") {
+            receipt_send_to_dialog_ph_number.error = getString(R.string.this_field_is_required)
+            retValue = false
+        }
+
+        if(receipt_send_to_dialog_cp_name.text == null || receipt_send_to_dialog_cp_name.text.toString() == "") {
+            receipt_send_to_dialog_cp_name.error = getString(R.string.this_field_is_required)
+            retValue = false
+        }
+
+        return retValue
+    }
+
+    fun showSendAlert(view: View) {
+        val builder = AlertDialog.Builder(this)
+        val inflater = this.layoutInflater
+        val dialogView = inflater.inflate(R.layout.receipt_receiver_details, null)
+
+        alertDialog = builder   .setView(dialogView)
+                                .setPositiveButton(R.string.ok, null)
+                                .setNegativeButton(R.string.cancel, DialogInterface.OnClickListener { dialog, id ->
+                                    // User cancelled the dialog
+                                    dialog.dismiss()
+                                })
+                                .setCancelable(false)
+                                .setTitle(R.string.send_receipt_to)
+                                .create()
+        alertDialog.setOnShowListener {
+            val button: Button = (alertDialog as AlertDialog).getButton(AlertDialog.BUTTON_POSITIVE)
+            button.setOnClickListener(View.OnClickListener {
+                // User clicked OK button
+                if(validateDialogInputs(dialogView)) {
+                    cpNumber = dialogView.findViewById<EditText>(R.id.receipt_send_to_dialog_ph_number).text.toString()
+                    cpName = dialogView.findViewById<EditText>(R.id.receipt_send_to_dialog_cp_name).text.toString()
+                    cpEmail = dialogView.findViewById<EditText>(R.id.receipt_send_to_dialog_cp_email).text.toString()
+                    sendReceipt()
+                }
+
+            })
+        }
+        alertDialog.show()
     }
 
     data class ReceiptDetailsObject (
         @SerializedName("partyId") val partyId: String,
         @SerializedName("cpName") val cpName: String,
-        @SerializedName("cpNumber") val cpNumber: Long,
+        @SerializedName("cpNumber") val cpNumber: String,
         @SerializedName("cpEmail") val cpEmail: String,
         @SerializedName("amount") val amount: BigDecimal,
         @SerializedName("paidBy") val paidBy: Byte,
@@ -106,31 +192,25 @@ class ReceiptPreviewActivity : AppCompatActivity() {
         @SerializedName("receiptDetails") val receiptDetails: ReceiptDetailsObject
     )
 
-    fun showSendAlert(view: View) {
-        val alertDialog: AlertDialog? = this.let {
+    private fun sendReceipt() {
+        alertDialog.dismiss()
+
+        val sendingReceiptDialog = this.let {
             val builder = AlertDialog.Builder(it)
-            builder.apply {
-                setPositiveButton(R.string.yes,
-                    DialogInterface.OnClickListener { dialog, id ->
-                        // User clicked OK button
-                        sendReceipt()
-                    })
-                setNegativeButton(R.string.cancel,
-                    DialogInterface.OnClickListener { dialog, id ->
-                        // User cancelled the dialog
-                    })
-            }
+            val inflater = this.layoutInflater
+
+            builder.setView(inflater.inflate(R.layout.receipt_sending_loader, null))
+
             // Set other dialog properties
-            builder.setTitle(R.string.confirm).setMessage("${getString(R.string.confirm_send_receipt)} ${cpNumber.toString()}")
+            builder.setTitle(R.string.please_wait)
+//            .setMessage("${getString(R.string.confirm_send_receipt)} ${cpNumber.toString()}")
+            builder.setCancelable(false)
 
             // Create the AlertDialog
             builder.create()
         }
 
-        alertDialog?.show()
-    }
-
-    private fun sendReceipt() {
+        sendingReceiptDialog.show()
         lifecycleScope.launch {
             val db = Room.databaseBuilder(this@ReceiptPreviewActivity, AppDB::class.java, "PbdDB").build()
             val apiKey = db.userDetailsDao().getApiKey()
@@ -142,11 +222,11 @@ class ReceiptPreviewActivity : AppCompatActivity() {
                         cpName = cpName,
                         cpNumber = cpNumber,
                         cpEmail = cpEmail,
-                        amount = amount,
-                        paidBy = paidBy.toByte(),
+                        amount = amount.toBigDecimal(),
+                        paidBy = paidBy,
                         chequeNo = chequeNo,
                         ddNo = ddNo,
-                        payment = payment.toByte()
+                        payment = payment
                     ))
                 ))
 
@@ -158,12 +238,15 @@ class ReceiptPreviewActivity : AppCompatActivity() {
                         Receipts::class.java
                     );      //convert the response back into JSON Object from the response string
 
+                    sendingReceiptDialog.dismiss()
                     GlobalScope.launch {
                         db.receiptsDao().addReceipt(responseObject)
-
+                        setResult(Activity.RESULT_OK)
+                        finish()
                     }
                 },
                 { code, error ->
+                    sendingReceiptDialog.dismiss()
                     Snackbar.make(receipt_preview_layout, "${getString(R.string.cannot_generate_the_receipt)} $error", Snackbar.LENGTH_LONG).show()
                 },
                 DefaultRetryPolicy(
@@ -173,6 +256,5 @@ class ReceiptPreviewActivity : AppCompatActivity() {
                 )
             )
         }
-
     }
 }
