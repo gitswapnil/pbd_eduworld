@@ -154,7 +154,16 @@ class AddNewReceiptActivity : AppCompatActivity() {
             return
         }
 
-        val amount = amount.text.toString()
+        var amountString = amount.text.toString()
+        if(!Regex("^([0-9]+\\.[0-9][0-9])\$").matches(amountString)) {
+            if(Regex("[0-9]+").matches(amountString)){
+                amountString += ".00"
+            } else {
+                amount.error = getString(R.string.invalid_amount)
+                return
+            }
+        }
+
         val paidBy =   if(paid_by_radio_group.checkedRadioButtonId == R.id.paid_by_radio_cheque) 1
                             else if(paid_by_radio_group.checkedRadioButtonId == R.id.paid_by_radio_dd) 2 else 0
         val chequeNo = if(paidBy == 1) cheque_no.text.toString() else ""
@@ -168,7 +177,7 @@ class AddNewReceiptActivity : AppCompatActivity() {
 
         val intent = Intent(this, ReceiptPreviewActivity::class.java)
         intent.putExtra("partyId", selectedPartyId)
-        intent.putExtra("amount", amount)
+        intent.putExtra("amount", amountString)
         intent.putExtra("paidBy", paidBy.toByte())
         intent.putExtra("chequeNo", chequeNo)
         intent.putExtra("ddNo", ddNo)

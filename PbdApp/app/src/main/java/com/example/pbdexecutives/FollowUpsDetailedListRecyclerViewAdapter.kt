@@ -35,7 +35,7 @@ class FollowUpsDetailedListRecyclerViewAdapter(
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val followUpFor: TextView = view.findViewById(R.id.follow_up_for)
         val completedOn: TextView = view.findViewById(R.id.completed_on)
-        val cpName: TextView = view.findViewById(R.id.cp_number)
+        val cpName: TextView = view.findViewById(R.id.cp_name)
         val cpNumber: TextView = view.findViewById(R.id.cp_number)
     }
 }

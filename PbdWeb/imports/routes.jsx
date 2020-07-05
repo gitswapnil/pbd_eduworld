@@ -729,7 +729,7 @@ if(Meteor.isClient) {
 				cpName: String,
 				cpNumber: Long,
 				cpEmail: String,
-				amount: Number,
+				amount: String,
 				paidBy: 0, 1, 2
 				chequeNo: String,
 				ddNo: String,
@@ -744,7 +744,7 @@ if(Meteor.isClient) {
 				cpName: String,
 				cpNumber: Long,
 				cpEmail: String,
-				amount: Number,
+				amount: String,
 				paidBy: 0, 1, 2
 				chequeNo: String,
 				ddNo: String,
@@ -771,7 +771,7 @@ if(Meteor.isClient) {
 			return;
 		}
 
-		if(receiptDetails.cpEmail && (receiptDetails.cpEmail != "")) {
+		if(receiptDetails.cpEmail && receiptDetails.cpEmail != "") {
 			const validationContext = new SimpleSchema({ cpEmail: { type: String, regEx: SimpleSchema.RegEx.Email }}).newContext();
 			if(!validationContext.validate({ cpEmail: receiptDetails.cpEmail })) {
 				throw new Error("Invalid email.");
@@ -831,14 +831,17 @@ if(Meteor.isClient) {
 					const cpList = {
 						cpName: receiptDetails.cpName,
 						cpNumber: receiptDetails.cpNumber,
-						cpEmail: receiptDetails.cpEmail,
+						cpEmail: (receiptDetails.cpEmail == "") ? undefined : receiptDetails.cpEmail,
 						createdAt: new Date()
 					}
+					console.log("cpList: " + JSON.stringify(cpList))
 					Collections.receipts.update({ _id: serverId }, { $push: { cpList } });
 
 					const retObj = Collections.receipts.findOne({ _id: serverId })
 					retObj.serverId = retObj._id;
 					delete retObj._id;
+					delete retObj.cpList;
+					Object.assign(retObj, cpList);
 					retObj.createdAt = moment(cpList.createdAt).valueOf()
 					resolve(retObj);
 				} catch(e) {
@@ -856,7 +859,7 @@ if(Meteor.isClient) {
 					const cpObj = {
 						cpName: receiptDetails.cpName,
 	        			cpNumber: receiptDetails.cpNumber,
-	        			cpEmail: receiptDetails.cpEmail,
+	        			cpEmail: (receiptDetails.cpEmail == "") ? undefined : receiptDetails.cpEmail,
 	        			createdAt: new Date()
 		        	};
 
@@ -866,7 +869,7 @@ if(Meteor.isClient) {
 			        	receiptNo: autoIndex,
 			        	partyId: receiptDetails.partyId,
 			        	cpList: [ cpObj ],
-			        	amount: receiptDetails.amount,
+			        	amount: parseFloat(receiptDetails.amount).toFixed(2),
 			        	paidBy: receiptDetails.paidBy,
 			        	chequeNo: receiptDetails.chequeNo,
 			        	ddNo: receiptDetails.ddNo,
@@ -886,7 +889,7 @@ if(Meteor.isClient) {
 					        	cpName: cpObj.cpName,
 								cpNumber: cpObj.cpNumber,
 								cpEmail: cpObj.cpEmail,
-					        	amount: receipt.amount,
+					        	amount: String(receipt.amount),
 					        	paidBy: receipt.paidBy,
 					        	chequeNo: receipt.chequeNo,
 					        	ddNo: receipt.ddNo,

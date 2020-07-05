@@ -55,7 +55,7 @@ class FollowUpDetailActivity : AppCompatActivity() {
             if(followUp != null) {
                 party_name.text = followUp.partyName
                 party_address.text = followUp.partyAddress
-                cp_number.text = followUp.cpName
+                cp_name.text = followUp.cpName
                 cp_number.text = followUp.cpNumber.toString()
                 reminder_date.text = if(followUp.reminderDate != null) SimpleDateFormat("dd/MM/yy").format(Date(followUp.reminderDate)) else null
                 follow_up_for.text = if(followUp.followUpFor != null) {

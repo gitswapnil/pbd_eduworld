@@ -276,8 +276,8 @@ data class Receipts(
     @SerializedName("partyId") val partyId: String,
     @SerializedName("cpName") val cpName: String,
     @SerializedName("cpNumber") val cpNumber: String,
-    @SerializedName("cpEmail") val cpEmail: String,
-    @SerializedName("amount") val amount: Double,
+    @SerializedName("cpEmail") val cpEmail: String?,
+    @SerializedName("amount") val amount: String,
     @SerializedName("paidBy") val paidBy: Byte,
     @SerializedName("chequeNo") val chequeNo: String?,
     @SerializedName("ddNo") val ddNo: String?,
@@ -296,14 +296,15 @@ data class ReceiptsWithJoins(
     @SerializedName("partyPhNumber") val partyPhNumber: String,
     @SerializedName("cpName") val cpName: String,
     @SerializedName("cpNumber") val cpNumber: String,
-    @SerializedName("cpEmail") val cpEmail: String,
-    @SerializedName("amount") val amount: Double,
+    @SerializedName("cpEmail") val cpEmail: String?,
+    @SerializedName("amount") val amount: String,
     @SerializedName("paidBy") val paidBy: Byte,
     @SerializedName("chequeNo") val chequeNo: String?,
     @SerializedName("ddNo") val ddNo: String?,
     @SerializedName("payment") val payment: Byte,
     @SerializedName("serverId") val serverId: String?,
-    @SerializedName("createdAt") val createdAt: Long
+    @SerializedName("createdAt") val createdAt: Long,
+    @SerializedName("concatCreatedAt") val concatCreatedAt: String?
 )
 
 @Dao
@@ -311,10 +312,10 @@ interface ReceiptsDAO{
     @Insert
     suspend fun addReceipt(receipts: Receipts)
 
-    @Query("SELECT r.id, r.receiptNo, r.partyId, p.code as partyCode, p.name as partyName, p.address as partyAddress, p.cNumber as partyPhNumber, group_concat(r.cpName) as cpName, group_concat(r.cpNumber) as cpNumber, group_concat(r.cpEmail) as cpEmail, r.amount, r.paidBy, r.chequeNo, r.ddNo, r.payment, r.createdAt, r.serverId FROM Receipts AS r LEFT JOIN Parties AS p ON r.partyId=p.id GROUP BY r.serverId ORDER BY r.createdAt DESC LIMIT :limit OFFSET :offset")
+    @Query("SELECT * FROM (SELECT r.id, r.receiptNo, r.partyId, p.code as partyCode, p.name as partyName, p.address as partyAddress, p.cNumber as partyPhNumber, r.cpName, r.cpNumber, r.cpEmail, r.amount, r.paidBy, r.chequeNo, r.ddNo, r.payment, r.createdAt, r.serverId, null as concatCreatedAt FROM Receipts AS r LEFT JOIN Parties AS p ON r.partyId=p.id ORDER BY r.createdAt ASC) GROUP BY serverId LIMIT :limit OFFSET :offset")
     suspend fun getReceipts(limit: Int, offset: Int): List<ReceiptsWithJoins>
 
-    @Query("SELECT r.id, r.receiptNo, r.partyId, p.code as partyCode, p.name as partyName, p.address as partyAddress, p.cNumber as partyPhNumber, group_concat(r.cpName) as cpName, group_concat(r.cpNumber) as cpNumber, group_concat(r.cpEmail) as cpEmail, r.amount, r.paidBy, r.chequeNo, r.ddNo, r.payment, r.createdAt, r.serverId FROM Receipts AS r LEFT JOIN Parties AS p ON r.partyId=p.id WHERE r.id=:id GROUP BY r.serverId")
+    @Query("SELECT rr.id, rr.receiptNo, rr.partyId, rr.partyCode, rr.partyName, rr.partyAddress, rr.partyPhNumber, group_concat(cpName) as cpName, group_concat(cpNumber) as cpNumber, group_concat(cpEmail) as cpEmail, rr.amount, rr.paidBy, rr.chequeNo, rr.ddNo, rr.payment, rr.serverId, rr.createdAt, group_concat(createdAt) as concatCreatedAt FROM (SELECT r.*, p.code as partyCode, p.name as partyName, p.address as partyAddress, p.cNumber as partyPhNumber FROM Receipts AS r LEFT JOIN Parties AS p ON r.partyId=p.id ORDER BY r.createdAt DESC) AS rr LEFT JOIN (SELECT rt.serverId FROM Receipts AS rt WHERE rt.id=:id) AS rs ON rr.serverId=rs.serverId WHERE rr.serverId=rs.serverId GROUP BY rr.serverId")
     suspend fun getReceiptDetails(id: Long): ReceiptsWithJoins
 }
 

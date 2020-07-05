@@ -15,14 +15,15 @@ if(Meteor.isClient) {
 	import ExecutiveMap from './ExecutiveMap';
 
 	const IndividualStatus = (props) => {
-		const [showDetails, setShowDetails] = useState(false);
 		const [showLive, setShowLive] = useState(false);
+		const [showVisits, setShowVisits] = useState(false);
+		const [showFollowUps, setShowFollowUps] = useState(false);
 
 		return (
 			<div className="container">
 				<div className="row">
-					<div className="col-12 status-block" style={{paddingBottom: `${showDetails ? "10px" : "0"}`}}>
-						<div className="container" style={{paddingBottom: `${showDetails ? "0" : "10px"}`}}>
+					<div className="col-12 status-block" style={{paddingBottom: `${(showLive || showVisits || showFollowUps) ? "10px" : "0"}`}}>
+						<div className="container" style={{paddingBottom: `${(showLive || showVisits || showFollowUps) ? "0" : "10px"}`}}>
 							<div className="row">
 								<div className="col-5">
 									<div className="row">
@@ -62,17 +63,22 @@ if(Meteor.isClient) {
 							</div>
 						</div>
 						<div className="container">
-							<div className="row" style={{height: `${showDetails ? "500px" : "0px"}`}}>
+							<div className="row" style={{height: `${(showLive || showVisits || showFollowUps) ? "500px" : "0px"}`}}>
 								<div className="col-8">
 									<div style={{height: "0px", textAlign: "right"}}>
 										<button className="btn btn-primary btn-sm" 
 												style={{borderRadius: "5px 5px 0 0", marginTop: "-4em"}}
-												onClick={() => {setShowDetails(!showDetails), setShowLive(!showLive)}}
+												onClick={() => {
+													setShowLive(!showLive)
+													if(!showVisits && !showFollowUps) {
+														setShowVisits(true)
+													}
+												}}
 												disabled={(props.sessions === null)}>
 											<FontAwesomeIcon icon={faMapMarkerAlt} size="sm"/> &nbsp;Live
 										</button>
 									</div>
-									<div style={{"border": `${showDetails ? "1px solid #888" : ""}`, height: "100%"}}>
+									<div style={{"border": `${showLive ? "1px solid #888" : ""}`, height: "100%"}}>
 										{
 											showLive ? 
 											(() => {
@@ -88,19 +94,19 @@ if(Meteor.isClient) {
 									<div style={{height: "0px", textAlign: "right"}}>
 										<button className="btn btn-primary btn-sm" 
 												style={{borderRadius: "5px 5px 0 0", marginTop: "-4em", fontSize: "small"}}
-												onClick={() => {setShowDetails(!showDetails)}}
+												onClick={() => {setShowVisits(!showVisits)}}
 												disabled={(props.sessions === null)}>
 											Vists: 0
 										</button>
 										&nbsp;&nbsp;
 										<button className="btn btn-primary btn-sm" 
 												style={{borderRadius: "5px 5px 0 0", marginTop: "-4em", fontSize: "small"}}
-												onClick={() => {setShowDetails(!showDetails)}}
+												onClick={() => {setShowFollowUps(!showFollowUps)}}
 												>
 											Follow Ups: 0/0
 										</button>
 									</div>
-									<div style={{"border": `${showDetails ? "1px solid #888" : ""}`, height: "100%"}}>
+									<div style={{"border": `${(showLive || showVisits || showFollowUps) ? "1px solid #888" : ""}`, height: "100%"}}>
 										
 									</div>
 								</div>

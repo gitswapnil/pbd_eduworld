@@ -437,8 +437,7 @@
                 android:layout_marginTop="8dp"
                 android:text="@string/this_receipt_is_sent_to"
                 android:textSize="12sp"
-                app:layout_constraintEnd_toStartOf="@+id/receipt_sent_to"
-                app:layout_constraintHorizontal_bias="0.5"
+                app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_chainStyle="packed"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/textView74"
@@ -446,14 +445,18 @@
 
             <TextView
                 android:id="@+id/receipt_sent_to"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginLeft="8dp"
+                android:layout_marginEnd="8dp"
+                android:layout_marginRight="8dp"
+                android:singleLine="false"
                 android:text="TextView"
                 android:textSize="12sp"
-                app:layout_constraintBaseline_toBaselineOf="@+id/this_receipt_sent_to"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintHorizontal_bias="0.5"
-                app:layout_constraintStart_toEndOf="@+id/this_receipt_sent_to"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/this_receipt_sent_to"
                 tools:visibility="gone" />
 
             <Button
@@ -473,7 +476,7 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/this_receipt_sent_to" />
+                app:layout_constraintTop_toBottomOf="@+id/receipt_sent_to" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </ScrollView>

@@ -119,7 +119,7 @@ class ReceiptsFragment : Fragment() {
                         id = it.id,
                         receiptNo = it.receiptNo,
                         partyName = it.partyName,
-                        partyAddress = it.partyAddress,
+                        amount = "${getString(R.string.rupee)} ${it.amount.toBigDecimal().toPlainString()}",
                         cpName = it.cpName,
                         cpNumber = it.cpNumber,
                         createdAt = SimpleDateFormat("dd/MM/yy").format(it.createdAt),

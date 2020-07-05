@@ -30,7 +30,8 @@ import java.util.*
 import kotlin.properties.Delegates
 
 class ReceiptPreviewActivity : AppCompatActivity() {
-    private var receiptId by Delegates.notNull<Long>()
+    private var receiptId: Long = 0
+    private var serverId: String? = null
     private lateinit var partyId: String
     private lateinit var cpName: String
     private lateinit var cpNumber: String
@@ -62,10 +63,6 @@ class ReceiptPreviewActivity : AppCompatActivity() {
 
         setSupportActionBar(findViewById(R.id.receipt_preview_toolbar))
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-    }
-
-    override fun onResume() {
-        super.onResume()
 
         val db = Room.databaseBuilder(this@ReceiptPreviewActivity, AppDB::class.java, "PbdDB").build()
         GlobalScope.launch {
@@ -95,14 +92,15 @@ class ReceiptPreviewActivity : AppCompatActivity() {
             } else {
                 val receiptDetails = db.receiptsDao().getReceiptDetails(id = receiptId)
 
+                serverId = receiptDetails.serverId
                 partyId = receiptDetails.partyId
-                amount = receiptDetails.amount.toString()
+                amount = receiptDetails.amount
                 paidBy = receiptDetails.paidBy
                 chequeNo = receiptDetails.chequeNo.toString()
                 ddNo = receiptDetails.ddNo.toString()
                 payment = receiptDetails.payment
 
-                receipt_date.text = SimpleDateFormat("dd/MM/yy").format(Date())
+                receipt_date.text = SimpleDateFormat("dd/MM/yy").format(Date(receiptDetails.createdAt))
                 customer_code.text = receiptDetails.partyCode
                 customer_name.text = receiptDetails.partyName
                 customer_address.text = receiptDetails.partyAddress
@@ -113,17 +111,33 @@ class ReceiptPreviewActivity : AppCompatActivity() {
 
                 this_receipt_sent_to.visibility = View.VISIBLE
                 receipt_sent_to.visibility = View.VISIBLE
-                receipt_sent_to.text = "${receiptDetails.cpNumber} (${receiptDetails.cpName})"
+
+                val cpNames = receiptDetails.cpName.split(",")
+                val cpNumbers = receiptDetails.cpNumber.split(",")
+                val cpEmails = receiptDetails.cpEmail?.split(",")
+                val cpCreatedAts = receiptDetails.concatCreatedAt?.split(",")
+                var finalString: String = ""
+                if (cpCreatedAts != null) {
+                    cpCreatedAts.forEachIndexed { index, s ->
+                        val email = if(cpEmails != null && (index < cpEmails.size)) cpEmails[index] else ""
+                        finalString += "\n ${cpNumbers[index]}, ${email}, (${cpNames[index]}) at ${SimpleDateFormat("dd/MM/yy HH:mm").format(Date(cpCreatedAts[index].toLong()))}"
+                    }
+                }
+                receipt_sent_to.text = finalString
+//
             }
 
             paid_by.text = if(paidBy == 1.toByte()) getString(R.string.cheque)
-                            else if(paidBy == 2.toByte()) getString(R.string.demand_draft) else getString(R.string.cash)
+            else if(paidBy == 2.toByte()) getString(R.string.demand_draft) else getString(R.string.cash)
             cheque_no.text = if(chequeNo != null && chequeNo != "") chequeNo else ""
             dd_no.text = if(ddNo != null && ddNo != "") ddNo else ""
             receipt_payment.text = if(payment == 1.toByte()) getString(R.string.full) else getString(R.string.part)
             paid_amount.text = "${getString(R.string.rupee)} $amount"
         }
+    }
 
+    override fun onResume() {
+        super.onResume()
     }
 
     private fun validateDialogInputs(view: View): Boolean {
@@ -176,6 +190,7 @@ class ReceiptPreviewActivity : AppCompatActivity() {
     }
 
     data class ReceiptDetailsObject (
+        @SerializedName("serverId") val serverId: String?,
         @SerializedName("partyId") val partyId: String,
         @SerializedName("cpName") val cpName: String,
         @SerializedName("cpNumber") val cpNumber: String,
@@ -218,6 +233,7 @@ class ReceiptPreviewActivity : AppCompatActivity() {
                 Gson().toJson(RequestObject(
                     apiKey = apiKey,
                     receiptDetails = ReceiptDetailsObject(
+                        serverId = serverId,
                         partyId = partyId,
                         cpName = cpName,
                         cpNumber = cpNumber,

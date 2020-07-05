@@ -18,7 +18,7 @@ data class ReceiptsListItemModel(
     var id: Long,
     var receiptNo: Long,
     var partyName: String,
-    var partyAddress: String,
+    var amount: String,
     var cpName: String,
     var cpNumber: String,
     var createdAt: String,
@@ -38,7 +38,7 @@ class ReceiptsRecyclerViewAdapter(
 
     private fun changeDataPlaceholdersVisibility(holder: ReceiptsRecyclerViewAdapter.ViewHolder, visibility: Int) {
         holder.partyName.visibility = visibility
-        holder.partyAddress.visibility = visibility
+        holder.amount.visibility = visibility
         holder.cpNumber.visibility = visibility
         holder.cpName.visibility = visibility
         holder.receiptDate.visibility = visibility
@@ -59,7 +59,7 @@ class ReceiptsRecyclerViewAdapter(
         val item = values[position]
         if(item != null) {
             holder.partyName.text = item.partyName
-            holder.partyAddress.text = item.partyAddress
+            holder.amount.text = item.amount
             holder.receiptDate.text = item.createdAt
             holder.cpNumber.text = item.cpNumber
             holder.cpName.text = item.cpName
@@ -76,7 +76,7 @@ class ReceiptsRecyclerViewAdapter(
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         var partyName: TextView = view.findViewById(R.id.receipt_lt_party_name)
-        val partyAddress: TextView = view.findViewById(R.id.receipt_lt_party_address)
+        val amount: TextView = view.findViewById(R.id.receipt_lt_receipt_amount)
         val receiptDate: TextView = view.findViewById(R.id.receipt_lt_date)
         val cpNumber: TextView = view.findViewById(R.id.receipt_lt_cp_number)
         val cpName: TextView = view.findViewById(R.id.receipt_lt_cp_name)
