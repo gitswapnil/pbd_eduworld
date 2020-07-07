@@ -618,10 +618,8 @@ if(Meteor.isClient) {
 					createdAt: followUp.createdAt
 				}
 
-				console.log("obj: " + JSON.stringify(obj));
 
 				let serverId = followUp.serverId;
-				console.log("serverId: " + serverId);
 				if(typeof serverId === "string") {
 					Collections.followUps.update({ _id: serverId }, {$unset: {reminderDate: 0, followUpFor: 0}}, {multi: false}, (err, docs) => { 
 						if(err) throw new Error(err.message)
@@ -629,7 +627,6 @@ if(Meteor.isClient) {
 						//after complete unset, set the values.
 						Collections.followUps.update({ _id: serverId }, {$set: obj}, {multi: false}, (err, docs) => { 
 							if(err) {
-								console.log("Err: " + err);
 								throw new Error(err.message)
 							}
 						});

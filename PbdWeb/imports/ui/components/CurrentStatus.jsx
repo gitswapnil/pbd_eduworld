@@ -145,13 +145,15 @@ if(Meteor.isServer) {
 					doc.partyName = party.profile.name;
 					doc.partyAddress = party.profile.address;
 					this.added('tasks', _id, doc);
+					
 				},
 
 				changed: (_id, doc) => {
+
 					const task = Collections.tasks.findOne({ _id });
 					const party = Meteor.users.findOne({ _id: task.partyId });
-					task.partyName = party.profile.name;
-					task.partyAddress = party.profile.address;
+					doc.partyName = party.profile.name;
+					doc.partyAddress = party.profile.address;
 					this.changed('tasks', _id, task);
 				},
 
@@ -160,12 +162,26 @@ if(Meteor.isServer) {
 				}
 			});
 
-			const handle4 = Collections.followUps.find({ createdAt: { $gte: todayStart, $lte: todayEnd }, userId: { $in: userIds } }).observeChanges({
+
+			const handle4 = Collections.followUps.find({ reminderDate: { $gte: todayStart, $lte: todayEnd }, userId: { $in: userIds } }).observeChanges({
 				added: (_id, doc) => {
+					const party = Meteor.users.findOne({ _id: doc.partyId });
+					doc.partyName = party.profile.name;
+					doc.partyAddress = party.profile.address;
+					const task = Collections.tasks.findOne({ _id: doc.taskId });
+					doc.cpName = task.cpName;
+					doc.cpNumber = task.cpNumber;
 					this.added('followUps', _id, doc);
 				},
 
 				changed: (_id, doc) => {
+					const followUp = Collections.followUps.findOne({ _id });
+					const party = Meteor.users.findOne({ _id: followUp.partyId });
+					doc.partyName = party.profile.name;
+					doc.partyAddress = party.profile.address;
+					const task = Collections.tasks.findOne({ _id: followUp.taskId });
+					doc.cpName = task.cpName;
+					doc.cpNumber = task.cpNumber;
 					this.changed('followUps', _id, doc);
 				},
 
@@ -221,8 +237,25 @@ if(Meteor.isClient) {
 							return user;
 						}
 
-						const visits = Collections.tasks.find({ userId: user._id }).fetch();
-						const followUps = Collections.followUps.find({ userId: user._id }).fetch();
+						const visits = Collections.tasks.find({ userId: user._id }, {sort: {createdAt: -1}}).fetch();
+
+						const todayStart = moment().startOf('day').toDate();
+						const todayEnd = moment().endOf('day').toDate();
+						let followUpsIdRecoder = {};
+						let followUps = [];
+						Collections.followUps.find({ userId: user._id }, {sort: {createdAt: -1}}).forEach(followUp => {
+							if(!followUpsIdRecoder[followUp.partyId]) {
+								followUpsIdRecoder[followUp.partyId] = true;
+
+								if(Collections.tasks.findOne({ createdAt: { $gte: todayStart, $lte: todayEnd }, userId: followUp.userId, partyId: followUp.partyId, reason: { $gte: followUp.followUpFor } })) {
+									followUp.completed = true;
+								} else {
+									followUp.completed = false;
+								}
+
+								followUps.push(followUp);
+							}
+						});
 
 						return Object.assign({ sessions: userLocationObj.sessions, visits, followUps }, user);
 					});

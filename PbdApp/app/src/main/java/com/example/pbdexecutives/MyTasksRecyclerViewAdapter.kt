@@ -8,7 +8,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.Fragment
-import kotlin.reflect.KFunction2
+import kotlin.reflect.KFunction1
 
 data class MyTaskListItemModel(
     var id: Long,
@@ -17,7 +17,7 @@ data class MyTaskListItemModel(
     var remarks: String,
     var reason: String?,
     val createdAt: String,
-    val onClick: KFunction2<@ParameterName(name = "taskId") Long, @ParameterName(name = "position") Int, MyTasksFragment.OnItemClick>
+    val onClick: KFunction1<@ParameterName(name = "taskId") Long, MyTasksFragment.OnItemClick>
 )
 
 class MyTasksRecyclerViewAdapter(
@@ -55,7 +55,7 @@ class MyTasksRecyclerViewAdapter(
             holder.remark.text = item.remarks
             holder.reason.text = item.reason
             holder.createdAt.text = item.createdAt
-            holder.taskItem.setOnClickListener(item.onClick(item.id, position))
+            holder.taskItem.setOnClickListener(item.onClick(item.id))
 
             changeDataPlaceholdersVisibility(holder, View.VISIBLE)
         } else {

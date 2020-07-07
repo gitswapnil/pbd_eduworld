@@ -265,3 +265,48 @@ table.tbl > tbody > tr.row-selectable:hover {
 	font-size: x-small;
 	color: darkslategray;
 }
+
+.status-followUps-toComplete {
+	background: #FF9999;
+
+}
+
+.status-followUps-completed {
+	background: #99FFFF;
+
+}
+
+.status-followUps-toComplete > .header,
+.status-followUps-completed > .header {
+	padding: 5px;
+	font-size: small;
+	font-weight: bold;
+	border-bottom: 1px solid black;
+}
+
+.status-followUps-list-item-toComplete, 
+.status-followUps-list-item-completed {
+	padding: 5px;
+	border-bottom: 1px solid #BBB;
+}
+
+.status-followUps-list-item-toComplete > .status-followUps-list-item-followUpFor,
+.status-followUps-list-item-completed > .status-followUps-list-item-followUpFor {
+	font-size: x-small;
+}
+
+.status-followUps-list-item-toComplete > .status-followUps-list-item-partyName,
+.status-followUps-list-item-completed > .status-followUps-list-item-partyName {
+	
+}
+
+.status-followUps-list-item-toComplete > .status-followUps-list-item-partyAddress,
+.status-followUps-list-item-completed > .status-followUps-list-item-partyAddress {
+	font-size: x-small;
+	color: #555;
+}
+
+.status-followUps-list-item-toComplete > .status-followUps-list-item-contactPerson,
+.status-followUps-list-item-completed > .status-followUps-list-item-contactPerson {
+	font-size: x-small;
+}

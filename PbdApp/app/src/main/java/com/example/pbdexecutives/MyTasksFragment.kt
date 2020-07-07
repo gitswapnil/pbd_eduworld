@@ -4,7 +4,6 @@ import android.app.Activity.RESULT_OK
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -73,18 +72,17 @@ class MyTasksFragment : Fragment() {
             reloadData()
         } else if(requestCode == 54 && resultCode == RESULT_OK && data != null) {
             val editTaskId = data.getLongExtra("taskId", 0)
-            val editItemPosition = data.getIntExtra("position", -1)
             val editItemType = data.getIntExtra("type", -1)
             val editItemPartyName = data.getStringExtra("partyName")
             val editItemRemarks = data.getStringExtra("remarks")
             val editItemReasonForVisit = data.getIntExtra("reasonForVisit", -1)
             val isItemRemoved = data.getBooleanExtra("removed", false)
 
-            if(editTaskId != 0.toLong() && editItemPosition != -1) {
+            if(editTaskId != 0.toLong()) {
                 val index = listItems.indexOfFirst { it?.id == editTaskId }
                 if(isItemRemoved) {
                     listItems.removeAt(index)
-                    recyclerViewAdapter.notifyItemRemoved(editItemPosition)
+                    recyclerViewAdapter.notifyItemRemoved(index)
                 } else {
                     listItems[index]?.id = editTaskId
                     listItems[index]?.party = editItemPartyName.toString()
@@ -94,7 +92,7 @@ class MyTasksFragment : Fragment() {
                         resources.getStringArray(R.array.reasons_for_visit)[editItemReasonForVisit.toInt()]
                     } else null
 
-                    recyclerViewAdapter.notifyItemChanged(editItemPosition)
+                    recyclerViewAdapter.notifyItemChanged(index)
                 }
             }
         }
@@ -201,11 +199,10 @@ class MyTasksFragment : Fragment() {
         startActivityForResult(Intent(activity, AddNewTaskActivity::class.java), 43)
     }
 
-    inner class OnItemClick(private val taskId: Long, private val position: Int): View.OnClickListener {
+    inner class OnItemClick(private val taskId: Long): View.OnClickListener {
         override fun onClick(v: View?) {
             val intent = Intent(activity, AddNewTaskActivity::class.java)
             intent.putExtra("taskId", taskId)
-            intent.putExtra("position", position)
             startActivityForResult(intent, 54)
         }
     }

@@ -146,7 +146,6 @@ class AddNewTaskActivity : AppCompatActivity() {
         JodaTimeAndroid.init(this)
 
         taskId = intent.getLongExtra("taskId", 0)
-        itemPosition = intent.getIntExtra("position", -1)
 
         setSupportActionBar(findViewById(R.id.add_new_task_toolbar))
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -204,7 +203,6 @@ class AddNewTaskActivity : AppCompatActivity() {
                 intent.putExtra("taskId", taskId)
 
                 if(taskId != 0.toLong()) {
-                    intent.putExtra("position", itemPosition)
                     intent.putExtra("removed", true)
                 }
 
@@ -565,7 +563,6 @@ class AddNewTaskActivity : AppCompatActivity() {
             intent.putExtra("taskId", taskId)
 
             if(taskId != 0.toLong()) {
-                intent.putExtra("position", itemPosition)
                 intent.putExtra("type", type)
                 intent.putExtra("partyName", if(type == 0) selectedPartyName else subject)
                 intent.putExtra("remarks", remarks)

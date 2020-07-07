@@ -27,12 +27,52 @@ if(Meteor.isClient) {
 												<div className="status-visits-list-item-contactPerson">{(visit && visit.cpName && visit.cpNumber) ? `${visit.cpNumber}(${visit.cpName})` : ""}</div>
 												<div className="status-visits-list-item-remarks">{(visit && visit.remarks) ? visit.remarks : ""}</div>
 											</div>);
-	}
+	};
 
 	const FollowUpsList = (props) => {
+		const data = props.followUps;
+
 		console.log("followUps: " + JSON.stringify(props.followUps));
-		return <div>This is Follow Ups Tab</div>
-	}
+		
+		const getListItems = (items, type) => {
+			return items && items.map(item => 
+				<div key={item._id} className={`status-followUps-list-item-${type}`}>
+					<div className="status-followUps-list-item-followUpFor">{(item && (typeof item.followUpFor == "number")) ? getReasonFromCode(item.followUpFor) : ""}</div>
+					<div className="status-followUps-list-item-partyName">{(item && item.partyName) ? item.partyName : ""}</div>
+					<div className="status-followUps-list-item-partyAddress">{(item && item.partyAddress) ? item.partyAddress : ""}</div>
+					<div className="status-followUps-list-item-contactPerson">{(item && item.cpName && item.cpNumber) ? `${item.cpNumber}(${item.cpName})` : ""}</div>
+				</div>);
+		};
+
+		let completedFollowUps = [];
+		let toCompleteFollowUps = [];
+
+		data && data.map(followUp => {
+			if(followUp.completed) {
+				completedFollowUps.push(followUp);
+			} else {
+				toCompleteFollowUps.push(followUp);
+			}
+		});
+
+		let toComplete = <div></div>;
+		if (toCompleteFollowUps.length !== 0) {
+			toComplete = <div className="status-followUps-toComplete">
+							<div className="header">Not Completed</div>
+							{getListItems(toCompleteFollowUps, "toComplete")}
+						</div>
+		}
+
+		let completed = <div></div>;
+		if(completedFollowUps.length !== 0) {
+			completed = <div className="status-followUps-completed">
+							<div className="header">Completed</div>
+							{getListItems(completedFollowUps, "completed")}
+						</div>
+		}
+
+		return <div>{toComplete}{completed}</div>;
+	};
 
 	const IndividualStatus = (props) => {
 		const [showLiveDetails, setShowLiveDetails] = useState(false);
@@ -104,7 +144,7 @@ if(Meteor.isClient) {
 										</button>
 									</div>
 									<div style={{border: "1px solid #888", height: "100%", visibility: showLiveDetails ? "visible" : "hidden"}}>
-										{/*
+										{
 											showLive ? 
 											(() => {
 												const lastLocation = props.sessions[props.sessions.length - 1];
@@ -112,7 +152,7 @@ if(Meteor.isClient) {
 												return <ExecutiveMap latitude={lastLocation.latitude} longitude={lastLocation.longitude} executiveName={props.name} zoom={15}/>
 											})()
 											: null
-										*/}
+										}
 									</div>
 								</div>
 								<div className="col-4" style={{paddingLeft: "0"}}>
@@ -131,20 +171,19 @@ if(Meteor.isClient) {
 											Follow Ups: {
 												(() => {
 													let finished = 0, toComplete = 0;
-													props.visits ? props.visits.forEach(visit => {
-														if(typeof visit.followUpFor === "undefined") {
+													props.followUps ? props.followUps.forEach(followUp => {
+														if(followUp.completed) {
 															++finished;
-														} else {
-															++toComplete;
 														}
+														++toComplete;
 													}) : null
 
-													return `${toComplete}/${finished}`;
+													return `${finished}/${toComplete}`;
 												})()
 											}
 										</button>
 									</div>
-									<div style={{border: "1px solid #888", height: "470px", visibility: showLiveDetails ? "visible" : "hidden", overflowY: "auto"}}>
+									<div style={{border: "1px solid #888", height: showLiveDetails ? "470px" : "0px", visibility: showLiveDetails ? "visible" : "hidden", overflowY: "auto"}}>
 										{
 											selectedTab == 0 ? 
 											<VisitedList visits={props.visits}/>
