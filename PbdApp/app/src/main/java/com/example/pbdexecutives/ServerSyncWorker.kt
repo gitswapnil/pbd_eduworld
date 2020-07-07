@@ -56,6 +56,7 @@ data class FollowUpsObject(
     @SerializedName("id") val id: Long,
     @SerializedName("reminderDate") val reminderDate: Long?,
     @SerializedName("partyId") val partyId: String,
+    @SerializedName("taskId") val taskId: Long,
     @SerializedName("followUpFor") val followUpFor: Short?,
     @SerializedName("serverId") val serverId: String?,
     @SerializedName("createdAt") val createdAt: Long
@@ -178,6 +179,7 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                             FollowUpsObject(
                                 id = it.id,
                                 partyId = it.partyId,
+                                taskId = it.taskId,
                                 reminderDate = it.reminderDate,
                                 followUpFor = it.followUpFor,
                                 serverId = it.serverId,

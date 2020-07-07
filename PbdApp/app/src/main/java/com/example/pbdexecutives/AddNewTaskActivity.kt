@@ -445,12 +445,12 @@ class AddNewTaskActivity : AppCompatActivity() {
         return retValue
     }
 
-    private fun getFollowUpForId(reasonForVisit: Int, doneWithTask: Boolean): Int? {
-        return if(reasonForVisit == 0 && !doneWithTask) 0
-        else if(reasonForVisit == 0 && doneWithTask) 1
-        else if(reasonForVisit == 1 && !doneWithTask) 1
-        else if(reasonForVisit == 1 && doneWithTask) 2
-        else if(reasonForVisit == 2 && !doneWithTask) 2
+    private fun getFollowUpForId(reasonForVisit: Int, doneWithTask: Boolean): Short? {
+        return if(reasonForVisit == 0 && !doneWithTask) 0.toShort()
+        else if(reasonForVisit == 0 && doneWithTask) 1.toShort()
+        else if(reasonForVisit == 1 && !doneWithTask) 1.toShort()
+        else if(reasonForVisit == 1 && doneWithTask) 2.toShort()
+        else if(reasonForVisit == 2 && !doneWithTask) 2.toShort()
         else null
     }
 
@@ -468,7 +468,8 @@ class AddNewTaskActivity : AppCompatActivity() {
         val contactPersonNumber: String? = if(type == 0) contact_person_number.text.toString() else null
         val reasonForVisit: Int = reason_for_visit.selectedItemPosition
         val doneWithTask: Boolean = (done_with_task.checkedRadioButtonId == R.id.task_done_yes)
-        val reminder: Boolean = (set_reminder.checkedRadioButtonId == R.id.reminder_yes)
+        val followUpFor: Short? = getFollowUpForId(reasonForVisit, doneWithTask)
+        val reminder: Boolean = ((set_reminder.checkedRadioButtonId == R.id.reminder_yes) && (followUpFor != null))
         val remarks: String = remarks.text.toString()
         val subject: String = subject.text.toString()
         val createdAt: Long = Date().time.toLong()
@@ -498,7 +499,7 @@ class AddNewTaskActivity : AppCompatActivity() {
                         reminderDate = if(reminder) selectedReminderDate else null,
                         partyId = partyId.toString(),
                         taskId = newTaskId,
-                        followUpFor = getFollowUpForId(reasonForVisit, doneWithTask)?.toShort(),
+                        followUpFor = followUpFor,
                         synced = false,
                         createdAt = Date().time,
                         serverId = null
@@ -526,14 +527,14 @@ class AddNewTaskActivity : AppCompatActivity() {
                             id = id,
                             reminderDate = if(reminder) selectedReminderDate else null,
                             partyId = partyId.toString(),
-                            followUpFor = getFollowUpForId(reasonForVisit, doneWithTask)?.toShort()
+                            followUpFor = followUpFor
                         )
                     } else {
                         db.followUpsDao().addFollowUp(FollowUps(
                             reminderDate = if(reminder) selectedReminderDate else null,
                             partyId = partyId.toString(),
                             taskId = taskId,
-                            followUpFor = getFollowUpForId(reasonForVisit, doneWithTask)?.toShort(),
+                            followUpFor = followUpFor,
                             synced = false,
                             createdAt = Date().time,
                             serverId = null

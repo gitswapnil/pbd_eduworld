@@ -11,6 +11,10 @@ followUps.attachSchema(new SimpleSchema({
 		type: Date,
 		optional: true 
 	},
+	taskId: {
+		type: String,
+		regEx: SimpleSchema.RegEx.Id
+	},
 	followUpFor: {
 		type: Number,
 		optional: true

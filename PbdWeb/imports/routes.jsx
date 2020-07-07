@@ -334,10 +334,10 @@ if(Meteor.isClient) {
 
 			return deletedIds.map((deletedDoc, index) => {
 				switch(deletedDoc.from) {
-					case "followUps" : Collections.followUps.remove({ id: deletedDoc.serverId });
+					case "followUps" : Collections.followUps.remove({ _id: deletedDoc.serverId });
 							break;
 
-					case "tasks" : Collections.tasks.remove({ id: deletedDoc.serverId });
+					case "tasks" : Collections.tasks.remove({ _id: deletedDoc.serverId });
 							break;
 				}
 
@@ -594,7 +594,7 @@ if(Meteor.isClient) {
 		return;
 	};
 
-	const storeFollowUps = async (userId, followUps) => {
+	const storeFollowUps = (userId, followUps, tasks) => {
 		//if the locations key is defined.
 		if(followUps) {
 			// console.log("locations: " + JSON.stringify(locations));
@@ -604,18 +604,27 @@ if(Meteor.isClient) {
 			}
 
 			return followUps.map((followUp, index) => {
-				// console.log("followUp: " + JSON.stringify(followUp));
+				let taskId;
+				tasks.forEach(task => {
+					task.id == followUp.taskId ? taskId = task.serverId : null
+				});
+
 				let obj = {
 					partyId: followUp.partyId,
+					taskId, 
 					reminderDate: followUp.reminderDate,
 					followUpFor: followUp.followUpFor,
 					userId: userId,
 					createdAt: followUp.createdAt
 				}
 
-				let serverId = followUp.serverId
+				let serverId = followUp.serverId;
 
 				if(typeof serverId === "string") {
+					Collections.followUps.update({ _id: serverId }, {$unset: {reminderDate: 0, followUpFor: 0}}, {multi: false}, (err, docs) => { 
+						if(err) throw new Error(err.message)
+					});
+
 					Collections.followUps.update({ _id: serverId }, {$set: obj}, {multi: false}, (err, docs) => { 
 						if(err) throw new Error(err.message)
 					});
@@ -695,23 +704,27 @@ if(Meteor.isClient) {
 			return;
 		});
 
-		const followUpsApi = storeFollowUps(user._id, reqBody.followUps).catch(err => {
-			res.end(JSON.stringify({error: true, message: err.message, code: 400}));
-			return;
-		});
+		// const followUpsApi = .catch(err => {
+		// 	res.end(JSON.stringify({error: true, message: err.message, code: 400}));
+		// 	return;
+		// });
 
 		const callAllFuncs = async () => {
-			const values = await Promise.all([deleteDocsApi, locationsApi, userDetailsApi, partyDetailsApi, tasksApi, followUpsApi]);
+			const values = await Promise.all([deleteDocsApi, locationsApi, userDetailsApi, partyDetailsApi, tasksApi]);
 
-			console.log(`values: ${JSON.stringify(values)}`);
+			//this function is made separate because, it needs saved task ids
+			const followUpsRetIds = storeFollowUps(user._id, reqBody.followUps, values[4]);
+
 			const message = {
 				deletedIds: values[0],
 				locationIds: values[1],
 				userDetails: values[2],
 				partyDetails: values[3],
 				taskIds: values[4],
-				followUpIds: values[5]
+				followUpIds: followUpsRetIds
 			}
+			
+			console.log(`return Message: ${JSON.stringify(message)}`);
 			res.end(JSON.stringify({ error: false, message, code: 200 }));
 		}
 

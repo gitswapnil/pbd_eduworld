@@ -4,7 +4,7 @@ const tasks = new Mongo.Collection("tasks");
 
 tasks.attachSchema(new SimpleSchema({
 	type: { 
-		type: String,
+		type: Number,
 		optional: true
 	},
 	partyId: { 

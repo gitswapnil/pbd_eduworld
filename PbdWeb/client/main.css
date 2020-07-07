@@ -79,6 +79,11 @@
 	box-shadow: 1px 1px 2px #eee;
 }
 
+.btn-inactive {
+	background: #55bfff;
+	border-color: #4eadff;
+}
+
 /*Tbl class developed for table element*/
 table.tbl {
 	border: 1px solid #bbb;
@@ -224,4 +229,39 @@ table.tbl > tbody > tr.row-selectable:hover {
 
 .timing-bar-duty-time > .duty-time-tip > div:first-child {
 	margin-left: -12px;
+}
+
+.status-visits-list-item {
+	background: #fff;
+	padding: 5px;
+	border-bottom: 1px solid #ccc;
+}
+
+.status-visits-list-item > .status-visits-list-item-reason {
+	font-size: x-small;
+	display: inline-block;
+	float: left;
+}
+
+.status-visits-list-item > .status-visits-list-item-time {
+	font-size: x-small;
+	display: inline-block;
+	float: right;
+}
+
+.status-visits-list-item > .status-visits-list-item-partyName {
+	/*font-size: x-small;*/
+}
+
+.status-visits-list-item > .status-visits-list-item-partyAddress {
+	font-size: x-small;
+}
+
+.status-visits-list-item > .status-visits-list-item-contactPerson {
+	font-size: x-small;
+}
+
+.status-visits-list-item > .status-visits-list-item-remarks {
+	font-size: x-small;
+	color: darkslategray;
 }

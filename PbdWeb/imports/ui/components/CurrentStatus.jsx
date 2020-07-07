@@ -2,11 +2,12 @@ import { Meteor } from 'meteor/meteor'
 import Collections from 'meteor/collections';
 
 if(Meteor.isServer) {
-	Meteor.publish('executives.getExecutiveStatus', function(){
-		console.log("Publishing the executives.getExecutiveStatus...");
+	Meteor.publish('currentStatus.getEveryoneStatus', function(){
+		console.log("Publishing the currentStatus.getEveryoneStatus...");
 		//authorization
 		if(this.userId && Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
 			// console.log("userId: " +JSON.stringify(userIds));
+			let userIds = [];
 			let initializing = true;		//flag to skip the huge loading during initial time.
 
 			const handle1 = Meteor.users.find({}).observeChanges({
@@ -16,6 +17,7 @@ if(Meteor.isServer) {
 						const userDoc = Meteor.users.findOne({ _id }, {fields: {"services": 0, apiKey: 0}});
 						userDoc.isExecutive = true;
 						if(userDoc.active) {
+							userIds.push(_id);
 							this.added('users', _id, userDoc);		//just send the ids.
 						}
 					}
@@ -26,6 +28,7 @@ if(Meteor.isServer) {
 						const userDoc = Meteor.users.findOne({ _id }, {fields: {"services": 0, apiKey: 0}});
 						userDoc.isExecutive = true;
 						if(userDoc.active) {
+							userIds.push(_id);
 							this.added('users', _id, userDoc);		//just send the ids.
 						}
 					}
@@ -133,12 +136,52 @@ if(Meteor.isServer) {
 				initializing = false;
 			});
 
-			console.log("data publication for \"executives.getExecutiveStatus is complete.\"");
+			const todayStart = moment().startOf('day').toDate();
+			const todayEnd = moment().endOf('day').toDate();
+
+			const handle3 = Collections.tasks.find({ createdAt: { $gte: todayStart, $lte: todayEnd }, type: 0, userId: { $in: userIds } }).observeChanges({
+				added: (_id, doc) => {
+					const party = Meteor.users.findOne({ _id: doc.partyId });
+					doc.partyName = party.profile.name;
+					doc.partyAddress = party.profile.address;
+					this.added('tasks', _id, doc);
+				},
+
+				changed: (_id, doc) => {
+					const task = Collections.tasks.findOne({ _id });
+					const party = Meteor.users.findOne({ _id: task.partyId });
+					task.partyName = party.profile.name;
+					task.partyAddress = party.profile.address;
+					this.changed('tasks', _id, task);
+				},
+
+				removed: (_id) => {
+					this.removed('tasks', _id);
+				}
+			});
+
+			const handle4 = Collections.followUps.find({ createdAt: { $gte: todayStart, $lte: todayEnd }, userId: { $in: userIds } }).observeChanges({
+				added: (_id, doc) => {
+					this.added('followUps', _id, doc);
+				},
+
+				changed: (_id, doc) => {
+					this.changed('followUps', _id, doc);
+				},
+
+				removed: (_id) => {
+					this.removed('followUps', _id);
+				}
+			});
+
+			console.log("data publication for \"currentStatus.getEveryoneStatus is complete.\"");
 			this.ready();
 			this.onStop(() => {
 				handle1.stop();
 				handle2.stop();
-				console.log("Publication, \"executives.getExecutiveStatus\" is stopped.");
+				handle3.stop();
+				handle4.stop();
+				console.log("Publication, \"currentStatus.getEveryoneStatus\" is stopped.");
 			});
 		}
 	});
@@ -157,16 +200,16 @@ if(Meteor.isClient) {
 		const [executives, setExecutives] = useState([]);
 
 		useEffect(() => {
-			const handle = Meteor.subscribe('executives.getExecutiveStatus', {
+			const handle = Meteor.subscribe('currentStatus.getEveryoneStatus', {
 				onStop(error) {
-					console.log("executives.getExecutiveStatus is stopped.");
+					console.log("currentStatus.getEveryoneStatus is stopped.");
 					if(error) {
 						console.log(error);
 					}
 				},
 
 				onReady() {
-					console.log("executives.getExecutiveStatus is ready to get the data.");
+					console.log("currentStatus.getEveryoneStatus is ready to get the data.");
 				}
 			});
 
@@ -177,11 +220,14 @@ if(Meteor.isClient) {
 						if(!userLocationObj) {
 							return user;
 						}
-						// console.log("sessions: " + JSON.stringify(userLocationObj.sessions));
-						return Object.assign({ sessions: userLocationObj.sessions }, user);
+
+						const visits = Collections.tasks.find({ userId: user._id }).fetch();
+						const followUps = Collections.followUps.find({ userId: user._id }).fetch();
+
+						return Object.assign({ sessions: userLocationObj.sessions, visits, followUps }, user);
 					});
 
-					setExecutives(executives);	
+					setExecutives(executives);
 				}
 			})
 
@@ -204,6 +250,8 @@ if(Meteor.isClient) {
 														email={executive.emails && executive.emails[executive.emails.length - 1].address}
 														mobileNo={executive.username}
 														sessions={executive.sessions}
+														visits={executive.visits}
+														followUps={executive.followUps}
 														/>
 									<br/>
 								</div>

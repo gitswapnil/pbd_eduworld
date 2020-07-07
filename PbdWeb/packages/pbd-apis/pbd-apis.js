@@ -15,6 +15,22 @@ export const findByType = (children, component) => {
   return result[0];
 };
 
+export const getReasonFromCode = (code) => {
+  let retValue = "";
+  switch(code) {
+    case 0: retValue = "Sampling";
+      break;
+
+    case 1: retValue = "To receive an order";
+      break;
+
+    case 2: retValue = "To get payment";
+      break;
+  }
+
+  return retValue;
+};
+
 export const MAP_API_KEY = "2D16m-0MldWtZBO8ymMUMxz-qRlneZkQUx_s-VhRmBo";
 export const DUTY_START_TIME = "10:00";    //format should always be in HH:mm
 export const DUTY_END_TIME = "18:00";
