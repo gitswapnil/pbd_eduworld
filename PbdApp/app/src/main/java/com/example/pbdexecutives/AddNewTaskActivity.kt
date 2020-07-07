@@ -17,6 +17,7 @@ import com.google.gson.annotations.SerializedName
 import kotlinx.android.synthetic.main.activity_add_new_task.*
 import kotlinx.coroutines.launch
 import net.danlew.android.joda.JodaTimeAndroid
+import org.joda.time.DateTime
 import org.joda.time.DateTimeZone
 import org.joda.time.LocalDate
 import java.text.SimpleDateFormat
@@ -363,9 +364,12 @@ class AddNewTaskActivity : AppCompatActivity() {
             checkSetReminder()
         }
 
-        val minDate = (System.currentTimeMillis() + 86399000)
+//        val minDate = (System.currentTimeMillis() + 86399000)
+        val minDate = DateTime.now(DateTimeZone.forID("Asia/Kolkata")).plusDays(1).withTimeAtStartOfDay().toDate().time
         reminder_calendar.minDate = minDate
         reminder_calendar.date = minDate
+
+        selectedReminderDate = minDate
 
         reminder_calendar.setOnDateChangeListener { view, year, month, dayOfMonth ->
             selectedReminderDate = SimpleDateFormat("dd/MM/yyyy").parse("${dayOfMonth}/${month + 1}/${year}")?.time
