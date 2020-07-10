@@ -18,15 +18,23 @@ if(Meteor.isClient) {
 	const VisitedList = (props) => {
 		const data = props.visits;
 
-		return 	data && data.map(visit => 	<div key={visit._id} className="status-visits-list-item">
-												<div className="status-visits-list-item-reason">{(visit && (typeof visit.reason == "number")) ? getReasonFromCode(visit.reason) : ""}</div>
-												<div className="status-visits-list-item-time">{(visit && visit.createdAt) ? moment(visit.createdAt).format("HH:mm") : ""}</div>
-												<div style={{clear: "both"}}></div>
-												<div className="status-visits-list-item-partyName">{(visit && visit.partyName) ? visit.partyName : ""}</div>
-												<div className="status-visits-list-item-partyAddress">{(visit && visit.partyAddress) ? visit.partyAddress : ""}</div>
-												<div className="status-visits-list-item-contactPerson">{(visit && visit.cpName && visit.cpNumber) ? `${visit.cpNumber}(${visit.cpName})` : ""}</div>
-												<div className="status-visits-list-item-remarks">{(visit && visit.remarks) ? visit.remarks : ""}</div>
-											</div>);
+		if(data) {
+			if(data.length) {
+				return 	data && data.map(visit => 	<div key={visit._id} className="status-visits-list-item">
+														<div className="status-visits-list-item-reason">{(visit && (typeof visit.reason == "number")) ? getReasonFromCode(visit.reason) : ""}</div>
+														<div className="status-visits-list-item-time">{(visit && visit.createdAt) ? moment(visit.createdAt).format("HH:mm") : ""}</div>
+														<div style={{clear: "both"}}></div>
+														<div className="status-visits-list-item-partyName">{(visit && visit.partyName) ? visit.partyName : ""}</div>
+														<div className="status-visits-list-item-partyAddress">{(visit && visit.partyAddress) ? visit.partyAddress : ""}</div>
+														<div className="status-visits-list-item-contactPerson">{(visit && visit.cpName && visit.cpNumber) ? `${visit.cpNumber}(${visit.cpName})` : ""}</div>
+														<div className="status-visits-list-item-remarks">{(visit && visit.remarks) ? visit.remarks : ""}</div>
+													</div>);
+			} else {
+				return <div style={{textAlign: "center", fontSize: "small"}}>No Data Present</div>;
+			}
+		}
+
+		return <div></div>;
 	};
 
 	const FollowUpsList = (props) => {
@@ -47,31 +55,40 @@ if(Meteor.isClient) {
 		let completedFollowUps = [];
 		let toCompleteFollowUps = [];
 
-		data && data.map(followUp => {
-			if(followUp.completed) {
-				completedFollowUps.push(followUp);
+		if(data) {
+			if(data.length) {
+				data.map(followUp => {
+					if(followUp.completed) {
+						completedFollowUps.push(followUp);
+					} else {
+						toCompleteFollowUps.push(followUp);
+					}
+				});
+
+				let toComplete = <div></div>;
+				if (toCompleteFollowUps.length !== 0) {
+					toComplete = <div className="status-followUps-toComplete">
+									<div className="header">Not Completed</div>
+									{getListItems(toCompleteFollowUps, "toComplete")}
+								</div>
+				}
+
+				let completed = <div></div>;
+				if(completedFollowUps.length !== 0) {
+					completed = <div className="status-followUps-completed">
+									<div className="header">Completed</div>
+									{getListItems(completedFollowUps, "completed")}
+								</div>
+				}
+
+				return <div>{toComplete}{completed}</div>;
 			} else {
-				toCompleteFollowUps.push(followUp);
+				return <div style={{textAlign: "center", fontSize: "small"}}>No Data Present</div>
 			}
-		});
-
-		let toComplete = <div></div>;
-		if (toCompleteFollowUps.length !== 0) {
-			toComplete = <div className="status-followUps-toComplete">
-							<div className="header">Not Completed</div>
-							{getListItems(toCompleteFollowUps, "toComplete")}
-						</div>
 		}
 
-		let completed = <div></div>;
-		if(completedFollowUps.length !== 0) {
-			completed = <div className="status-followUps-completed">
-							<div className="header">Completed</div>
-							{getListItems(completedFollowUps, "completed")}
-						</div>
-		}
+		return <div></div>;
 
-		return <div>{toComplete}{completed}</div>;
 	};
 
 	const IndividualStatus = (props) => {

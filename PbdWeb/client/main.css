@@ -1,3 +1,4 @@
+
 .img-container-with-text {
 	position: relative;
   	text-align: center;
@@ -309,4 +310,23 @@ table.tbl > tbody > tr.row-selectable:hover {
 .status-followUps-list-item-toComplete > .status-followUps-list-item-contactPerson,
 .status-followUps-list-item-completed > .status-followUps-list-item-contactPerson {
 	font-size: x-small;
+}
+
+.reports-container {
+	margin: 20px;
+	border: 1px solid black;
+	border-radius: 5px;
+	background: rgb(221,221,221);
+	background: -moz-linear-gradient(180deg, rgba(221,221,221,1) 0%, rgba(255,255,255,1) 0%, rgba(210,210,210,1) 100%);
+	background: -webkit-linear-gradient(180deg, rgba(221,221,221,1) 0%, rgba(255,255,255,1) 0%, rgba(210,210,210,1) 100%);
+	background: linear-gradient(180deg, rgba(221,221,221,1) 0%, rgba(255,255,255,1) 0%, rgba(210,210,210,1) 100%);
+	filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#dddddd",endColorstr="#d2d2d2",GradientType=1);
+
+	padding: 20px;
+}
+
+.reports-container > .title {
+	font-size: larger;
+	font-weight: bold;
+	text-align: center;
 }
