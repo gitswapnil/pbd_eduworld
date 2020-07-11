@@ -16,7 +16,7 @@ import kotlin.reflect.KFunction2
 
 data class ReceiptsListItemModel(
     var id: Long,
-    var receiptNo: Long,
+    var receiptNo: String,
     var partyName: String,
     var amount: String,
     var cpName: String,
@@ -63,7 +63,7 @@ class ReceiptsRecyclerViewAdapter(
             holder.receiptDate.text = item.createdAt
             holder.cpNumber.text = item.cpNumber
             holder.cpName.text = item.cpName
-            holder.receiptNo.text = item.receiptNo.toString()
+            holder.receiptNo.text = item.receiptNo
             holder.receiptItem.setOnClickListener(item.onClick(item.id, position))
 
             changeDataPlaceholdersVisibility(holder, View.VISIBLE)

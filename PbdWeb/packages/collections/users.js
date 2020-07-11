@@ -51,6 +51,11 @@ Meteor.users.attachSchema(new SimpleSchema({
         		optional: true
         	},
 
+            "receiptSeries": {
+                type: String,
+                optional: true
+            },
+
         	"img": {
         		type: String,
         		optional: true,

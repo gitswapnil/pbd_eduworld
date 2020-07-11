@@ -41,6 +41,7 @@ data class UserDetails (
     val email: String,
     @ColumnInfo(typeAffinity = ColumnInfo.BLOB) val img: ByteArray,
     val address: String,
+    val receiptSeries: String,
     val updatedAt: Long
 ) {
     override fun equals(other: Any?): Boolean {
@@ -55,6 +56,8 @@ data class UserDetails (
         if (phoneNo != other.phoneNo) return false
         if (email != other.email) return false
         if (!img.contentEquals(other.img)) return false
+        if (address != other.address) return false
+        if (receiptSeries != other.receiptSeries) return false
         if (updatedAt != other.updatedAt) return false
 
         return true
@@ -67,6 +70,8 @@ data class UserDetails (
         result = 31 * result + phoneNo.hashCode()
         result = 31 * result + email.hashCode()
         result = 31 * result + img.contentHashCode()
+        result = 31 * result + address.hashCode()
+        result = 31 * result + receiptSeries.hashCode()
         result = 31 * result + updatedAt.hashCode()
         return result
     }
@@ -86,8 +91,8 @@ interface UserDetailsDAO {
     @Insert
     suspend fun createUser(user: UserDetails)
 
-    @Query("UPDATE UserDetails SET name=:name, phoneNo=:phoneNo, email=:email, img=:img, address=:address, updatedAt=:updatedAt")
-    suspend fun saveUserDetails(name: String, phoneNo: String, email: String, img: ByteArray, address: String, updatedAt: Long)
+    @Query("UPDATE UserDetails SET name=:name, phoneNo=:phoneNo, email=:email, img=:img, address=:address, receiptSeries=:receiptSeries, updatedAt=:updatedAt")
+    suspend fun saveUserDetails(name: String, phoneNo: String, email: String, img: ByteArray, address: String, receiptSeries: String, updatedAt: Long)
 }
 
 //Locations

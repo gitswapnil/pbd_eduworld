@@ -46,6 +46,8 @@ if(Meteor.isServer) {
 				handle2.stop();
 				console.log("Publication, \"executives.getAll\" is stopped.");
 			});
+		} else {
+			this.ready();
 		}
 	});
 }
@@ -87,6 +89,12 @@ Meteor.methods({
 				min: 1,
 				max: 1000,
 				label: "Residential address",
+			},
+			receiptSeries: { 
+				type: String,
+				min: 1,
+				max: 100,
+				label: "Receipt Series",
 			},
 			pwd: { 
 				type: String,
@@ -143,6 +151,7 @@ Meteor.methods({
 					"profile.img": cleanedInputs.userImg,
 					"profile.phoneNumber": cleanedInputs.pPhNo,
 					"profile.address": cleanedInputs.resAddress,
+					"profile.receiptSeries": cleanedInputs.receiptSeries,
 					"active": cleanedInputs.active,
 					"updatedAt": new Date()
 				};
@@ -172,6 +181,7 @@ Meteor.methods({
 						img: cleanedInputs.userImg,
 						phoneNumber: cleanedInputs.pPhNo,
 						address: cleanedInputs.resAddress,
+						receiptSeries: cleanedInputs.receiptSeries,
 					},
 					apiKey: Random.hexString(32),
 					active: true,
@@ -217,6 +227,9 @@ if(Meteor.isClient) {
 		const [resAddress, setResAddress] = useState("");
 		const [resAddressError, setResAddressError] = useState("");
 
+		const [receiptSeries, setReceiptSeries] = useState("");
+		const [receiptSeriesError, setReceiptSeriesError] = useState("");
+
 		const [pwd, setPwd] = useState("");
 		const [pwdError, setPwdError] = useState("");
 
@@ -235,6 +248,7 @@ if(Meteor.isClient) {
 			setPPhNo("");
 			setEmail("");
 			setResAddress("");
+			setReceiptSeries("");
 			setPwd("");
 		}
 
@@ -245,6 +259,7 @@ if(Meteor.isClient) {
 			setPPhNoError("");
 			setEmailError("");
 			setResAddressError("");
+			setReceiptSeriesError("");
 			setPwdError("");
 			setGeneralError("");
 		}
@@ -268,6 +283,7 @@ if(Meteor.isClient) {
 			setPPhNo((executive.profile && executive.profile.phoneNumber) || "");
 			setEmail((executive.emails && executive.emails[executive.emails.length - 1] && executive.emails[executive.emails.length - 1].address) || "");
 			setResAddress(executive.profile && executive.profile.address);
+			setReceiptSeries(executive.profile && executive.profile.receiptSeries);
 
 			setEditId(editId);
 			setShowModal(true);
@@ -286,6 +302,7 @@ if(Meteor.isClient) {
 						case "pPhNo": setPPhNoError(value); break;
 						case "email": setEmailError(value); break;
 						case "resAddress": setResAddressError(value); break;
+						case "receiptSeries": setReceiptSeriesError(value); break;
 						case "pwd": setPwdError(value); break;
 						case "generalError": setGeneralError(value); break;
 					}
@@ -293,7 +310,7 @@ if(Meteor.isClient) {
 			});
 
 			Meteor.apply('executives.saveExecutive', 
-				[{ userImg, cPhNo, name, pPhNo, email, resAddress, pwd }, editId], 
+				[{ userImg, cPhNo, name, pPhNo, email, resAddress, receiptSeries, pwd }, editId], 
 				{returnStubValues: true, throwStubExceptions: true}, 
 				(err, res) => {
 					// console.log("err: " + err);
@@ -463,6 +480,19 @@ if(Meteor.isClient) {
 											      				onChange={e => setResAddress(e.target.value)}/>
 										      		<div className="invalid-feedback text-left">
 											        	{resAddressError}
+											        </div>
+										    	</div>
+											</div>
+											<div className="form-group row">
+										    	<label htmlFor="inReceiptSeries" className="col-5 col-form-label-sm text-right">Receipt Series<b className="text-danger">*</b>:</label>
+										    	<div className="col-7">
+										      		<input 	type="text" 
+										      				className={`form-control form-control-sm ${(receiptSeriesError === "") ? "" : "is-invalid"}`} 
+										      				id="inReceiptSeries" 
+										      				value={receiptSeries} 
+										      				onChange={e => setReceiptSeries(e.target.value)}/>
+										      		<div className="invalid-feedback text-left">
+											        	{receiptSeriesError}
 											        </div>
 										    	</div>
 											</div>

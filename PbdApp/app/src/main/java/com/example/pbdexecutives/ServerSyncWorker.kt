@@ -78,6 +78,7 @@ data class UserDetailsResponseObject(
     @SerializedName("email") val email: String,
     @SerializedName("img") val img: String,
     @SerializedName("address") val address: String,
+    @SerializedName("receiptSeries") val receiptSeries: String,
     @SerializedName("updatedAt") val updatedAt: Long
 )
 
@@ -247,6 +248,7 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                                         email = userDetailsRef.email,
                                         img = if(userDetailsRef.img != null) Base64.decode(userDetailsRef.img, Base64.DEFAULT) else ByteArray(0x0),
                                         address = userDetailsRef.address,
+                                        receiptSeries = userDetailsRef.receiptSeries,
                                         updatedAt = userDetailsRef.updatedAt
                                     )
                                 }

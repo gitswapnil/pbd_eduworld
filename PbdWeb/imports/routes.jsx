@@ -299,6 +299,8 @@ if(Meteor.isClient) {
 					phoneNo: String,
 					email: String,
 					img: String,
+					address: String,
+					receiptSeries: String,
 					updatedAt: String
 				},
 				partyDetails: {
@@ -391,6 +393,7 @@ if(Meteor.isClient) {
 						email: (user.emails && user.emails[user.emails.length - 1] && user.emails[user.emails.length - 1].address) || "Unknown",
 						img: (user.profile.img && user.profile.img.split(",")[1]),
 						address: user.profile.address || "Unknown",
+						receiptSeries: user.profile.receiptSeries || "",
 						updatedAt: dbUserUpdatedAt
 					}
 				}
@@ -766,7 +769,8 @@ if(Meteor.isClient) {
 				chequeNo: String,
 				ddNo: String,
 				payment: 0, 1,
-				serverId: String
+				serverId: String,
+				createdAt: Long,
 			}",
 			code: Integer
 		}	if error is false then message is the apiKey for that user.
@@ -843,83 +847,69 @@ if(Meteor.isClient) {
 		}
 
 		let details = new Promise((resolve, reject) => {
+			const cpObj = {
+				cpName: receiptDetails.cpName,
+				cpNumber: receiptDetails.cpNumber,
+				cpEmail: (receiptDetails.cpEmail == "") ? undefined : receiptDetails.cpEmail,
+				createdAt: new Date()
+			}
+
 			if(serverId) {
 				try {
-					const cpList = {
-						cpName: receiptDetails.cpName,
-						cpNumber: receiptDetails.cpNumber,
-						cpEmail: (receiptDetails.cpEmail == "") ? undefined : receiptDetails.cpEmail,
-						createdAt: new Date()
-					}
-					console.log("cpList: " + JSON.stringify(cpList))
-					Collections.receipts.update({ _id: serverId }, { $push: { cpList } });
+					console.log("cpObj: " + JSON.stringify(cpObj))
+					Collections.receipts.update({ _id: serverId }, { $push: { cpList: cpObj } });
 
 					const retObj = Collections.receipts.findOne({ _id: serverId })
 					retObj.serverId = retObj._id;
 					delete retObj._id;
 					delete retObj.cpList;
-					Object.assign(retObj, cpList);
-					retObj.createdAt = moment(cpList.createdAt).valueOf()
+					Object.assign(retObj, cpObj);
+					retObj.createdAt = moment(cpObj.createdAt).valueOf()
 					resolve(retObj);
 				} catch(e) {
 					console.log("error in cpList update..." + e);
 					reject(new Error("Problem in updating the receipt, please check the database and the request."));
 				}
 			} else {
-				const db = Collections.receipts.rawDatabase();
-				autoIncrement.getNextSequence(db, "receipts", function (err, autoIndex) {
-					if(err) {
-						reject(new Error(err.message));
-						return;
-					}
+				try {
+					const prevReceipt = Collections.receipts.findOne({ userId }, {sort: { createdAt: -1 }});
+					const prevReceiptNo = (prevReceipt && prevReceipt.receiptNo || 0);
+					const receiptNo = parseInt(prevReceiptNo) + 1;
 
-					const cpObj = {
-						cpName: receiptDetails.cpName,
-	        			cpNumber: receiptDetails.cpNumber,
-	        			cpEmail: (receiptDetails.cpEmail == "") ? undefined : receiptDetails.cpEmail,
-	        			createdAt: new Date()
-		        	};
-
-			        var collection = db.collection("receipts");
-			        collection.insert({
-			        	_id: Random.id(),
-			        	receiptNo: autoIndex,
+		        	const insertObj = {
+			        	receiptNo,
 			        	partyId: receiptDetails.partyId,
 			        	cpList: [ cpObj ],
-			        	amount: parseFloat(receiptDetails.amount).toFixed(2),
+			        	amount: parseFloat(String(parseFloat(receiptDetails.amount * 1.0000000001)).match(/[0-9]+\.[0-9][0-9]/)[0]),
 			        	paidBy: receiptDetails.paidBy,
 			        	chequeNo: receiptDetails.chequeNo,
 			        	ddNo: receiptDetails.ddNo,
 			        	payment: receiptDetails.payment,
 			        	userId,
 			        	createdAt: new Date()
-			        }).then(result => {
-				        console.log("result: " + JSON.stringify(result));
-				        if(result.ops && result.ops[0]){
-				        	const receipt = result.ops[0];
-				        	
+			        };
 
-					        const retObj = {
-					        	serverId: receipt._id,
-					        	receiptNo: receipt.receiptNo,
-					        	partyId: receipt.partyId,
-					        	cpName: cpObj.cpName,
-								cpNumber: cpObj.cpNumber,
-								cpEmail: cpObj.cpEmail,
-					        	amount: String(receipt.amount),
-					        	paidBy: receipt.paidBy,
-					        	chequeNo: receipt.chequeNo,
-					        	ddNo: receipt.ddNo,
-					        	payment: receipt.payment,
-					        	createdAt: moment(cpObj.createdAt).valueOf()
-					        }
+					const serverId = Collections.receipts.insert(insertObj);
 
-					        resolve(retObj);
-				        } else {
-				        	reject(new Error("Problem in insertion of receipt, please check the database."))
-				        }
-			        })
-			    });
+			        const retObj = {
+			        	serverId,
+			        	receiptNo,
+			        	partyId: receiptDetails.partyId,
+			        	cpName: cpObj.cpName,
+						cpNumber: cpObj.cpNumber,
+						cpEmail: cpObj.cpEmail,
+			        	amount: String(parseFloat(receiptDetails.amount * 1.0000000001)).match(/[0-9]+\.[0-9][0-9]/)[0],
+			        	paidBy: receiptDetails.paidBy,
+			        	chequeNo: receiptDetails.chequeNo,
+			        	ddNo: receiptDetails.ddNo,
+			        	payment: receiptDetails.payment,
+			        	createdAt: moment(cpObj.createdAt).valueOf()
+			        }
+
+			        resolve(retObj);
+				} catch(e) {
+					reject(new Error("Problem in insertion of receipt, please check the database."));
+				}
 			}
 		})
 		

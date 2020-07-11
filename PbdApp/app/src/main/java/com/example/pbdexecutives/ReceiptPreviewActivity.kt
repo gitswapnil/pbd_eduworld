@@ -107,7 +107,7 @@ class ReceiptPreviewActivity : AppCompatActivity() {
                 customer_contact.text = receiptDetails.partyPhNumber
 
                 receipt_no_row.visibility = View.VISIBLE
-                receipt_no.text = receiptDetails.receiptNo.toString()
+                receipt_no.text = "${thisUser.receiptSeries}${receiptDetails.receiptNo.toString()}"
 
                 this_receipt_sent_to.visibility = View.VISIBLE
                 receipt_sent_to.visibility = View.VISIBLE

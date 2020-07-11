@@ -4,20 +4,19 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import androidx.room.Room
-import com.example.pbdexecutives.dummy.DummyContent
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import kotlinx.android.synthetic.main.fragment_follow_ups_list.*
 import kotlinx.android.synthetic.main.fragment_receipts_list.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -34,7 +33,6 @@ class ReceiptsFragment : Fragment() {
     private var offset: Int = 0
     private var isLoading = false
     private var initializing = true
-
     private lateinit var db: AppDB
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -104,6 +102,11 @@ class ReceiptsFragment : Fragment() {
                 recyclerViewAdapter.notifyItemRemoved(listItems.size)
             }
 
+            val userDetails =
+                withContext(Dispatchers.Default) {
+                    db.userDetailsDao().getCurrentUser();
+                }
+
             val receipts = db.receiptsDao().getReceipts(limit = limit, offset = offset)
             if(receipts.isEmpty()) {
                 isLoading = false
@@ -117,7 +120,7 @@ class ReceiptsFragment : Fragment() {
                 listItems.add(
                     ReceiptsListItemModel(
                         id = it.id,
-                        receiptNo = it.receiptNo,
+                        receiptNo = "${userDetails.receiptSeries}${it.receiptNo}",
                         partyName = it.partyName,
                         amount = "${getString(R.string.rupee)} ${it.amount.toBigDecimal().toPlainString()}",
                         cpName = it.cpName,
