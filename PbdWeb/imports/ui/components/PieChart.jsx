@@ -1,65 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import * as d3 from 'd3';
 
-const data = [
-  { name: "Sanjay", value: 56423.01 }, 
-  { name: "Nelson", value: 12302 },
-  { name: "Umesh", value: 65923 },
-  { name: "Suresh", value: 89956 },
-  { name: "exec1", value: 123456 },
-  { name: "exec2", value: 54234 },
-  { name: "exec3", value: 23546 },
-  { name: "exec4", value: 25876 },
-  { name: "exec5", value: 86754 },
-];
-
-// const colors = [
-// 	{ name: "red", mainColor: 'rgba(255, 99, 132, 0.6)', borderColor:  'rgba(255, 99, 132, 1)'},
-// 	{ name: "Blue", mainColor: 'rgba(54, 162, 235, 0.6)', borderColor:  'rgba(54, 162, 235, 1)'},
-// 	{ name: "Yellow", mainColor: 'rgba(255, 206, 86, 0.6)', borderColor:  'rgba(255, 206, 86, 1)'},
-// 	{ name: "Green", mainColor: 'rgba(75, 192, 192, 0.6)', borderColor:  'rgba(75, 192, 192, 1)'},
-// 	{ name: "Purple", mainColor: 'rgba(153, 102, 255, 0.6)', borderColor:  'rgba(153, 102, 255, 1)'},
-// 	{ name: "Orange", mainColor: 'rgba(255, 159, 64, 0.6)', borderColor:  'rgba(255, 159, 64, 1)'},
-// 	{ name: "maroon", mainColor: 'rgba(128, 0, 0, 0.6)', borderColor:  'rgba(128, 0, 0, 1)'},
-// 	{ name: "gold", mainColor: 'rgba(255, 215, 0, 0.6)', borderColor:  'rgba(255, 215, 0, 1)'},
-// 	{ name: "dark green", mainColor: 'rgba(0, 100, 0, 0.6)', borderColor:  'rgba(0, 100, 0, 1)'},
-// 	{ name: "aqua", mainColor: 'rgba(0, 255, 255, 0.6)', borderColor:  'rgba(0, 255, 255, 1)'},
-// 	{ name: "medium orchid", mainColor: 'rgba(186, 85, 211, 0.6)', borderColor:  'rgba(186, 85, 211, 1)'},
-// 	{ name: "chocolate", mainColor: 'rgba(210, 105, 30, 0.6)', borderColor:  'rgba(210, 105, 30, 1)'},
-// 	{ name: "light steel blue", mainColor: 'rgba(176, 196, 222, 0.6)', borderColor:  'rgba(176, 196, 222, 1)'},
-// 	{ name: "crimson", mainColor: 'rgba(220, 20, 60, 0.6)', borderColor:  'rgba(220, 20, 60, 1)'},
-// 	{ name: "lawn green", mainColor: 'rgba(124, 252, 0, 0.6)', borderColor:  'rgba(124, 252, 0, 1)'},
-// 	{ name: "deep pink", mainColor: 'rgba(255, 20, 147, 0.6)', borderColor:  'rgba(255, 20, 147, 1)'},
-// 	{ name: "lavender", mainColor: 'rgba(230, 230, 250, 0.6)', borderColor:  'rgba(230, 230, 250, 1)'},
-// 	{ name: "dark khaki", mainColor: 'rgba(189, 183, 107, 0.6)', borderColor:  'rgba(189, 183, 107, 1)'},
-// 	{ name: "orange red", mainColor: 'rgba(255, 69, 0, 0.6)', borderColor:  'rgba(255, 69, 0, 1)'},
-// 	{ name: "olive drab", mainColor: 'rgba(107, 142, 35, 0.6)', borderColor:  'rgba(107, 142, 35, 1)'},
-// 	{ name: "rosy brown", mainColor: 'rgba(188, 143, 143, 0.6)', borderColor:  'rgba(188, 143, 143, 1)'},
-// 	{ name: "dark gray", mainColor: 'rgba(169, 169, 169, 0.6)', borderColor:  'rgba(169, 169, 169, 1)'},
-// 	{ name: "magenta", mainColor: 'rgba(255, 0, 255, 0.6)', borderColor:  'rgba(255, 0, 255, 1)'},
-// 	{ name: "spring green", mainColor: 'rgba(0, 255, 127, 0.6)', borderColor:  'rgba(0, 255, 127, 1)'},
-// 	{ name: "khaki", mainColor: 'rgba(240, 230, 140, 0.6)', borderColor:  'rgba(240, 230, 140, 1)'},
-// 	{ name: "medium purple", mainColor: 'rgba(147, 112, 219, 0.6)', borderColor:  'rgba(147, 112, 219, 1)'},
-// 	{ name: "wheat", mainColor: 'rgba(245, 222, 179, 0.6)', borderColor:  'rgba(245, 222, 179, 1)'},
-// 	{ name: "dodger blue", mainColor: 'rgba(30, 144, 255, 0.6)', borderColor:  'rgba(30, 144, 255, 1)'},
-// 	{ name: "lime", mainColor: 'rgba(0, 255, 0, 0.6)', borderColor:  'rgba(0, 255, 0, 1)'},
-// 	{ name: "salmon", mainColor: 'rgba(250, 128, 114, 0.6)', borderColor:  'rgba(250, 128, 114, 1)'},
-// 	{ name: "turquoise", mainColor: 'rgba(64, 224, 208, 0.6)', borderColor:  'rgba(64, 224, 208, 1)'},
-// 	{ name: "sienna", mainColor: 'rgba(160, 82, 45, 0.6)', borderColor:  'rgba(160, 82, 45, 1)'},
-// 	{ name: "pink", mainColor: 'rgba(255, 192, 203, 0.6)', borderColor:  'rgba(255, 192, 203, 1)'},
-// 	{ name: "golden rod", mainColor: 'rgba(218, 165, 32, 0.6)', borderColor:  'rgba(218, 165, 32, 1)'},
-// 	{ name: "tomato", mainColor: 'rgba(255, 99, 71, 0.6)', borderColor:  'rgba(255, 99, 71, 1)'},
-// ]
-
 const PieChart = (props) => {
 	const initializeChart = () => {
+		const data = props.data;
 		const width = props.width;
 		const height = props.height;
 		const margin = 50;
 
 		const color = d3.scaleOrdinal()
 						.domain(data.map(d => d.name))
-						.range(d3.quantize(t => d3.interpolateSpectral(t * 0.8 + 0.1), data.length).reverse())
+						.range(d3.quantize(t => d3.interpolateSpectral(t * 1 + 0.1), data.length).reverse())
   
 		const arc = d3.arc()
 						.innerRadius(0)
@@ -74,6 +25,7 @@ const PieChart = (props) => {
 
 		const arcs = pie(data);
 
+		d3.select(`#${props.id} > svg`).remove();
 		const svg = d3.select(`#${props.id}`).append("svg").attr("viewBox", [-width / 2, -height / 2, width, height]);
 
 
@@ -101,8 +53,8 @@ const PieChart = (props) => {
 		const mousemove = function(d) {
 		  Tooltip
 		    .html("₹" + d.value)
-		    .style("left", `${d3.event.pageX - (props.width / 2) + 50}px`)
-		    .style("top", `${d3.event.pageY + 10}px`)
+		    .style("left", (d3.event.pageX - $('.sections-column').width() + 15) + "px")
+		    .style("top", (d3.event.pageY + 15) + "px")
 		}
 
 		//mouseLeave
@@ -111,7 +63,7 @@ const PieChart = (props) => {
 		    .style("opacity", 0)
 		  d3.select(this)
 		    .style("stroke", "none")
-		    .style("opacity", 0.8)
+		    .style("opacity", 1)
 		}
 
 		svg.append("g")
@@ -149,7 +101,7 @@ const PieChart = (props) => {
 		initializeChart();
 	});
 
-	return <div id={props.id} width={props.width} height={props.height}></div>
+	return <div id={props.id} style={{width: props.width, height: props.height}}></div>
 }
 
 export default PieChart;

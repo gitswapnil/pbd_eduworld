@@ -1,3 +1,6 @@
+body {
+	overflow: hidden;
+}
 
 .img-container-with-text {
 	position: relative;
@@ -323,10 +326,4 @@ table.tbl > tbody > tr.row-selectable:hover {
 	filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#dddddd",endColorstr="#d2d2d2",GradientType=1);
 
 	padding: 20px;
-}
-
-.reports-container > .title {
-	font-size: larger;
-	font-weight: bold;
-	text-align: center;
 }

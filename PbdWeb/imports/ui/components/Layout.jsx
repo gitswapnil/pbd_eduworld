@@ -44,7 +44,7 @@ const Layout = (props) => {
 		<div className="container-fluid">
 			<div className="row">
 				{/*This is left side section*/}
-				<div className="col-2" style={{"padding": 0}}>
+				<div className="col-2 sections-column" style={{"padding": 0}}>
 					<div className="text-center">
 						<img src={`${Meteor.absoluteUrl('pbd_logo.png')}`} width="150px" style={{"margin": "8px 0"}}/>
 					</div>
