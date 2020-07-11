@@ -119,6 +119,9 @@ interface LocationsDAO {
 
     @Query("UPDATE Locations SET synced=1 WHERE id IN (:ids)")
     suspend fun updateSyncStatus(ids: List<Long>)
+
+    @Query("DELETE FROM Locations")
+    suspend fun clearLocations()
 }
 
 //Parties
@@ -148,6 +151,9 @@ interface PartiesDAO {
 
     @Query("DELETE FROM Parties WHERE id IN (:ids)")
     suspend fun removeParties(ids: List<String>)
+
+    @Query("DELETE FROM Parties")
+    suspend fun clearParties()
 }
 
 //Tasks
@@ -208,6 +214,9 @@ interface TasksDAO {
 
     @Query("UPDATE Tasks SET type=:type, partyId=:partyId, contactPersonName=:contactPersonName, contactPersonNumber=:contactPersonNumber, reasonForVisit=:reasonForVisit, doneWithTask=:doneWithTask, reminder=:reminder, remarks=:remarks, subject=:subject, synced=0 WHERE id=:id")
     suspend fun updateTask(id:Long, type: Short, partyId: String?, contactPersonName: String?, contactPersonNumber: String?, reasonForVisit: Short, doneWithTask: Boolean, reminder: Boolean, remarks: String, subject: String)
+
+    @Query("DELETE FROM Tasks")
+    suspend fun clearTasks()
 }
 
 //FollowUps
@@ -264,6 +273,9 @@ interface FollowUpsDAO {
 
     @Query("DELETE FROM FollowUps WHERE taskId=:taskId")
     suspend fun deleteFollowUp(taskId: Long)
+
+    @Query("DELETE FROM FollowUps")
+    suspend fun clearFollowUps()
 }
 
 data class cpDetails(
@@ -322,6 +334,9 @@ interface ReceiptsDAO{
 
     @Query("SELECT rr.id, rr.receiptNo, rr.partyId, rr.partyCode, rr.partyName, rr.partyAddress, rr.partyPhNumber, group_concat(cpName) as cpName, group_concat(cpNumber) as cpNumber, group_concat(cpEmail) as cpEmail, rr.amount, rr.paidBy, rr.chequeNo, rr.ddNo, rr.payment, rr.serverId, rr.createdAt, group_concat(createdAt) as concatCreatedAt FROM (SELECT r.*, p.code as partyCode, p.name as partyName, p.address as partyAddress, p.cNumber as partyPhNumber FROM Receipts AS r LEFT JOIN Parties AS p ON r.partyId=p.id ORDER BY r.createdAt DESC) AS rr LEFT JOIN (SELECT rt.serverId FROM Receipts AS rt WHERE rt.id=:id) AS rs ON rr.serverId=rs.serverId WHERE rr.serverId=rs.serverId GROUP BY rr.serverId")
     suspend fun getReceiptDetails(id: Long): ReceiptsWithJoins
+
+    @Query("DELETE FROM Receipts")
+    suspend fun clearReceipts()
 }
 
 @Database (entities = [ DeletedIds::class,

@@ -71,6 +71,11 @@ class PbdExecutivesUtils: Application() {
             //clear all of his data first
             val db = Room.databaseBuilder(context, AppDB::class.java, "PbdDB").build();
             db.userDetailsDao().clearUserDetails()
+            db.tasksDao().clearTasks()
+            db.followUpsDao().clearFollowUps()
+            db.partiesDao().clearParties()
+            db.locationsDao().clearLocations()
+            db.receiptsDao().clearReceipts()
 
             //clear the worker if the user is logged out
             WorkManager.getInstance(this@PbdExecutivesUtils).cancelUniqueWork("serversync")
