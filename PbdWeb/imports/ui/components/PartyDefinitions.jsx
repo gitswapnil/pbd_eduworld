@@ -54,6 +54,8 @@ if(Meteor.isServer) {
 				handle2.stop();
 				console.log("Publication, \"party.getAll\" is stopped.");
 			});
+		} else {
+			this.ready();
 		}
 	});
 }

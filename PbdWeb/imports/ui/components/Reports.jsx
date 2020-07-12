@@ -2,29 +2,216 @@ import { Meteor } from 'meteor/meteor';
 import Collections from 'meteor/collections';
 
 if(Meteor.isServer) {
-	Meteor.publish('reports.getAll', function(){
-		console.log("Publishing the reports.getAll...");
+	Meteor.publish('reports.getCollections', function({from, to}){
+		console.log("Publishing the reports.getCollections...");
+		console.log("from: " + from + ", to: " + to);
+		if(this.userId && Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
+			let initializing = true;
 
-		const userId = this.userId;
-		console.log("userId: " + userId);
-		const handle1 = Collections.receipts.find({ userId }).observeChanges({
-			added: function() {
+			const getCollectionsPie = async () => {
+				const executor = (resolve, reject) => {
+					Collections.receipts.rawCollection().aggregate([
+						{
+					        $match: {
+					            createdAt: {
+					                $gte: from,
+					                $lte: to
+					            }
+					        }
+					    },
+					    {
+					        $lookup: {
+					            from: "users",
+					            localField: "userId",
+					            foreignField: "_id",
+					            as: "userInfo"
+					        }
+					    },
+					    {
+					        $unwind: "$userInfo"
+					    },
+					    {
+					        $project: {
+					            _id: 1,
+					            receiptNo: 1,
+					            amount: 1,
+					            name: "$userInfo.profile.name",
+					            receiptSeries: "$userInfo.profile.receiptSeries",
+					            userId: 1,
+					            createdAt: 1,
+					        }
+					    },
+					    {
+					        $sort: { createdAt: 1 }
+					    },
+					    {
+					        $group: {
+					            _id: { $concat: ["$receiptSeries", { $convert: { input: "$receiptNo", to: "string"}}] },
+					            amount: { $last: "$amount" },
+					            userId: { $last: "$userId" },
+					            name: { $last: "$name" },
+					            createdAt: { $last: "$createdAt" },
+					        }
+					    },
+					    {
+					        $group: {
+					            _id: "$userId",
+					            amount: { $sum: "$amount" },
+					            name: { $first: "$name" },
+					            createdAt: { $first: "$createdAt" }
+					        }
+					    },
+					    {
+					    	$sort: { createdAt: 1 }
+					    }
+					], (err, cursor) => {
+						if(err) reject(err);
 
-			}
-		});
+						cursor.toArray((error, docs) => {
+							if(error) reject(error);
 
-		console.log("data publication for \"reports.getAll is complete.\"");
-		this.ready();
-		this.onStop(() => {
-			handle1.stop();
-			console.log("Publication, \"reports.getAll\" is stopped.");
-		});
+							resolve(docs);
+						});
+					})
+				}
+
+				const prmse = new Promise(executor);
+
+				const result = await prmse;
+				return result;
+			};
+
+			const getCollectionsLine = async () => {
+				const executor = (resolve, reject) => {
+					Collections.receipts.rawCollection().aggregate([
+						{
+						    $match: {
+						        createdAt: {
+						            $gte: from,
+						            $lte: to
+						        }
+						    }
+						},
+						{
+						    $lookup: {
+						        from: "users",
+						        localField: "userId",
+						        foreignField: "_id",
+						        as: "userInfo"
+						    }
+						},
+						{
+						    $unwind: "$userInfo"
+						},
+						{
+						    $project: {
+						        _id: 1,
+						        receiptNo: 1,
+						        amount: 1,
+						        receiptSeries: "$userInfo.profile.receiptSeries",
+						        createdAt: { $dateToString: { format: "%d-%m-%Y", date: "$createdAt" } },
+						        // createdAt: { $dateToString: { format: "%d-%m-%Y", date: "$createdAt", timezone: "Asia/Kolkata" } },
+						    }
+						},
+						{
+						    $group: {
+						        _id: { $concat: ["$receiptSeries", { $convert: { input: "$receiptNo", to: "string"}}] },
+						        amount: { $last: "$amount" },
+						        createdAt: { $last: "$createdAt" },
+						    }
+						},
+						{
+						    $group: {
+						        _id: "$createdAt",
+						        amount: { $sum: "$amount" },
+						        createdAt: { $first: "$createdAt" },
+						    }
+						},
+						    {
+						        $project: {
+						            _id: 1,
+						            amount: 1,
+						            createdAt: { $dateFromString: { dateString: "$createdAt", format: "%d-%m-%Y" } }
+						            // createdAt: { $dateFromString: { dateString: "$createdAt", format: "%d-%m-%Y", timezone: "Asia/Kolkata" } }
+						        }
+						    },
+						{
+							$sort: { createdAt: 1 }
+						}
+					], (err, cursor) => {
+						if(err) reject(err);
+
+						cursor.toArray((error, docs) => {
+							if(error) reject(error);
+
+							resolve(docs);
+						});
+					});
+				}
+
+				const prmse = new Promise(executor);
+
+				const result = await prmse;
+				return result;
+			};
+
+			const handle1 = Collections.receipts.find().observeChanges({
+				added: function() {
+					if(!initializing) {
+						getCollectionsPie().then(docs => {
+							this.changed("receipts", "collectionsPie", { docs });
+						}).catch(err => {
+							throw new Meteor.Error("publication-error", err);
+						});
+
+						getCollectionsLine().then(docs => {
+							this.changed("receipts", "collectionsLine", { docs });
+						}).catch(err => {
+							throw new Meteor.Error("publication-error", err);
+						});
+					}
+				}
+			});
+
+			const pieChartData = getCollectionsPie().catch(err => {
+				throw new Meteor.Error("publication-error", err);
+			});
+
+			const lineChartData = getCollectionsLine().catch(err => {
+				throw new Meteor.Error("publication-error", err);
+			});
+
+			const waitForTasks = async () => {
+				const result = await Promise.all([pieChartData, lineChartData]);
+				// console.log("result: " + JSON.stringify(result));
+
+				this.added("receipts", "collectionsPie", { docs: result[0] });
+				this.added("receipts", "collectionsLine", { docs: result[1] });
+
+				initializing = false;
+			};
+
+			waitForTasks.apply(this).catch(err => {
+				throw new Meteor.Error("publication-error", err);
+			});
+
+			console.log("data publication for \"reports.getCollections is complete.\"");
+			this.ready();
+			this.onStop(() => {
+				handle1.stop();
+				console.log("Publication, \"reports.getCollections\" is stopped.");
+			});
+		} else {
+			this.ready();
+		}
 	});
 }
 
 if(Meteor.isClient) {
 	import React, { useState, useEffect } from 'react';
 	import $ from 'jquery';
+	import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+	import { faCircleNotch } from '@fortawesome/free-solid-svg-icons';
 	import { datepicker } from 'jquery-ui-dist/jquery-ui.min.js';
 	import PieChart from './PieChart';
 	import BarChart from './BarChart';
@@ -36,25 +223,25 @@ if(Meteor.isClient) {
 		const [toDate, setToDate] = useState(moment().format("DD-MMM-YYYY"));
 
 		const initializeFromDatepicker = (maxDate) => {
-			$(this.fromDate).datepicker({
+			$(`#${props.id}FromDate`).datepicker({
 			    dateFormat: "dd-M-yy",
 			    maxDate,
 			    onSelect: (dateText, dateInst) => {
 			    	setFromDate(dateText);
-			    	$(this.toDate).datepicker("destroy");
+			    	$(`#${props.id}toDate`).datepicker("destroy");
 			    	initializeToDatepicker(dateText);
 			    }
 			});
 		};
 
 		const initializeToDatepicker = (minDate) => {
-			$(this.toDate).datepicker({
+			$(`#${props.id}toDate`).datepicker({
 			    dateFormat: "dd-M-yy",
 			    maxDate: new Date(),
 			    minDate,
 			    onSelect: (dateText, dateInst) => {
 			    	setToDate(dateText);
-			    	$(this.fromDate).datepicker("destroy");
+			    	$(`#${props.id}FromDate`).datepicker("destroy");
 			    	initializeFromDatepicker(dateText);
 			    }
 			});
@@ -62,7 +249,7 @@ if(Meteor.isClient) {
 
 		const initializeDatePicker = () => {
 			initializeFromDatepicker(fromDate);
-			initializeToDatepicker(null);
+			initializeToDatepicker(toDate);
 		};
 
 		const generateReport = (event) => {
@@ -74,8 +261,8 @@ if(Meteor.isClient) {
 			initializeDatePicker();
 
 			return (() => {
-				$(this.fromDate).datepicker("destroy");
-				$(this.toDate).datepicker("destroy");
+				$(`#${props.id}FromDate`).datepicker("destroy");
+				$(`#${props.id}toDate`).datepicker("destroy");
 			});
 		}, []);
 
@@ -84,10 +271,10 @@ if(Meteor.isClient) {
 			<div className="text-center">
 				<form onSubmit={generateReport}>
 					{props.fromString}
-					<input type="text" ref={ref => this.fromDate = ref} value={fromDate}/> 
+					<input id={`${props.id}FromDate`} type="text" value={fromDate}/> 
 					&nbsp; &nbsp; 
 					{props.toString} 
-					<input type="text" ref={ref => this.toDate = ref} value={toDate}/>
+					<input id={`${props.id}toDate`} type="text" value={toDate}/>
 					&nbsp; &nbsp;
 					<button className="btn btn-sm btn-primary" type="submit"> Generate </button>
 				</form>
@@ -100,21 +287,42 @@ if(Meteor.isClient) {
 	};
 
 	const Reports = (props) => {
-		const [collectionsLoading, setCollectionsLoading] = useState(true);
+		let todayStart = moment().startOf("day").toDate();
+		let todayEnd = moment().endOf("day").toDate();
+
+		const [collectionsPieLoading, setCollectionsPieLoading] = useState(true);
+		const [collectionsLineLoading, setCollectionsLineLoading] = useState(true);
+		const [collectionsPieData, setCollectionsPieData] = useState([]);
+		const [collectionsLineData, setCollectionsLineData] = useState([]);
 		const [pieWidth, setPieWidth] = useState(null);
 		const [lineWidth, setLineWidth] = useState(null);
+		const [collectionsFrom, setCollectionsFrom] = useState(todayStart);
+		const [collectionsTo, setCollectionsTo] = useState(todayEnd);
 
 		const [efficiencyLoading, setEfficiencyLoading] = useState(true);
 		const [barWidth, setBarWidth] = useState(null);
+		const [efficiencyFrom, setEfficiencyFrom] = useState(todayStart);
+		const [efficiencyTo, setEfficiencyTo] = useState(todayEnd);
 
 		const getCollections = (from, to) => {
 			console.log("from: " + from.toDate());
 			console.log("to: " + to.toDate());
+
+			setCollectionsPieLoading(true);
+			setCollectionsLineLoading(true);
+
+			setCollectionsFrom(from.toDate());
+			setCollectionsTo(to.toDate());
 		}
 
 		const getEfficiencies = (from, to) => {
 			console.log("from: " + from.toDate());
 			console.log("to: " + to.toDate());
+
+			setEfficiencyLoading(true);
+
+			setEfficiencyFrom(from.toDate());
+			setEfficiencyTo(to.toDate());
 		}
 
 		useEffect(() => {
@@ -127,21 +335,71 @@ if(Meteor.isClient) {
 			const barwdth = parseInt(containerWidth * 0.8);
 			setBarWidth(barwdth);
 
-			setCollectionsLoading(false);
-			setEfficiencyLoading(false);
-		}, [pieWidth, lineWidth, collectionsLoading]);
+		}, [pieWidth, lineWidth]);
 
+		//update the pieChart and lineChart
 		useEffect(() => {
-			const handle = Meteor.subscribe('reports.getAll', {
+			const handle = Meteor.subscribe('reports.getCollections', { from: collectionsFrom, to: collectionsTo }, {
 				onStop(error) {
-					console.log("reports.getAll is stopped.");
+					console.log("reports.getCollections is stopped.");
 					if(error) {
 						console.log(error);
 					}
 				},
 
 				onReady() {
-					console.log("reports.getAll is ready to get the data.");
+					console.log("reports.getCollections is ready to get the data.");
+				}
+			});
+
+			Tracker.autorun(() => {
+				if(handle.ready()) {
+					const collectionsPie = Collections.receipts.findOne({ "_id": "collectionsPie" });
+					
+					if(collectionsPie && collectionsPie.docs) {
+						let pieData = [];
+						console.log("collectionsPie.docs: " + JSON.stringify(collectionsPie.docs));
+						collectionsPie.docs.forEach(doc => {
+							pieData.push({ name: doc.name, value: doc.amount });
+						});
+
+						setCollectionsPieData(pieData);
+						setCollectionsPieLoading(false);
+					}
+
+					const collectionsLine = Collections.receipts.findOne({ "_id": "collectionsLine" });
+
+					if(collectionsLine && collectionsLine.docs) {
+						let lineData = [];
+						console.log("collectionsLine.docs: " + JSON.stringify(collectionsLine.docs));
+						collectionsLine.docs.forEach(doc => {
+							lineData.push({ date: doc.createdAt, value: doc.amount });
+						});
+
+						setCollectionsLineData(lineData);
+						setCollectionsLineLoading(false);
+					}
+
+				}
+			})
+
+			return function() {
+				handle.stop();
+			}
+		}, [collectionsFrom, collectionsTo]);
+
+		//update the barChart
+		useEffect(() => {
+			const handle = Meteor.subscribe('reports.getEfficiencies', {}, {
+				onStop(error) {
+					console.log("reports.getEfficiencies is stopped.");
+					if(error) {
+						console.log(error);
+					}
+				},
+
+				onReady() {
+					console.log("reports.getEfficiencies is ready to get the data.");
 				}
 			});
 
@@ -154,95 +412,39 @@ if(Meteor.isClient) {
 			return function() {
 				handle.stop();
 			}
-		}, []);
+		}, [collectionsFrom, collectionsTo]);
 
 		return <div>
-			<ReportsBlock title="Collections" fromString="Filter results from: " toString="To: " onGenerate={getCollections}>
+			<ReportsBlock id="collectionsBlock" title="Collections" fromString="Filter results from: " toString="To: " onGenerate={getCollections}>
 				{ 
 					<React.Fragment>
 						<div className="text-center">
 							<div style={{ width: `${pieWidth}px`, margin: "20px", display: "inline-block"}}>
 								{
-									(collectionsLoading || !pieWidth) ? "Loading" :
+									(collectionsPieLoading || !pieWidth) ? 
 
-									<PieChart 	id="collectionsPie" width={pieWidth} height={pieWidth}
-												data={[
-														{ name: "Sanjay", value: 56423.01 }, 
-													  	{ name: "Nelson", value: 12302 },
-													  	{ name: "Umesh", value: 65923 },
-													  	{ name: "Suresh", value: 89956 },
-													  	{ name: "exec1", value: 123456 },
-													  	{ name: "exec2", value: 54234 },
-													  	{ name: "exec3", value: 23546 },
-													  	{ name: "exec4", value: 25876 },
-													  	{ name: "exec5", value: 86754 },
-													]}/>
+									<div><FontAwesomeIcon icon={faCircleNotch} spin/> Loading...</div> :
+
+									(collectionsPieData.length) ?
+
+									<PieChart 	id="collectionsPie" width={pieWidth} height={pieWidth} data={collectionsPieData}/>
+
+									: <div className="text-danger">No data present for this time period</div>
 								}
 							</div>
 						</div>
 						<br/>
 						<div style={{margin: "20px"}}>
 							{
-								(collectionsLoading || !lineWidth) ? "Loading" :
-								<LineChart id="collectionsLine" width={lineWidth} height={lineWidth/2}
-											data={[
-													{"date":new Date("2007-04-23T00:00:00.000Z"),"value":93.24},
-													{"date":new Date("2007-04-24T00:00:00.000Z"),"value":95.35},
-													{"date":new Date("2007-04-25T00:00:00.000Z"),"value":98.84},
-													{"date":new Date("2007-04-26T00:00:00.000Z"),"value":99.92},
-													{"date":new Date("2007-04-29T00:00:00.000Z"),"value":99.8},
-													{"date":new Date("2007-05-01T00:00:00.000Z"),"value":99.47},
-													{"date":new Date("2007-05-02T00:00:00.000Z"),"value":100.39},
-													{"date":new Date("2007-05-03T00:00:00.000Z"),"value":100.4},
-													{"date":new Date("2007-05-04T00:00:00.000Z"),"value":100.81},
-													{"date":new Date("2007-05-07T00:00:00.000Z"),"value":103.92},
-													{"date":new Date("2007-05-08T00:00:00.000Z"),"value":105.06},
-													{"date":new Date("2007-05-09T00:00:00.000Z"),"value":106.88},
-													{"date":new Date("2007-05-09T00:00:00.000Z"),"value":107.34},
-													{"date":new Date("2007-05-10T00:00:00.000Z"),"value":108.74},
-													{"date":new Date("2007-05-13T00:00:00.000Z"),"value":109.36},
-													{"date":new Date("2007-05-14T00:00:00.000Z"),"value":107.52},
-													{"date":new Date("2007-05-15T00:00:00.000Z"),"value":107.34},
-													{"date":new Date("2007-05-16T00:00:00.000Z"),"value":109.44},
-													{"date":new Date("2007-05-17T00:00:00.000Z"),"value":110.02},
-													{"date":new Date("2007-05-20T00:00:00.000Z"),"value":111.98},
-													{"date":new Date("2007-05-21T00:00:00.000Z"),"value":113.54},
-													{"date":new Date("2007-05-22T00:00:00.000Z"),"value":112.89},
-													{"date":new Date("2007-05-23T00:00:00.000Z"),"value":110.69},
-													{"date":new Date("2007-05-24T00:00:00.000Z"),"value":113.62},
-													{"date":new Date("2007-05-28T00:00:00.000Z"),"value":114.35},
-													{"date":new Date("2007-05-29T00:00:00.000Z"),"value":118.77},
-													{"date":new Date("2007-05-30T00:00:00.000Z"),"value":121.19},
-													{"date":new Date("2007-06-01T00:00:00.000Z"),"value":118.4},
-													{"date":new Date("2007-06-04T00:00:00.000Z"),"value":121.33},
-													{"date":new Date("2007-06-05T00:00:00.000Z"),"value":122.67},
-													{"date":new Date("2007-06-06T00:00:00.000Z"),"value":123.64},
-													{"date":new Date("2007-06-07T00:00:00.000Z"),"value":124.07},
-													{"date":new Date("2007-06-08T00:00:00.000Z"),"value":124.49},
-													{"date":new Date("2007-06-10T00:00:00.000Z"),"value":120.19},
-													{"date":new Date("2007-06-11T00:00:00.000Z"),"value":120.38},
-													{"date":new Date("2007-06-12T00:00:00.000Z"),"value":117.5},
-													{"date":new Date("2007-06-13T00:00:00.000Z"),"value":118.75},
-													{"date":new Date("2007-06-14T00:00:00.000Z"),"value":120.5},
-													{"date":new Date("2007-06-17T00:00:00.000Z"),"value":125.09},
-													{"date":new Date("2007-06-18T00:00:00.000Z"),"value":123.66},
-													{"date":new Date("2007-06-19T00:00:00.000Z"),"value":1215.53},
-													{"date":new Date("2007-06-20T00:00:00.000Z"),"value":123.9},
-													{"date":new Date("2007-06-21T00:00:00.000Z"),"value":123},
-													{"date":new Date("2007-06-24T00:00:00.000Z"),"value":122.34},
-													{"date":new Date("2007-06-25T00:00:00.000Z"),"value":119.65},
-													{"date":new Date("2007-06-26T00:00:00.000Z"),"value":121.89},
-													{"date":new Date("2007-06-27T00:00:00.000Z"),"value":120.56},
-													{"date":new Date("2007-06-28T00:00:00.000Z"),"value":122.04},
-													{"date":new Date("2007-07-02T00:00:00.000Z"),"value":121.26},
-													{"date":new Date("2007-07-03T00:00:00.000Z"),"value":127.17},
-													{"date":new Date("2007-07-05T00:00:00.000Z"),"value":132.75},
-													{"date":new Date("2007-07-06T00:00:00.000Z"),"value":132.3},
-													{"date":new Date("2007-07-09T00:00:00.000Z"),"value":130.33},
-													{"date":new Date("2007-07-09T00:00:00.000Z"),"value":132.35},
-													{"date":new Date("2007-07-10T00:00:00.000Z"),"value":132.39},
-													{"date":new Date("2007-07-11T00:00:00.000Z"),"value":134.07},
-												]}/>
+								(collectionsLineLoading || !lineWidth) ? 
+
+								<div><FontAwesomeIcon icon={faCircleNotch} spin/> Loading...</div> :
+								
+								(collectionsLineData.length) ?
+
+								<LineChart id="collectionsLine" width={lineWidth} height={lineWidth/2} data={collectionsLineData}/>
+
+								: <div className="text-center text-danger">No data present for this time period</div>
 							}
 						</div>
 						<br/>
@@ -254,7 +456,7 @@ if(Meteor.isClient) {
 			</ReportsBlock>
 			<br/>
 			<br/>
-			<ReportsBlock title="Efficiency" fromString="Filter results from: " toString="To: " onGenerate={getEfficiencies}>
+			<ReportsBlock id="efficienciesBlock" title="Efficiency" fromString="Filter results from: " toString="To: " onGenerate={getEfficiencies}>
 				{
 					efficiencyLoading ? "Loading" : 
 

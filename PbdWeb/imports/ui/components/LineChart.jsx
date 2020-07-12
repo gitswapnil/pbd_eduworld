@@ -31,7 +31,7 @@ const LineChart = (props) => {
 		function formatValue(value) {
 		  return value.toLocaleString("en", {
 		    style: "currency",
-		    currency: "USD"
+		    currency: "INR"
 		  });
 		}
 

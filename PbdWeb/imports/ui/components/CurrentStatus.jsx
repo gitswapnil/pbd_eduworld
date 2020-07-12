@@ -131,7 +131,7 @@ if(Meteor.isServer) {
 					this.added("locations", doc._id, doc);
 				});
 
-				console.log("userIdRecorder: " + JSON.stringify(userIdRecorder));
+				// console.log("userIdRecorder: " + JSON.stringify(userIdRecorder));
 
 				initializing = false;
 			});
@@ -199,6 +199,8 @@ if(Meteor.isServer) {
 				handle4.stop();
 				console.log("Publication, \"currentStatus.getEveryoneStatus\" is stopped.");
 			});
+		} else {
+			this.ready();
 		}
 	});
 }
