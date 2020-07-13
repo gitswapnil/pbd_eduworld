@@ -58,7 +58,7 @@ const BarChart = (props) => {
 		//mousemove
 		const mousemove = function(d) {
 		  Tooltip
-		    .html("₹" + d.value)
+		    .html("₹" + d.value + "/day")
 		    .style("left", (d3.event.pageX - $('.sections-column').width() + 15) + "px")
 		    .style("top", (d3.event.pageY + 15) + "px")
 		}

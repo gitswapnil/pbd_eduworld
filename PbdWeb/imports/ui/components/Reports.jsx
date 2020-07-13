@@ -6,6 +6,8 @@ if(Meteor.isServer) {
 		console.log("Publishing the reports.getCollections...");
 		console.log("from: " + from + ", to: " + to);
 		if(this.userId && Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
+			const noOfDays = moment(to).diff(moment(from), "days") + 1;
+
 			let initializing = true;
 
 			const getCollectionsPie = async () => {
@@ -64,20 +66,25 @@ if(Meteor.isServer) {
 					    {
 					    	$sort: { createdAt: 1 }
 					    }
-					], (err, cursor) => {
+					], ((err, cursor) => {
 						if(err) reject(err);
 
-						cursor.toArray((error, docs) => {
+						cursor.toArray(((error, docs) => {
 							if(error) reject(error);
 
-							resolve(docs);
-						});
-					})
+							resolve.apply(this, [docs]);
+						}).bind(this));
+					}).bind(this));
 				}
 
-				const prmse = new Promise(executor);
+				const prmse = new Promise(executor.bind(this));
 
 				const result = await prmse;
+
+				if(Array.isArray(result) && result.length == 1) {
+					result.push({ _id: "fakeId", amount: 0, name: "" });
+				}
+
 				return result;
 			};
 
@@ -138,33 +145,58 @@ if(Meteor.isServer) {
 						{
 							$sort: { createdAt: 1 }
 						}
-					], (err, cursor) => {
+					], ((err, cursor) => {
 						if(err) reject(err);
 
-						cursor.toArray((error, docs) => {
+						cursor.toArray(((error, docs) => {
 							if(error) reject(error);
 
-							resolve(docs);
-						});
-					});
+							let retArr = [];
+							let serialDate = moment(from);
+
+							if(docs && (docs.length < noOfDays)) {
+								for(let i = 1; i <= noOfDays; i++){
+									serialDate.add(1, "days");
+
+									const matchFound = docs.filter(doc => moment(doc.createdAt).isSame(serialDate, "day"));
+									// console.log("matchFound: " + JSON.stringify(matchFound));
+									if(matchFound.length) {
+										retArr.push(matchFound[0]);
+									} else {
+										retArr.push({ _id: `fake${i}`, amount: 0, createdAt: serialDate.toDate() });
+									}
+								}
+							} else {
+								retArr = docs;
+							}
+
+							resolve.apply(this, [retArr]);
+						}).bind(this));
+					}).bind(this));
 				}
 
-				const prmse = new Promise(executor);
+				const prmse = new Promise(executor.bind(this));
 
 				const result = await prmse;
+
+				if(Array.isArray(result) && result.length == 1) {
+					result.splice(0, 0, { _id: "fakeId1", amount: 0, createdAt: moment(result[0].createdAt).subtract(1, "days").toDate() });
+					result.push({ _id: "fakeId2", amount: 0, createdAt: moment(result[result.length - 1].createdAt).add(1, "days").toDate() });
+				}
+
 				return result;
 			};
 
-			const handle1 = Collections.receipts.find().observeChanges({
-				added: function() {
+			const handle1 = Collections.receipts.find({ createdAt: { $gte: from, $lte: to } }).observeChanges({
+				added: (_id, doc) => {
 					if(!initializing) {
-						getCollectionsPie().then(docs => {
+						getCollectionsPie.apply(this).then(docs => {
 							this.changed("receipts", "collectionsPie", { docs });
 						}).catch(err => {
 							throw new Meteor.Error("publication-error", err);
 						});
 
-						getCollectionsLine().then(docs => {
+						getCollectionsLine.apply(this).then(docs => {
 							this.changed("receipts", "collectionsLine", { docs });
 						}).catch(err => {
 							throw new Meteor.Error("publication-error", err);
@@ -200,6 +232,154 @@ if(Meteor.isServer) {
 			this.onStop(() => {
 				handle1.stop();
 				console.log("Publication, \"reports.getCollections\" is stopped.");
+			});
+		} else {
+			this.ready();
+		}
+	});
+
+	Meteor.publish('reports.getEfficiencies', function({from, to}){
+		console.log("Publishing the reports.getEfficiencies...");
+		console.log("from: " + from + ", to: " + to);
+		if(this.userId && Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
+			let initializing = true;
+			const execIds = Meteor.roleAssignment.find({"role._id": "executive"}).map(roleObj => roleObj.user._id);
+			const currentExecutives = Meteor.users.find({ _id: { $in: execIds } }).fetch();
+
+			const getEfficienciesBar = async () => {
+				const executor = (resolve, reject) => {
+					const noOfDays = moment(to).diff(moment(from), "days") + 1;
+
+					Collections.receipts.rawCollection().aggregate([
+						{
+					        $match: {
+					            createdAt: {
+					                $gte: from,
+					                $lte: to
+					            }
+					        }
+					    },
+					    {
+					        $lookup: {
+					            from: "users",
+					            localField: "userId",
+					            foreignField: "_id",
+					            as: "userInfo"
+					        }
+					    },
+					    {
+					        $unwind: "$userInfo"
+					    },
+					    {
+					        $project: {
+					            _id: 1,
+					            receiptNo: 1,
+					            amount: 1,
+					            name: "$userInfo.profile.name",
+					            receiptSeries: "$userInfo.profile.receiptSeries",
+					            userId: 1,
+					            createdAt: 1,
+					        }
+					    },
+					    {
+					        $sort: { createdAt: 1 }
+					    },
+					    {
+					        $group: {
+					            _id: { $concat: ["$receiptSeries", { $convert: { input: "$receiptNo", to: "string"}}] },
+					            amount: { $last: "$amount" },
+					            userId: { $last: "$userId" },
+					            name: { $last: "$name" },
+					            createdAt: { $last: "$createdAt" },
+					        }
+					    },
+					    {
+					        $group: {
+					            _id: "$userId",
+					            amount: { $sum: "$amount" },
+					            name: { $first: "$name" },
+					            createdAt: { $first: "$createdAt" }
+					        }
+					    },
+					    {
+                            $project: {
+                                _id: 1,
+                                average: { $divide: [ "$amount", noOfDays ] },
+                                name: 1,
+                                createdAt: 1
+                            }
+                        },
+                        {
+                            $project: {
+                                _id: 1,
+                                average: { $round: [ "$average", 2 ] },
+                                name: 1,
+                                createdAt: 1
+                            }
+                        },
+					    {
+					    	$sort: { createdAt: 1 }
+					    }
+					], ((err, cursor) => {
+						if(err) reject(err);
+
+						cursor.toArray(((error, docs) => {
+							if(error) reject(error);
+							// console.log("docs: " + JSON.stringify(docs));
+
+							let retArr = [];
+							if(docs && docs.length) {
+								retArr = currentExecutives.map(executive => {
+									let execFound = docs.filter(doc => doc._id === executive._id);
+									if(execFound.length) {
+										return { _id: execFound[0]._id, average: execFound[0].average, name: execFound[0].name, createdAt: execFound[0].createdAt };
+									} else {
+										return { _id: executive._id, average: 0, name: executive.profile.name };
+									}
+								});
+							}
+
+							resolve.apply(this, [retArr]);
+						}).bind(this));
+					}).bind(this));
+				}
+
+				const prmse = new Promise(executor.bind(this));
+
+				const result = await prmse;
+
+				// if(Array.isArray(result) && result.length == 1) {
+				// 	result.push({ _id: "fakeId", average: 0, name: "" });
+				// }
+
+				return result;
+			};
+
+			const handle1 = Collections.receipts.find({ createdAt: { $gte: from, $lte: to } }).observeChanges({
+				added: (_id, doc) => {
+					if(!initializing) {
+						getEfficienciesBar.apply(this).then(docs => {
+							this.changed("receipts", "efficienciesBar", { docs });
+						}).catch(err => {
+							throw new Meteor.Error("publication-error", err);
+						});
+					}
+				}
+			});
+
+			const barChartData = getEfficienciesBar.apply(this).then(docs => {
+				this.added("receipts", "efficienciesBar", { docs });
+
+				initializing = false;
+			}).catch(err => {
+				throw new Meteor.Error("publication-error", err);
+			});
+
+			console.log("data publication for \"reports.getEfficiencies is complete.\"");
+			this.ready();
+			this.onStop(() => {
+				handle1.stop();
+				console.log("Publication, \"reports.getEfficiencies\" is stopped.");
 			});
 		} else {
 			this.ready();
@@ -300,6 +480,7 @@ if(Meteor.isClient) {
 		const [collectionsTo, setCollectionsTo] = useState(todayEnd);
 
 		const [efficiencyLoading, setEfficiencyLoading] = useState(true);
+		const [efficiencyBarData, setEfficiencyBarData] = useState([]);
 		const [barWidth, setBarWidth] = useState(null);
 		const [efficiencyFrom, setEfficiencyFrom] = useState(todayStart);
 		const [efficiencyTo, setEfficiencyTo] = useState(todayEnd);
@@ -327,7 +508,7 @@ if(Meteor.isClient) {
 
 		useEffect(() => {
 			const containerWidth = $('.tabs-content-container').width();
-			const piewdth = parseInt(containerWidth * 0.5);
+			const piewdth = parseInt(containerWidth * 0.4);
 			const linewdth = parseInt(containerWidth * 0.8);
 			setPieWidth(piewdth);
 			setLineWidth(linewdth);
@@ -358,7 +539,6 @@ if(Meteor.isClient) {
 					
 					if(collectionsPie && collectionsPie.docs) {
 						let pieData = [];
-						console.log("collectionsPie.docs: " + JSON.stringify(collectionsPie.docs));
 						collectionsPie.docs.forEach(doc => {
 							pieData.push({ name: doc.name, value: doc.amount });
 						});
@@ -371,7 +551,6 @@ if(Meteor.isClient) {
 
 					if(collectionsLine && collectionsLine.docs) {
 						let lineData = [];
-						console.log("collectionsLine.docs: " + JSON.stringify(collectionsLine.docs));
 						collectionsLine.docs.forEach(doc => {
 							lineData.push({ date: doc.createdAt, value: doc.amount });
 						});
@@ -390,7 +569,7 @@ if(Meteor.isClient) {
 
 		//update the barChart
 		useEffect(() => {
-			const handle = Meteor.subscribe('reports.getEfficiencies', {}, {
+			const handle = Meteor.subscribe('reports.getEfficiencies', { from: efficiencyFrom, to: efficiencyTo }, {
 				onStop(error) {
 					console.log("reports.getEfficiencies is stopped.");
 					if(error) {
@@ -405,14 +584,25 @@ if(Meteor.isClient) {
 
 			Tracker.autorun(() => {
 				if(handle.ready()) {
+					const efficienciesBar = Collections.receipts.findOne({ "_id": "efficienciesBar" });
 					
+					if(efficienciesBar && efficienciesBar.docs) {
+						let barData = [];
+						console.log("efficienciesBar: " + JSON.stringify(efficienciesBar));
+						efficienciesBar.docs.forEach(doc => {
+							barData.push({ name: doc.name, value: doc.average });
+						});
+
+						setEfficiencyBarData(barData);
+						setEfficiencyLoading(false);
+					}
 				}
 			})
 
 			return function() {
 				handle.stop();
 			}
-		}, [collectionsFrom, collectionsTo]);
+		}, [efficiencyFrom, efficiencyTo]);
 
 		return <div>
 			<ReportsBlock id="collectionsBlock" title="Collections" fromString="Filter results from: " toString="To: " onGenerate={getCollections}>
@@ -438,19 +628,24 @@ if(Meteor.isClient) {
 							{
 								(collectionsLineLoading || !lineWidth) ? 
 
-								<div><FontAwesomeIcon icon={faCircleNotch} spin/> Loading...</div> :
+								<div className="text-center"><FontAwesomeIcon icon={faCircleNotch} spin/> Loading...</div> :
 								
 								(collectionsLineData.length) ?
 
-								<LineChart id="collectionsLine" width={lineWidth} height={lineWidth/2} data={collectionsLineData}/>
+								<React.Fragment>
+									<LineChart id="collectionsLine" width={lineWidth} height={lineWidth/2} data={collectionsLineData}/>
+
+									<div className="text-center">
+										<h5>Total Collections: 
+											<b>₹{collectionsPieData.reduce((accumulator, currObj) => (parseFloat(accumulator + currObj.value).toFixed(2)), 0)}</b>
+										</h5>
+									</div>
+								</React.Fragment>
 
 								: <div className="text-center text-danger">No data present for this time period</div>
 							}
 						</div>
 						<br/>
-						<div className="text-center">
-							<h5>Total Collections: <b>₹34920</b></h5>
-						</div>
 					</React.Fragment>
 				}
 			</ReportsBlock>
@@ -458,7 +653,11 @@ if(Meteor.isClient) {
 			<br/>
 			<ReportsBlock id="efficienciesBlock" title="Efficiency" fromString="Filter results from: " toString="To: " onGenerate={getEfficiencies}>
 				{
-					efficiencyLoading ? "Loading" : 
+					(efficiencyLoading || !barWidth) ? 
+
+					<div className="text-center"><FontAwesomeIcon icon={faCircleNotch} spin/> Loading...</div> :
+
+					(efficiencyBarData.length) ? 
 
 					<React.Fragment>
 						<div style={{ transform: "rotate(-90deg)", display: "inline-block", float: "left", marginTop: `${barWidth * 0.2}px`}}>
@@ -466,24 +665,18 @@ if(Meteor.isClient) {
 						</div>
 						<div style={{ width: `${barWidth}px`, display: "inline-block", float: "left"}}>
 							<BarChart 	id="efficienciesBar" width={barWidth} height={barWidth * 0.5}
-										data={[
-												{ name: "Sanjay", value: 56423.01 }, 
-											  	{ name: "Nelson", value: 12302 },
-											  	{ name: "Umesh", value: 65923 },
-											  	{ name: "Suresh", value: 89956 },
-											  	{ name: "exec1", value: 123456 },
-											  	{ name: "exec2", value: 54234 },
-											  	{ name: "exec3", value: 23546 },
-											  	{ name: "exec4", value: 25876 },
-											  	{ name: "exec5", value: 86754 },
-											]}/>
+										data={efficiencyBarData}/>
 						</div>
 						<div style={{"clear": "both"}}></div>
 						<br/>
 						<div className="text-center">
-							<h5>Average efficiency: <b>₹3490/day</b></h5>
+							<h5>Average efficiency: 
+								<b>₹{efficiencyBarData.reduce((accumulator, currObj) => (parseFloat(accumulator + currObj.value).toFixed(2)), 0)}/day</b>
+							</h5>
 						</div>
 					</React.Fragment>
+
+					: <div className="text-center text-danger" style={{margin: "20px"}}>No data present for this time period</div>
 				}
 			</ReportsBlock>
 		</div>
