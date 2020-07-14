@@ -154,10 +154,10 @@ if(Meteor.isServer) {
 							let retArr = [];
 							let serialDate = moment(from);
 
-							if(docs && (docs.length < noOfDays)) {
-								for(let i = 1; i <= noOfDays; i++){
-									serialDate.add(1, "days");
+							console.log("docs: " + JSON.stringify(docs));
 
+							if(docs && (noOfDays > 1) && (docs.length) && (docs.length < noOfDays)) {
+								for(let i = 1; i <= noOfDays; i++){
 									const matchFound = docs.filter(doc => moment(doc.createdAt).isSame(serialDate, "day"));
 									// console.log("matchFound: " + JSON.stringify(matchFound));
 									if(matchFound.length) {
@@ -165,6 +165,8 @@ if(Meteor.isServer) {
 									} else {
 										retArr.push({ _id: `fake${i}`, amount: 0, createdAt: serialDate.toDate() });
 									}
+
+									serialDate.add(1, "days");
 								}
 							} else {
 								retArr = docs;
