@@ -2,6 +2,9 @@ import { Meteor } from 'meteor/meteor';
 import Collections from 'meteor/collections';
 
 if(Meteor.isServer) {
+	import XLSX from 'xlsx';
+	import { Random } from 'meteor/random';
+
 	Meteor.publish('reports.getCollections', function({from, to}){
 		console.log("Publishing the reports.getCollections...");
 		console.log("from: " + from + ", to: " + to);
@@ -387,13 +390,61 @@ if(Meteor.isServer) {
 			this.ready();
 		}
 	});
+
+	Meteor.methods({
+		'reports.getWorkReports'(format, from, to) {		//if editId is given, then it is a method to edit the executive's details.
+			console.log("reports.getWorkReports method with format: " + format + ", from: " + from + ", to: " + to);
+			const execIds = Meteor.roleAssignment.find({"role._id": "executive"}).map(roleObj => roleObj.user._id);
+			const currentExecutives = Meteor.users.find({ _id: { $in: execIds } }).fetch();
+
+			if(Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {		//authorization
+				const fileName = `${Random.hexString(10)}.xls`;
+
+				if(format === "excel") {
+					let wb = XLSX.utils.book_new();
+					currentExecutives.forEach((exec, execIndex) => {
+						const sheetName = exec.profile.name;
+
+						const data = [[ "S", "h", "e", "e", "t", "J", "S" ],
+									  [  1 ,  2 ,  3 ,  4 ,  5 ]];
+
+						let ws = XLSX.utils.aoa_to_sheet(data);
+						XLSX.utils.book_append_sheet(wb, ws, sheetName);
+					});
+					XLSX.writeFile(wb, `/tmp/${fileName}`);
+					return `${fileName}`;
+				} else if(format === "pdf") {
+
+				}
+			}
+
+			// console.log("reports.getWorkReports method is completed successfully.");
+			return "Unknown User";
+		},
+
+		'reports.getAttendanceReports'(format, from, to) {		//if editId is given, then it is a method to edit the executive's details.
+			console.log("reports.getAttendanceReports method with format: " + format + ", from: " + from + ", to: " + to);
+
+			if(Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {		//authorization
+				if(format === "excel") {
+
+				} else if(format === "pdf") {
+
+				}
+			}
+
+			console.log("reports.getAttendanceReports method is completed successfully.");
+			return "Attendance Report Generated Successfully";
+		},
+	});
 }
+
 
 if(Meteor.isClient) {
 	import React, { useState, useEffect } from 'react';
 	import $ from 'jquery';
 	import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-	import { faCircleNotch } from '@fortawesome/free-solid-svg-icons';
+	import { faCircleNotch, faCompactDisc, faFileExcel, faFilePdf } from '@fortawesome/free-solid-svg-icons';
 	import { datepicker } from 'jquery-ui-dist/jquery-ui.min.js';
 	import PieChart from './PieChart';
 	import BarChart from './BarChart';
@@ -412,6 +463,9 @@ if(Meteor.isClient) {
 			    	setFromDate(dateText);
 			    	$(`#${props.id}toDate`).datepicker("destroy");
 			    	initializeToDatepicker(dateText);
+			    	if(props.onFromDateSelect) {
+			    		props.onFromDateSelect(moment(dateText, "DD-MMM-YYYY").startOf("day").toDate());
+			    	}
 			    }
 			});
 		};
@@ -425,6 +479,10 @@ if(Meteor.isClient) {
 			    	setToDate(dateText);
 			    	$(`#${props.id}FromDate`).datepicker("destroy");
 			    	initializeFromDatepicker(dateText);
+
+			    	if(props.onToDateSelect) {
+			    		props.onToDateSelect(moment(dateText, "DD-MMM-YYYY").endOf("day").toDate());
+			    	}
 			    }
 			});
 		};
@@ -436,7 +494,10 @@ if(Meteor.isClient) {
 
 		const generateReport = (event) => {
 			event.preventDefault();
-			props.onGenerate(moment(fromDate, "DD-MMM-YYYY").startOf("day"), moment(toDate, "DD-MMM-YYYY").endOf("day"));
+
+			if(props.onGenerate) {
+				props.onGenerate(moment(fromDate, "DD-MMM-YYYY").startOf("day"), moment(toDate, "DD-MMM-YYYY").endOf("day"));
+			}
 		}
 
 		useEffect(() => {
@@ -458,7 +519,11 @@ if(Meteor.isClient) {
 					{props.toString} 
 					<input id={`${props.id}toDate`} type="text" value={toDate}/>
 					&nbsp; &nbsp;
-					<button className="btn btn-sm btn-primary" type="submit"> Generate </button>
+					{
+						props.onGenerate ? 
+						<button className="btn btn-sm btn-primary" type="submit"> Generate </button> :
+						null
+					}
 				</form>
 			</div>
 
@@ -487,25 +552,83 @@ if(Meteor.isClient) {
 		const [efficiencyFrom, setEfficiencyFrom] = useState(todayStart);
 		const [efficiencyTo, setEfficiencyTo] = useState(todayEnd);
 
-		const getCollections = (from, to) => {
-			console.log("from: " + from.toDate());
-			console.log("to: " + to.toDate());
+		const [workReportFrom, setWorkReportFrom] = useState(todayStart);
+		const [workReportTo, setWorkReportTo] = useState(todayEnd);
+		const [generatingWorkReportExcel, setGeneratingWorkReportExcel] = useState(false);
+		const [generatingWorkReportPdf, setGeneratingWorkReportPdf] = useState(false);
 
+		const [attendanceReportFrom, setAttendanceReportFrom] = useState(todayStart);
+		const [attendanceReportTo, setAttendanceReportTo] = useState(todayEnd);
+		const [generatingAttendanceReportExcel, setGeneratingAttendanceReportExcel] = useState(false);
+		const [generatingAttendanceReportPdf, setGeneratingAttendanceReportPdf] = useState(false);
+
+		const getCollections = (from, to) => {
 			setCollectionsPieLoading(true);
 			setCollectionsLineLoading(true);
 
 			setCollectionsFrom(from.toDate());
 			setCollectionsTo(to.toDate());
-		}
+		};
 
 		const getEfficiencies = (from, to) => {
-			console.log("from: " + from.toDate());
-			console.log("to: " + to.toDate());
-
 			setEfficiencyLoading(true);
 
 			setEfficiencyFrom(from.toDate());
 			setEfficiencyTo(to.toDate());
+		};
+
+		const getWorkReports = (format) => {
+			let generatingFlag;
+			(format === "excel") ? 
+				(generatingFlag = setGeneratingWorkReportExcel) : 
+				(generatingFlag = setGeneratingWorkReportPdf);
+
+			generatingFlag(true);
+
+			Meteor.apply('reports.getWorkReports', 
+				[format, workReportFrom, workReportTo], 
+				{returnStubValues: true, throwStubExceptions: true}, 
+				(err, res) => {
+					if(err){
+						console.log("err: " + err);
+						generatingFlag(false);
+					} else {		//when success, 
+						fetch(`http://localhost:3000/api/downloadFile/${res}`)
+							.then(resp => resp.blob())
+							.then(blob => {
+						   		const url = window.URL.createObjectURL(blob);
+							    const a = document.createElement('a');
+							    a.style.display = 'none';
+							    a.href = url;
+							    // the filename you want
+							    a.download = `work_report_${moment(workReportFrom).format("DDMMMYY")}-${moment(workReportTo).format("DDMMMYY")}.xls`;
+							    document.body.appendChild(a);
+							    a.click();
+							    window.URL.revokeObjectURL(url);
+							    a.remove();
+							    // alert('your file has downloaded!'); // or you know, something with better UX...
+							    generatingFlag(false);
+						  	})
+						  	.catch(err => {
+						  		alert('Error!' + err);
+						  		generatingFlag(false);
+						  	});
+					}
+				});
+		};
+
+		const getAttendanceReports = (format) => {
+			(format === "excel") ? setGeneratingAttendanceReportExcel(true) : setGeneratingAttendanceReportPdf(true);
+			Meteor.apply('reports.getAttendanceReports', 
+				[format, workReportFrom, workReportTo], 
+				{returnStubValues: true, throwStubExceptions: true}, 
+				(err, res) => {
+					if(err){
+						console.log("err: " + err);
+					} else {		//when success, 
+						
+					}
+				});
 		}
 
 		useEffect(() => {
@@ -607,7 +730,11 @@ if(Meteor.isClient) {
 		}, [efficiencyFrom, efficiencyTo]);
 
 		return <div>
-			<ReportsBlock id="collectionsBlock" title="Collections" fromString="Filter results from: " toString="To: " onGenerate={getCollections}>
+			<ReportsBlock 	id="collectionsBlock" 
+							title="Collections" 
+							fromString="Filter results from: " 
+							toString="To: " 
+							onGenerate={getCollections}>
 				{ 
 					<React.Fragment>
 						<div className="text-center">
@@ -652,8 +779,11 @@ if(Meteor.isClient) {
 				}
 			</ReportsBlock>
 			<br/>
-			<br/>
-			<ReportsBlock id="efficienciesBlock" title="Efficiency" fromString="Filter results from: " toString="To: " onGenerate={getEfficiencies}>
+			<ReportsBlock 	id="efficienciesBlock" 
+							title="Efficiency" 
+							fromString="Filter results from: " 
+							toString="To: " 
+							onGenerate={getEfficiencies}>
 				{
 					(efficiencyLoading || !barWidth) ? 
 
@@ -680,6 +810,84 @@ if(Meteor.isClient) {
 
 					: <div className="text-center text-danger" style={{margin: "20px"}}>No data present for this time period</div>
 				}
+			</ReportsBlock>
+			<br/>
+			<ReportsBlock 	id="workReportBlock" 
+							title="Work Report" 
+							fromString="Get work report from: " 
+							toString="To: " 
+							onFromDateSelect={fromDate => setWorkReportFrom(fromDate)}
+							onToDateSelect={toDate => setWorkReportTo(toDate)}>
+				<br/>
+				<div className="text-center">
+					<button className="btn btn-success" 
+							onClick={getWorkReports.bind(this, "excel")}
+							disabled={generatingWorkReportExcel}>
+						{
+							generatingWorkReportExcel ? 
+							<div className="text-center">
+								<FontAwesomeIcon icon={faCompactDisc} spin/> generating...
+							</div>
+							:
+							<React.Fragment>
+								Export to Excel &nbsp;<FontAwesomeIcon icon={faFileExcel}/>
+							</React.Fragment>
+						}
+					</button> &nbsp; &nbsp; &nbsp;
+					<button className="btn btn-danger" 
+							onClick={getWorkReports.bind(this, "pdf")}
+							disabled={generatingWorkReportPdf}>
+						{
+							generatingWorkReportPdf ? 
+							<div className="text-center">
+								<FontAwesomeIcon icon={faCompactDisc} spin/> generating...
+							</div>
+							:
+							<React.Fragment>
+								Export to PDF &nbsp;<FontAwesomeIcon icon={faFilePdf}/>
+							</React.Fragment>
+						}
+					</button>
+				</div>
+			</ReportsBlock>
+			<br/>
+			<ReportsBlock 	id="attendanceReportBlock" 
+							title="Attendance Report" 
+							fromString="Get Attendance report from: " 
+							toString="To: " 
+							onFromDateSelect={fromDate => setAttendanceReportFrom(fromDate)}
+							onToDateSelect={toDate => setAttendanceReportTo(toDate)}>
+				<br/>
+				<div className="text-center">
+					<button className="btn btn-success" 
+							onClick={getAttendanceReports.bind(this, "excel")}
+							disabled={generatingAttendanceReportExcel}>
+						{
+							generatingAttendanceReportExcel ? 
+							<div className="text-center">
+								<FontAwesomeIcon icon={faCompactDisc} spin/> generating...
+							</div>
+							:
+							<React.Fragment>
+								Export to Excel &nbsp;<FontAwesomeIcon icon={faFileExcel}/>
+							</React.Fragment>
+						}
+					</button> &nbsp; &nbsp; &nbsp;
+					<button className="btn btn-danger" 
+							onClick={getAttendanceReports.bind(this, "pdf")}
+							disabled={generatingAttendanceReportPdf}>
+						{
+							generatingAttendanceReportPdf ? 
+							<div className="text-center">
+								<FontAwesomeIcon icon={faCompactDisc} spin/> generating...
+							</div>
+							:
+							<React.Fragment>
+								Export to PDF &nbsp;<FontAwesomeIcon icon={faFilePdf}/>
+							</React.Fragment>
+						}
+					</button>
+				</div>
 			</ReportsBlock>
 		</div>
 	}

@@ -169,11 +169,46 @@ if(Meteor.isClient) {
 } else if(Meteor.isServer) {
 	import { Accounts } from 'meteor/accounts-base';
 	import { Random } from 'meteor/random';
-	const autoIncrement = require('mongodb-autoincrement');
+	import fs from 'fs';
+	import { finished } from 'stream';
+	import { promisify } from 'util';
 
 	Router.route('/api/testroute', {where: 'server'}).get(function(req, res, next) {
 		console.log("This is testroute.");
 		res.end("response from testroute. It is a get method.");
+	});
+
+	/*	
+		params: { filename: String }
+		return: File
+	*/
+	Router.route('/api/downloadFile/:filename', {where: 'server'}).get(function(req, res, next) {
+		console.log("API: downloadFile invoked.");
+		console.log("filename: " + this.params.filename);
+		const filename = this.params.filename;
+		const extension = filename.split(".")[1];
+
+		const readStream = fs.createReadStream(`/tmp/${filename}`);
+		const promisifiedFinished = promisify(finished);
+		async function run() {
+		  	await promisifiedFinished(readStream);
+		  	console.log('Stream is done reading.');
+		  	fs.unlink(`/tmp/${filename}`, (err) => {
+				if (err) throw err;
+				console.log('successfully deleted /tmp/'+filename);
+			});
+		}
+
+		run().catch(console.error);
+		readStream.resume(); // Drain the stream.
+
+		res.writeHead(200, {
+			'Content-disposition': `attachment; filename=${filename}`, 
+			'Content-Type': (extension === "xls") ? 'application/vnd.ms-excel' : (extension === "pdf") ? 'application/pdf' : null
+		}); //here you can add more headers
+		readStream.pipe(res);
+
+		return;
 	});
 
 	/*

@@ -212,10 +212,13 @@ if(Meteor.isServer) {
 if(Meteor.isClient) {
 	import React, { useState, useEffect } from 'react';
 	import IndividualStatus from './IndividualStatus';
+	import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+	import { faCircleNotch } from '@fortawesome/free-solid-svg-icons';
 	import { Tracker } from 'meteor/tracker';
 
 	const CurrentStatus = (props) => {
 		const [executives, setExecutives] = useState([]);
+		const [loading, setLoading] = useState(true);
 
 		useEffect(() => {
 			const handle = Meteor.subscribe('currentStatus.getEveryoneStatus', {
@@ -263,6 +266,7 @@ if(Meteor.isClient) {
 					});
 
 					setExecutives(executives);
+					setLoading(false);
 				}
 			})
 
@@ -277,6 +281,15 @@ if(Meteor.isClient) {
 				<div className="row">
 					<div className="col-12">
 						{
+							(loading) ? 
+							<div className="text-center">
+								<FontAwesomeIcon icon={faCircleNotch} spin/> Loading...
+							</div>
+							
+							:
+
+							(executives.length) ?
+
 							executives.map(executive => 
 								<div>
 									<IndividualStatus 	key={executive._id} 
@@ -291,6 +304,8 @@ if(Meteor.isClient) {
 									<br/>
 								</div>
 							)
+							:
+							<div className="text-center"> No executive created. Please go to Manage Executives tab and create executive's profile. </div>
 						}
 					</div>
 				</div>
