@@ -2,7 +2,7 @@ import { Meteor } from 'meteor/meteor';
 import Collections from 'meteor/collections';
 
 if(Meteor.isServer) {
-	import XLSX from 'xlsx';
+	import ExcelJS from 'exceljs';
 	import { Random } from 'meteor/random';
 
 	Meteor.publish('reports.getCollections', function({from, to}){
@@ -372,7 +372,7 @@ if(Meteor.isServer) {
 				}
 			});
 
-			const barChartData = getEfficienciesBar.apply(this).then(docs => {
+			getEfficienciesBar.apply(this).then(docs => {
 				this.added("receipts", "efficienciesBar", { docs });
 
 				initializing = false;
@@ -391,51 +391,304 @@ if(Meteor.isServer) {
 		}
 	});
 
-	Meteor.methods({
-		'reports.getWorkReports'(format, from, to) {		//if editId is given, then it is a method to edit the executive's details.
-			console.log("reports.getWorkReports method with format: " + format + ", from: " + from + ", to: " + to);
+	Meteor.publish('reports.getWorkReports', function({format, from, to}){
+		console.log("Publishing the reports.getWorkReports...");
+		console.log("reports.getWorkReports method with format: " + format + ", from: " + from + ", to: " + to);
+
+		if(this.userId && Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
+			const fileName = `${Random.hexString(10)}.${(format === "excel") ? "xls" : "pdf"}`;
+
+			let workbook = new ExcelJS.Workbook();
+			workbook.creator = 'PBD Executives reports dashboard';
+			workbook.created = new Date();
+			const normalText = { name: 'Calibri', family: 2, size: 10, scheme: 'minor' };
+			const boldTextProps = { name: 'Calibri', family: 2, size: 10, scheme: 'minor', bold: true };
+
+			const sendDataAs = async (id) => {
+				await workbook.xlsx.writeFile(`/tmp/${fileName}`);
+				this.added("receipts", id, { fileName });
+				console.log("data publication for \"reports.getWorkReports is complete.\"");
+
+				this.ready();
+			};
+
+			const getData = async () => {
+				const executor = (resolve, reject) => {
+					Collections.tasks.rawCollection().aggregate([
+						{
+					        $match: {
+					            createdAt: {
+					                $gte: from,
+					                $lte: to
+					            }
+					        }
+					    },
+					    {
+					        $lookup: {
+					            from: "users",
+					            foreignField: "_id",
+					            localField: "userId",
+					            as: "execInfo"
+					        }
+					    },
+					    {
+					        $group: {
+					            _id: "$userId",
+					            execName: { $first: { $arrayElemAt: ["$execInfo.profile.name", 0] } },
+					            others: {
+					                $addToSet: {
+					                    date: { $dateToString: { date: "$createdAt", format: "%d-%m-%Y", timezone: "Asia/Kolkata" } },
+					                    subject: "$subject",
+					                    remarks: "$remarks"
+					                }
+					            },
+					            otherFields: {
+					                $addToSet: {
+					                    taskId: "$_id",
+					                    type: "$type",
+					                    partyId: "$partyId",
+					                    cpName: "$cpName",
+					                    cpNumber: "$cpNumber",
+					                    reason: "$reason",
+					                    remarks: "$remarks",
+					                    userId: "$userId",
+					                    createdAt: "$createdAt"
+					                }
+					            }
+					        }
+					    },
+					    {
+					        $unwind: "$others"
+					    },
+					    {
+					        $unwind: "$otherFields"
+					    },
+					    {
+					        $project: {
+					            _id: "$otherFields.taskId",
+					            execName: 1,
+					            type: "$otherFields.type",
+					            partyId: "$otherFields.partyId",
+					            cpName: "$otherFields.cpName",
+					            cpNumber: "$otherFields.cpNumber",
+					            reason: "$otherFields.reason",
+					            remarks: "$otherFields.remarks",
+					            userId: "$otherFields.userId",
+					            createdAt: "$otherFields.createdAt",
+					            others: 1
+					        }
+					    },
+					    {
+					        $lookup: {
+					            from: "users",
+					            localField: "partyId",
+					            foreignField: "_id",
+					            as: "partyInfo"
+					        }
+					    },
+					    {
+					        $project: {
+					            _id: 1,
+					            execName: 1,
+					            userId: "$userId",
+					            type: 1,
+					            date: { $dateToString: { date: "$createdAt", format: "%d-%m-%Y", timezone: "Asia/Kolkata" } },
+					            party: { 
+					                code: { $arrayElemAt: ["$partyInfo.username", 0] }, 
+					                name: { $arrayElemAt: ["$partyInfo.profile.name", 0] }, 
+					                address: { $arrayElemAt: ["$partyInfo.profile.address", 0]} 
+					            },
+					            cp: { name: "$cpName", number: "$cpNumber" },
+					            reason: 1,
+					            remarks: 1,
+					            others: 1,
+					        }
+					    },
+					    {
+					        $group: {
+					            _id: "$userId",
+					            execName: { $first: "$execName" },
+					            visits: {
+					                $addToSet: {
+					                    $cond: [
+					                        { $eq: [ "$type", 0 ] },
+					                        
+					                        {
+					                            date: "$date",
+					                            party: "$party",
+					                            cp: "$cp",
+					                            reason: "$reason",
+					                            remarks: "$remarks"
+					                        },
+					                        
+					                        null
+					                    ]
+					                }
+					            },
+					            
+					            others: {
+					                $addToSet: {
+					                    $cond: [
+					                        { $eq: [ "$type", 1 ] },
+					                    
+					                        "$others",
+					                        null
+					                    ]
+					                }
+					            }
+					        }
+					    },
+					    {
+					        $project: {
+					            _id: 1,
+					            execName: 1,
+					            visits: {
+					                $filter: {
+					                    input: "$visits",
+					                    as: "visits",
+					                    cond: { $ne: [ "$$visits", null ] }
+					                }
+					            },
+					            others: {
+					                $filter: {
+					                    input: "$others",
+					                    as: "others",
+					                    cond: { $ne: [ "$$others", null ] }
+					                }
+					            }
+					        }
+					    }
+					], ((err, cursor) => {
+						if(err) reject(err);
+
+						cursor.toArray(((error, docs) => {
+							if(error) reject(error);
+							console.log("docs: " + JSON.stringify(docs));
+
+							resolve.apply(this, [docs]);
+						}).bind(this));
+					}).bind(this));
+				};
+
+				const prmse = new Promise(executor.bind(this));
+
+				const result = await prmse;
+
+				// if(Array.isArray(result) && result.length == 1) {
+				// 	result.push({ _id: "fakeId", average: 0, name: "" });
+				// }
+
+				return result;
+			};
+
+			getData.apply(this).then(docs => {
+				if(format === "excel") {
+					docs.forEach((exec, execIndex) => {
+						let worksheet = workbook.addWorksheet(exec.execName, {
+											pageSetup:{
+												paperSize: 9, 
+												orientation:'landscape'
+											}
+										});
+						worksheet.addRow([`Name: ${exec.execName}`]);
+						worksheet.mergeCells('A1:F1');
+						worksheet.addRow([]);
+						worksheet.addRow(["SI No.", "Date", "Visited Party", "Party Code", "Contact Person", "Reason", "Remarks"]);
+
+						worksheet.getColumn(2).width = 20;
+						worksheet.getColumn(3).width = 40;
+						worksheet.getColumn(4).width = 10;
+						worksheet.getColumn(5).width = 20;
+						worksheet.getColumn(6).width = 20;
+						worksheet.getColumn(7).width = 40;
+
+						worksheet.getRow(1).style.font = boldTextProps;
+						worksheet.getRow(3).style.font = boldTextProps;
+
+						exec.visits.forEach((visit, visitIndex) => {
+							const si = ++visitIndex;
+							worksheet.addRow([si, visit.date, `${visit.party.name}\n${visit.party.address}`, visit.party.code, `${visit.cp.name}\n(${visit.cp.number})`, visit.reason, visit.remarks]);
+							worksheet.getRow(3 + si).height = 30;
+							worksheet.getRow(3 + si).style.font = normalText;
+						});
+
+						worksheet.addRow([]);
+						worksheet.addRow(["SI No.", "Date", "Other Task", "Remarks"]);
+						let otherStartIndex = 3 + exec.visits.length + 2;
+
+						worksheet.getRow(otherStartIndex).style.font = boldTextProps;
+						worksheet.mergeCells(`D${otherStartIndex}:F${otherStartIndex}`);
+
+						exec.others.forEach((other, otherIndex) => {
+							otherStartIndex++;
+							worksheet.addRow([++otherIndex, other.date, other.subject, other.remarks]);
+							worksheet.getRow(otherStartIndex).style.font = normalText;
+							worksheet.mergeCells(`D${otherStartIndex}:F${otherStartIndex}`);
+						});
+
+					});
+
+					sendDataAs("workReportsExcel");
+				} else if(format === "pdf") {
+
+				}
+
+			}).catch(err => {
+				throw new Meteor.Error("publication-error", err);
+			});
+
+			this.onStop(() => {
+				this.stop();
+				console.log("Publication, \"reports.getWorkReports\" is stopped.");
+			});
+		} else {
+			this.ready();
+		}
+	});
+
+	Meteor.publish('reports.getAttendanceReports', function({format, from, to}){
+		console.log("Publishing the reports.getAttendanceReports...");
+		console.log("reports.getAttendanceReports method with format: " + format + ", from: " + from + ", to: " + to);
+
+		if(this.userId && Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
 			const execIds = Meteor.roleAssignment.find({"role._id": "executive"}).map(roleObj => roleObj.user._id);
 			const currentExecutives = Meteor.users.find({ _id: { $in: execIds } }).fetch();
+			const fileName = `${Random.hexString(10)}.${(format === "excel") ? "xls" : "pdf"}`;
 
-			if(Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {		//authorization
-				const fileName = `${Random.hexString(10)}.xls`;
+			if(format === "excel") {
+				let workbook = new ExcelJS.Workbook();
+				workbook.creator = 'PBD Executives reports dashboard';
+				workbook.created = new Date();
+				currentExecutives.forEach((exec, execIndex) => {
+					let worksheet = workbook.addWorksheet(exec.profile.name, {
+										pageSetup:{
+											paperSize: 9, 
+											orientation:'landscape'
+										}
+									});
+					worksheet.addRow(["Name:", exec.profile.name]);
+				});
 
-				if(format === "excel") {
-					let wb = XLSX.utils.book_new();
-					currentExecutives.forEach((exec, execIndex) => {
-						const sheetName = exec.profile.name;
+				const writeToTemp = async () => {
+					await workbook.xlsx.writeFile(`/tmp/${fileName}`);
+					this.added("receipts", "attendanceReportsExcel", { fileName });
+					console.log("data publication for \"reports.getAttendanceReports is complete.\"");
 
-						const data = [[ "S", "h", "e", "e", "t", "J", "S" ],
-									  [  1 ,  2 ,  3 ,  4 ,  5 ]];
+					this.ready();
+				};
 
-						let ws = XLSX.utils.aoa_to_sheet(data);
-						XLSX.utils.book_append_sheet(wb, ws, sheetName);
-					});
-					XLSX.writeFile(wb, `/tmp/${fileName}`);
-					return `${fileName}`;
-				} else if(format === "pdf") {
+				writeToTemp();
+			} else if(format === "pdf") {
 
-				}
 			}
 
-			// console.log("reports.getWorkReports method is completed successfully.");
-			return "Unknown User";
-		},
-
-		'reports.getAttendanceReports'(format, from, to) {		//if editId is given, then it is a method to edit the executive's details.
-			console.log("reports.getAttendanceReports method with format: " + format + ", from: " + from + ", to: " + to);
-
-			if(Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {		//authorization
-				if(format === "excel") {
-
-				} else if(format === "pdf") {
-
-				}
-			}
-
-			console.log("reports.getAttendanceReports method is completed successfully.");
-			return "Attendance Report Generated Successfully";
-		},
+			this.onStop(() => {
+				this.stop();
+				console.log("Publication, \"reports.getAttendanceReports\" is stopped.");
+			});
+		} else {
+			this.ready();
+		}
 	});
 }
 
@@ -585,50 +838,94 @@ if(Meteor.isClient) {
 
 			generatingFlag(true);
 
-			Meteor.apply('reports.getWorkReports', 
-				[format, workReportFrom, workReportTo], 
-				{returnStubValues: true, throwStubExceptions: true}, 
-				(err, res) => {
-					if(err){
-						console.log("err: " + err);
-						generatingFlag(false);
-					} else {		//when success, 
-						fetch(`http://localhost:3000/api/downloadFile/${res}`)
-							.then(resp => resp.blob())
-							.then(blob => {
-						   		const url = window.URL.createObjectURL(blob);
-							    const a = document.createElement('a');
-							    a.style.display = 'none';
-							    a.href = url;
-							    // the filename you want
-							    a.download = `work_report_${moment(workReportFrom).format("DDMMMYY")}-${moment(workReportTo).format("DDMMMYY")}.xls`;
-							    document.body.appendChild(a);
-							    a.click();
-							    window.URL.revokeObjectURL(url);
-							    a.remove();
-							    // alert('your file has downloaded!'); // or you know, something with better UX...
-							    generatingFlag(false);
-						  	})
-						  	.catch(err => {
-						  		alert('Error!' + err);
-						  		generatingFlag(false);
-						  	});
+			const handle = Meteor.subscribe('reports.getWorkReports', { format,  from: workReportFrom, to: workReportTo }, {
+				onStop(error) {
+					console.log("reports.getWorkReports is stopped.");
+					if(error) {
+						console.log(error);
 					}
-				});
+				},
+
+				onReady() {
+					console.log("reports.getWorkReports is ready to get the data.");
+				}
+			});
+
+			Tracker.autorun(() => {
+				if(handle.ready()) {
+					const fileName = Collections.receipts.findOne({ _id: (format === "excel") ? "workReportsExcel" : "workReportsPdf" }).fileName;
+					fetch(`http://localhost:3000/api/downloadFile/${fileName}`)
+						.then(resp => resp.blob())
+						.then(blob => {
+					   		const url = window.URL.createObjectURL(blob);
+						    const a = document.createElement('a');
+						    a.style.display = 'none';
+						    a.href = url;
+						    // the filename you want
+						    a.download = `work_report_${moment(workReportFrom).format("DDMMMYY")}-${moment(workReportTo).format("DDMMMYY")}.xls`;
+						    document.body.appendChild(a);
+						    a.click();
+						    window.URL.revokeObjectURL(url);
+						    a.remove();
+						    // alert('your file has downloaded!'); // or you know, something with better UX...
+						    generatingFlag(false);
+						    handle.stop();
+					  	})
+					  	.catch(err => {
+					  		alert('Error!' + err);
+					  		generatingFlag(false);
+					  	});
+				}
+			});
 		};
 
 		const getAttendanceReports = (format) => {
-			(format === "excel") ? setGeneratingAttendanceReportExcel(true) : setGeneratingAttendanceReportPdf(true);
-			Meteor.apply('reports.getAttendanceReports', 
-				[format, workReportFrom, workReportTo], 
-				{returnStubValues: true, throwStubExceptions: true}, 
-				(err, res) => {
-					if(err){
-						console.log("err: " + err);
-					} else {		//when success, 
-						
+			let generatingFlag;
+			(format === "excel") ? 
+				(generatingFlag = setGeneratingAttendanceReportExcel) : 
+				(generatingFlag = setGeneratingAttendanceReportPdf);
+
+			generatingFlag(true);
+
+			const handle = Meteor.subscribe('reports.getAttendanceReports', { format,  from: attendanceReportFrom, to: attendanceReportTo }, {
+				onStop(error) {
+					console.log("reports.getAttendanceReports is stopped.");
+					if(error) {
+						console.log(error);
 					}
-				});
+				},
+
+				onReady() {
+					console.log("reports.getAttendanceReports is ready to get the data.");
+				}
+			});
+
+			Tracker.autorun(() => {
+				if(handle.ready()) {
+					const fileName = Collections.receipts.findOne({ _id: (format === "excel") ? "attendanceReportsExcel" : "attendanceReportsPdf" }).fileName;
+					fetch(`http://localhost:3000/api/downloadFile/${fileName}`)
+						.then(resp => resp.blob())
+						.then(blob => {
+					   		const url = window.URL.createObjectURL(blob);
+						    const a = document.createElement('a');
+						    a.style.display = 'none';
+						    a.href = url;
+						    // the filename you want
+						    a.download = `attendance_report_${moment(attendanceReportFrom).format("DDMMMYY")}-${moment(attendanceReportTo).format("DDMMMYY")}.xls`;
+						    document.body.appendChild(a);
+						    a.click();
+						    window.URL.revokeObjectURL(url);
+						    a.remove();
+						    // alert('your file has downloaded!'); // or you know, something with better UX...
+						    generatingFlag(false);
+						    handle.stop();
+					  	})
+					  	.catch(err => {
+					  		alert('Error!' + err);
+					  		generatingFlag(false);
+					  	});
+				}
+			});			
 		}
 
 		useEffect(() => {
