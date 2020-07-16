@@ -24,8 +24,7 @@
     "pdfmake": "^0.1.66",
     "react": "^16.13.0",
     "react-dom": "^16.13.0",
-    "simpl-schema": "^1.7.1",
-    "xlsx": "^0.16.3"
+    "simpl-schema": "^1.7.1"
   },
   "meteor": {
     "mainModule": {

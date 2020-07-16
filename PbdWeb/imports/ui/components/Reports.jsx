@@ -4,6 +4,8 @@ import Collections from 'meteor/collections';
 if(Meteor.isServer) {
 	import ExcelJS from 'exceljs';
 	import { Random } from 'meteor/random';
+	import fs from 'fs';
+	import PdfMake from 'pdfmake';
 
 	Meteor.publish('reports.getCollections', function({from, to}){
 		console.log("Publishing the reports.getCollections...");
@@ -404,14 +406,6 @@ if(Meteor.isServer) {
 			const normalText = { name: 'Calibri', family: 2, size: 10, scheme: 'minor' };
 			const boldTextProps = { name: 'Calibri', family: 2, size: 10, scheme: 'minor', bold: true };
 
-			const sendDataAs = async (id) => {
-				await workbook.xlsx.writeFile(`/tmp/${fileName}`);
-				this.added("receipts", id, { fileName });
-				console.log("data publication for \"reports.getWorkReports is complete.\"");
-
-				this.ready();
-			};
-
 			const getData = async () => {
 				const executor = (resolve, reject) => {
 					Collections.tasks.rawCollection().aggregate([
@@ -628,9 +622,111 @@ if(Meteor.isServer) {
 
 					});
 
-					sendDataAs("workReportsExcel");
-				} else if(format === "pdf") {
+					const tempFunc = async () => {
+						await workbook.xlsx.writeFile(`/tmp/${fileName}`);
+						this.added("receipts", "workReportsExcel", { fileName });
+						console.log("data publication for \"reports.getWorkReports is complete.\"");
+						this.ready();
+					};
 
+					tempFunc.apply(this);
+				} else if(format === "pdf") {
+					const fonts = {
+					  	Helvetica: {
+						    normal: 'Helvetica',
+						    bold: 'Helvetica-Bold',
+						    italics: 'Helvetica-Oblique',
+						    bolditalics: 'Helvetica-BoldOblique'
+					  	},
+					};
+
+					const tableLayout = {
+				    	hLineWidth: function (i, node) {
+							return ((i === 0 || i === 1) || i === node.table.body.length) ? 2 : 1;
+						},
+						vLineWidth: function (i, node) {
+							return (i === 0 || i === node.table.widths.length) ? 2 : 1;
+						},
+						hLineColor: function (i, node) {
+							return ((i === 0 || i === 1) || i === node.table.body.length) ? 'black' : 'gray';
+						},
+						vLineColor: function (i, node) {
+							return (i === 0 || i === node.table.widths.length) ? 'black' : 'gray';
+						},
+				  	};
+
+					let content = [];
+					docs.forEach((exec, execIndex) => {
+						const name = `Name: ${exec.execName}`;
+						let visitsTableData = {
+					  		headerRows: 1,
+					  		widths: [ 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto' ],
+				        	body: [
+				        		[ 
+				          			{ text: 'SI No', style: 'tableHeader', bold: true }, 
+				          			{ text: 'Date', style: 'tableHeader', bold: true }, 
+				          			{ text: 'Visited Party', style: 'tableHeader', bold: true }, 
+				          			{ text: 'Party Code', style: 'tableHeader', bold: true }, 
+				          			{ text: 'Contact Person', style: 'tableHeader', bold: true }, 
+				          			{ text: 'Reason', style: 'tableHeader', bold: true }, 
+				          			{ text: 'Remarks', style: 'tableHeader', bold: true } 
+				          		]
+				        	]
+					  	};
+
+					  	exec.visits.forEach((visit, visitIndex) => {
+							visitsTableData.body.push([++visitIndex, visit.date, `${visit.party.name}\n${visit.party.address}`, visit.party.code, `${visit.cp.name}\n(${visit.cp.number})`, visit.reason, visit.remarks]);
+					  	});
+
+					  	let otherTableData = {
+					  		headerRows: 1,
+					  		widths: [ 'auto', 'auto', 'auto', 'auto' ],
+				        	body: [
+				        		[ 
+				          			{ text: 'SI No', style: 'tableHeader', bold: true }, 
+				          			{ text: 'Date', style: 'tableHeader', bold: true }, 
+				          			{ text: 'Subject', style: 'tableHeader', bold: true }, 
+				          			{ text: 'Remarks', style: 'tableHeader', bold: true }, 
+				          		]
+				        	]
+					  	};
+
+					  	exec.others.forEach((other, otherIndex) => {
+							otherTableData.body.push([++otherIndex, other.date, other.subject, other.remarks]);
+					  	});
+
+					  	if(execIndex !== 0) {
+					  		content.push({ text: " " });
+					  	}
+
+						content.push({ text: name, fontSize: 15, bold: true });
+
+						if(exec.visits.length !== 0) {
+							content.push({ layout: tableLayout, table: visitsTableData });
+						}
+
+						if(exec.others.length !== 0) {
+							content.push({ layout: tableLayout, table: otherTableData });
+						}
+					});
+
+					const docDefinition = {
+						pageSize: 'A4',
+						pageOrientation: 'landscape',
+						content,
+						defaultStyle: {
+						    font: 'Helvetica'
+						}
+					};
+
+					const pdfDoc = (new PdfMake(fonts)).createPdfKitDocument(docDefinition);
+					
+					pdfDoc.pipe(fs.createWriteStream(`/tmp/${fileName}`));
+					pdfDoc.end();
+
+					this.added("receipts", "workReportsPdf", { fileName });
+					console.log("data publication for \"reports.getWorkReports is complete.\"");
+					this.ready();
 				}
 
 			}).catch(err => {
@@ -854,7 +950,7 @@ if(Meteor.isClient) {
 			Tracker.autorun(() => {
 				if(handle.ready()) {
 					const fileName = Collections.receipts.findOne({ _id: (format === "excel") ? "workReportsExcel" : "workReportsPdf" }).fileName;
-					fetch(`http://localhost:3000/api/downloadFile/${fileName}`)
+					fetch(`${Meteor.absoluteUrl()}api/downloadFile/${fileName}`)
 						.then(resp => resp.blob())
 						.then(blob => {
 					   		const url = window.URL.createObjectURL(blob);
@@ -862,7 +958,7 @@ if(Meteor.isClient) {
 						    a.style.display = 'none';
 						    a.href = url;
 						    // the filename you want
-						    a.download = `work_report_${moment(workReportFrom).format("DDMMMYY")}-${moment(workReportTo).format("DDMMMYY")}.xls`;
+						    a.download = `work_report_${moment(workReportFrom).format("DDMMMYY")}-${moment(workReportTo).format("DDMMMYY")}.${(format === "excel") ? "xls" : "pdf"}`;
 						    document.body.appendChild(a);
 						    a.click();
 						    window.URL.revokeObjectURL(url);
@@ -903,7 +999,7 @@ if(Meteor.isClient) {
 			Tracker.autorun(() => {
 				if(handle.ready()) {
 					const fileName = Collections.receipts.findOne({ _id: (format === "excel") ? "attendanceReportsExcel" : "attendanceReportsPdf" }).fileName;
-					fetch(`http://localhost:3000/api/downloadFile/${fileName}`)
+					fetch(`${Meteor.absoluteUrl()}/api/downloadFile/${fileName}`)
 						.then(resp => resp.blob())
 						.then(blob => {
 					   		const url = window.URL.createObjectURL(blob);

@@ -189,6 +189,7 @@ if(Meteor.isClient) {
 		const extension = filename.split(".")[1];
 
 		const readStream = fs.createReadStream(`/tmp/${filename}`);
+		const fileStat = fs.statSync(`/tmp/${filename}`);
 		const promisifiedFinished = promisify(finished);
 		async function run() {
 		  	await promisifiedFinished(readStream);
@@ -204,6 +205,7 @@ if(Meteor.isClient) {
 
 		res.writeHead(200, {
 			'Content-disposition': `attachment; filename=${filename}`, 
+			'Content-Length': fileStat.size,
 			'Content-Type': (extension === "xls") ? 'application/vnd.ms-excel' : (extension === "pdf") ? 'application/pdf' : null
 		}); //here you can add more headers
 		readStream.pipe(res);
