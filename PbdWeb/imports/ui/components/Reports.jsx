@@ -6,6 +6,7 @@ if(Meteor.isServer) {
 	import { Random } from 'meteor/random';
 	import fs from 'fs';
 	import PdfMake from 'pdfmake';
+	import { DUTY_START_TIME, DUTY_END_TIME } from 'meteor/pbd-apis';
 
 	Meteor.publish('reports.getCollections', function({from, to}){
 		console.log("Publishing the reports.getCollections...");
@@ -751,33 +752,230 @@ if(Meteor.isServer) {
 			const currentExecutives = Meteor.users.find({ _id: { $in: execIds } }).fetch();
 			const fileName = `${Random.hexString(10)}.${(format === "excel") ? "xls" : "pdf"}`;
 
-			if(format === "excel") {
-				let workbook = new ExcelJS.Workbook();
-				workbook.creator = 'PBD Executives reports dashboard';
-				workbook.created = new Date();
+			let fromMoment = moment(from);
+			let endMoment = moment(to);
+
+			let datesArr = [];
+			do {
+				datesArr.push({
+					createdAt: { 
+                        $gte: new Date(fromMoment.format(`YYYY-MM-DDT${DUTY_START_TIME}:00`)),
+                        $lte: new Date(endMoment.format(`YYYY-MM-DDT${DUTY_END_TIME}:00`))
+                    }
+				});
+				fromMoment.add(1, "days");
+			} while(fromMoment.unix() < endMoment.unix())
+
+			// console.log("datesArr: " + JSON.stringify(datesArr));
+
+			const asyncWrapper = async () => {
+				const getData = (resolve, reject) => {
+					Collections.locations.rawCollection().aggregate([
+						{
+					        $match: {
+					            $or: [...datesArr]
+					        }
+					    },
+					    {
+					        $sort: {
+					            createdAt: 1
+					        }
+					    },
+					    {
+					        $group: {
+					            _id: "$sessionId",
+					            firstCreatedAt: { $first: "$createdAt" },
+					            lastCreatedAt: { $last: "$createdAt" },
+					            createdAt: { $last: "$createdAt" },
+					            userId: { $first: "$userId" }
+					        }
+					    },
+					    {
+					        $project: {
+					            _id: 1,
+					            period: { $subtract: ["$lastCreatedAt", "$firstCreatedAt"] },
+					            createdAt: 1,
+					            date: { $dateToString: { date: "$createdAt", format: "%d-%m-%Y", timezone: "Asia/Kolkata" } },
+					            userId: 1
+					        }
+					    },
+					    {
+					        $sort: { createdAt: 1 }
+					    },
+					    {
+					        $group: {
+					            _id: { $concat: ["$date", "$userId"] },
+					            createdAt: { $last: "$createdAt" },
+					            userId: { $first: "$userId" },
+					            timePeriod: { $sum: "$period" },
+					            date: { $first: "$date" },
+					        }
+					    },
+					    {
+					        $group: {
+					            _id: "$userId",
+					            dates: { 
+					                $addToSet: {
+					                    date: "$date",
+					                    createdAt: { $toLong: "$createdAt" },
+					                    timePeriod: "$timePeriod"
+					                }
+					            }
+					        }
+					    },
+					], ((err, cursor) => {
+						if(err) reject(err);
+
+						cursor.toArray(((error, docs) => {
+							if(error) reject(error);
+							console.log("docs: " + JSON.stringify(docs));
+
+							resolve.apply(this, [docs]);
+						}).bind(this));
+					}).bind(this));
+				};
+
+				const prmse = new Promise(getData.bind(this));
+
+				const attendances = await prmse;
+
+				let executivesAttendances = [ ["Name\\Date"].concat(datesArr.map(date => moment(date.createdAt.$gte).format("DD-MM-YY"))) ];
 				currentExecutives.forEach((exec, execIndex) => {
-					let worksheet = workbook.addWorksheet(exec.profile.name, {
+					const userFound = attendances.find(elem => elem._id === exec._id) || { dates: [] };
+					// console.log("userFound: " + JSON.stringify(userFound));
+
+					executivesAttendances.push([exec.profile.name].concat(datesArr.map(date => {
+						const dateString = moment(date.createdAt.$gte).format("DD-MM-YYYY");
+						const dateFound = userFound.dates.find(d => dateString === d.date)
+						if(dateFound) {
+							return `${moment.duration(dateFound.timePeriod).hours()} Hrs ${moment.duration(dateFound.timePeriod).minutes()} Mins`;
+						} else {
+							return "A";
+						}
+					})) );
+
+				});
+
+				// console.log("executivesAttendances: " + JSON.stringify(executivesAttendances));
+
+				if(format === "excel") {
+					let workbook = new ExcelJS.Workbook();
+					workbook.creator = 'PBD Executives reports dashboard';
+					workbook.created = new Date();
+					const normalText = { name: 'Calibri', family: 2, size: 10, scheme: 'minor' };
+					const boldTextProps = { name: 'Calibri', family: 2, size: 10, scheme: 'minor', bold: true };
+					
+					let worksheet = workbook.addWorksheet("Attendances", {
 										pageSetup:{
 											paperSize: 9, 
 											orientation:'landscape'
 										}
 									});
-					worksheet.addRow(["Name:", exec.profile.name]);
-				});
 
-				const writeToTemp = async () => {
-					await workbook.xlsx.writeFile(`/tmp/${fileName}`);
-					this.added("receipts", "attendanceReportsExcel", { fileName });
-					console.log("data publication for \"reports.getAttendanceReports is complete.\"");
+					executivesAttendances[0].forEach((item, itemIndex) => {
+						if(itemIndex === 0) {
+							worksheet.getColumn(++itemIndex).width = 30;
+						} else {
+							worksheet.getColumn(++itemIndex).width = 13;
+						}
+					});
 
+					executivesAttendances.forEach((items, itemIndex) => {
+						worksheet.addRow(items);
+						worksheet.getRow(itemIndex + 2).style.font = normalText;
+					});
+
+					worksheet.getRow(1).style.font = boldTextProps;
+
+					const tempFunc = async () => {
+						await workbook.xlsx.writeFile(`/tmp/${fileName}`);
+						this.added("receipts", "attendanceReportsExcel", { fileName });
+						console.log("data publication for \"reports.getAttendanceReports is complete.\"");
+
+						this.ready();
+					};
+
+					tempFunc.apply(this);
+				} else if(format === "pdf") {
+					const fonts = {
+					  	Helvetica: {
+						    normal: 'Helvetica',
+						    bold: 'Helvetica-Bold',
+						    italics: 'Helvetica-Oblique',
+						    bolditalics: 'Helvetica-BoldOblique'
+					  	},
+					};
+
+					const tableLayout = {
+				    	hLineWidth: function (i, node) {
+							return ((i === 0 || i === 1) || i === node.table.body.length) ? 2 : 1;
+						},
+						vLineWidth: function (i, node) {
+							return (i === 0 || i === node.table.widths.length) ? 2 : 1;
+						},
+						hLineColor: function (i, node) {
+							return ((i === 0 || i === 1) || i === node.table.body.length) ? 'black' : 'gray';
+						},
+						vLineColor: function (i, node) {
+							return (i === 0 || i === node.table.widths.length) ? 'black' : 'gray';
+						},
+				  	};
+
+				  	let content = [];
+
+					executivesAttendances.forEach((items, itemsIndex) => {
+						if(itemsIndex === 0) return;
+
+						content.push({ text: items[0], fontSize: 14, bold: true });
+						let tableData = {
+							layout: tableLayout, 
+							table: {
+						  		headerRows: 1,
+						  		widths: ["auto", "auto"],
+					        	body: [
+					        		[
+						        		{ text: "Date", style: 'tableHeader', bold: true },
+						        		{ text: "Duration", style: 'tableHeader', bold: true }
+					        		]
+					        	]
+						  	}
+						};
+
+						console.log("items: " + JSON.stringify(items));
+						
+						items.forEach((item, itemIndex) => {
+							if(itemIndex === 0) return;
+
+							tableData.table.body.push([executivesAttendances[0][itemIndex], item]);
+						});
+
+						content.push(tableData);
+						content.push({ text: " " });
+					});
+
+					console.log("content: " + JSON.stringify(content));
+
+					const docDefinition = {
+						pageSize: 'A4',
+						pageOrientation: 'landscape',
+						content,
+						defaultStyle: {
+						    font: 'Helvetica'
+						}
+					};
+
+					const pdfDoc = (new PdfMake(fonts)).createPdfKitDocument(docDefinition);
+					
+					pdfDoc.pipe(fs.createWriteStream(`/tmp/${fileName}`));
+					pdfDoc.end();
+
+					this.added("receipts", "attendanceReportsPdf", { fileName });
+					console.log("data publication for \"reports.getWorkReports is complete.\"");
 					this.ready();
-				};
+				}
+			};
 
-				writeToTemp();
-			} else if(format === "pdf") {
-
-			}
-
+			asyncWrapper.apply(this);
 			this.onStop(() => {
 				this.stop();
 				console.log("Publication, \"reports.getAttendanceReports\" is stopped.");
@@ -1007,7 +1205,7 @@ if(Meteor.isClient) {
 						    a.style.display = 'none';
 						    a.href = url;
 						    // the filename you want
-						    a.download = `attendance_report_${moment(attendanceReportFrom).format("DDMMMYY")}-${moment(attendanceReportTo).format("DDMMMYY")}.xls`;
+						    a.download = `attendance_report_${moment(attendanceReportFrom).format("DDMMMYY")}-${moment(attendanceReportTo).format("DDMMMYY")}.${(format === "excel") ? "xls" : "pdf"}`;
 						    document.body.appendChild(a);
 						    a.click();
 						    window.URL.revokeObjectURL(url);

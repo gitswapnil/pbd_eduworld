@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DUTY_START_TIME, DUTY_END_TIME } from 'meteor/pbd-apis'
+import { DUTY_START_TIME, DUTY_END_TIME } from 'meteor/pbd-apis';
 
 const TimingBar = (props) => {
 	const dutyStartTime = moment(`${moment().format("DD-MM-YYYY")} ${DUTY_START_TIME}`, "DD-MM-YYYY HH:mm").unix();
