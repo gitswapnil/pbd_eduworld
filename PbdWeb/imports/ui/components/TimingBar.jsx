@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DUTY_START_TIME, DUTY_END_TIME } from 'meteor/pbd-apis';
+import { Random } from 'meteor/random';
 
 const TimingBar = (props) => {
 	const dutyStartTime = moment(`${moment().format("DD-MM-YYYY")} ${DUTY_START_TIME}`, "DD-MM-YYYY HH:mm").unix();
@@ -57,15 +58,14 @@ const TimingBar = (props) => {
 		})
 	});
 
-	const drawingData = data.map(session => {
-		const tag = session.tag;
+	const drawingData = data.map((session, index) => {
 		const period = moment(session.end).unix() - moment(session.start).unix();
 		const sessionStart = moment(session.start).format("H:mm");
 		const sessionEnd = moment(session.end).format("H:mm");
 		const sessionWidth = `${((period / totalDiff) * 100).toFixed(2)}%`;
 		// const leftMargin = `${((moment(data[sessionId].start).unix() - start) / totalDiff) * 100}%`;
 
-		return {tag, sessionStart, sessionEnd, sessionWidth};
+		return {id: index, tag: session.tag, sessionStart, sessionEnd, sessionWidth};
 	});
 
 	useEffect(() => {
@@ -94,7 +94,7 @@ const TimingBar = (props) => {
 				{
 
 					(drawingData && drawingData.length) && drawingData.map(session => 
-						<div key={session.sessionId} className={`timing-duty-${session.tag}`} style={{width: session.sessionWidth}}>
+						<div key={session.id} className={`timing-duty-${session.tag}`} style={{width: session.sessionWidth}}>
 							<div className="start-tip hidden">
 								<div className="tip-time">
 									{session.sessionStart}

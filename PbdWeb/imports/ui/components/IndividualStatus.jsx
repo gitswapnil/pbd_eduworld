@@ -148,8 +148,7 @@ if(Meteor.isClient) {
 												onClick={() => {
 													setShowLiveDetails(!showLiveDetails);
 													setShowLive(true);
-												}}
-												disabled={(props.sessions === null)}>
+												}}>
 											{showLiveDetails ? 
 												<React.Fragment>
 													Hide Details &nbsp;<FontAwesomeIcon icon={faAngleUp} size="sm"/>
@@ -164,8 +163,17 @@ if(Meteor.isClient) {
 										{
 											showLive ? 
 											(() => {
+												if(!props.sessions) {
+													return <div style={{textAlign: "center", fontSize: "small"}}>Not Live</div>;
+												} 
+												
 												const lastLocation = props.sessions[props.sessions.length - 1];
 												console.log("lastLocation: " + JSON.stringify(lastLocation));
+
+												if(moment().diff(moment(lastLocation.end), 'minutes') > 3) {
+													return <div style={{textAlign: "center", fontSize: "small"}}>Not Live</div>;
+												}
+
 												return <ExecutiveMap latitude={lastLocation.latitude} longitude={lastLocation.longitude} executiveName={props.name} zoom={15}/>
 											})()
 											: null
@@ -176,8 +184,7 @@ if(Meteor.isClient) {
 									<div style={{textAlign: "right"}}>
 										<button className={`btn btn-primary btn-sm ${selectedTab == 1 ? "btn-inactive" : ""}`} 
 												style={{borderRadius: "5px 5px 0 0", fontSize: "small", visibility: showLiveDetails ? "visible" : "hidden"}}
-												onClick={() => {setSelectedTab(0)}}
-												disabled={(props.sessions === null)}>
+												onClick={() => {setSelectedTab(0)}}>
 											Vists: {props.visits ? props.visits.length : 0}
 										</button>
 										&nbsp;&nbsp;

@@ -327,3 +327,7 @@ table.tbl > tbody > tr.row-selectable:hover {
 
 	padding: 20px;
 }
+
+.history-list > .list-group-item {
+	border-radius: 0;
+}

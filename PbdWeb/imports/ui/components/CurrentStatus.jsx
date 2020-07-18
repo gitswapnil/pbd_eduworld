@@ -238,9 +238,6 @@ if(Meteor.isClient) {
 				if(handle.ready()) {
 					const executives = Meteor.users.find({"isExecutive": true}).map(user => {
 						const userLocationObj = Collections.locations.findOne({ _id: user._id });
-						if(!userLocationObj) {
-							return user;
-						}
 
 						const visits = Collections.tasks.find({ userId: user._id }, {sort: {createdAt: -1}}).fetch();
 
@@ -262,7 +259,7 @@ if(Meteor.isClient) {
 							}
 						});
 
-						return Object.assign({ sessions: userLocationObj.sessions, visits, followUps }, user);
+						return Object.assign({ sessions: userLocationObj && userLocationObj.sessions, visits, followUps }, user);
 					});
 
 					setExecutives(executives);
@@ -291,9 +288,8 @@ if(Meteor.isClient) {
 							(executives.length) ?
 
 							executives.map(executive => 
-								<div>
-									<IndividualStatus 	key={executive._id} 
-														img={executive.profile && executive.profile.img}
+								<div key={executive._id} >
+									<IndividualStatus   img={executive.profile && executive.profile.img}
 														name={executive.profile && executive.profile.name}
 														email={executive.emails && executive.emails[executive.emails.length - 1].address}
 														mobileNo={executive.username}

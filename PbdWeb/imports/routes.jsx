@@ -14,6 +14,7 @@ if(Meteor.isClient) {
 
 	import CurrentStatus from './ui/components/CurrentStatus';
 	import Reports from './ui/components/Reports';
+	import History from './ui/components/History';
 	import CreateExecutives from './ui/components/CreateExecutives';
 	import PartyDefinitions from './ui/components/PartyDefinitions';
 
@@ -91,7 +92,7 @@ if(Meteor.isClient) {
 				renderComponent(		//If he is logged in, then go the specified page.
 					<Layout selectedSection="dashboard">
 						<NavigationTabs tabs={tabs}>
-							This is History Tab
+							<History />
 						</NavigationTabs>
 					</Layout>
 				);
