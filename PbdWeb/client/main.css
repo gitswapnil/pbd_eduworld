@@ -328,6 +328,56 @@ table.tbl > tbody > tr.row-selectable:hover {
 	padding: 20px;
 }
 
+.history-executive-list {
+	padding-left: 5px;
+	padding-right: 0px;
+	max-height: 100%;
+	overflow-y: auto
+}
+
+.history-list {
+	font-size: smaller !important;
+}
+
 .history-list > .list-group-item {
 	border-radius: 0;
+}
+
+.history-list > .history-date-title {
+	padding: 0 0 0 10px;
+	display: flex;
+	align-items: baseline;
+	width: 100%;
+	background: #E4F1F7;
+	border-left: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.history-list > .history-date-title > div:nth-child(2) {
+	margin-left: auto;
+}
+
+.history-details-list {
+	padding: 0;
+	max-height: 100%;	
+}
+
+.history-details-list > div:first-child {
+	padding: 7px;
+	border-bottom: 1px solid #ddd;
+}
+
+.history-details-list > div:nth-child(2) {
+	padding: 0;
+	max-height: 88%;
+	overflow-y: auto;
+}
+
+.custom-list-group-item {
+	padding: 7px;
+}
+
+.custom-list-group-item.active {
+	background: #ddd;
+	border: 1px solid #aaa;
+	color: #333;
 }
