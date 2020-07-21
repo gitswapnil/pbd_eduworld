@@ -32,6 +32,22 @@ export const getReasonFromCode = (code) => {
   return retValue;
 };
 
+export const getCodeFromReason = (reason) => {
+  let retValue = -1;
+  switch(reason.toLowerCase()) {
+    case "sampling": retValue = 0;
+      break;
+
+    case "to receive an order": retValue = 1;
+      break;
+
+    case "to get payment": retValue = 2;
+      break;
+  }
+
+  return retValue;
+};
+
 export const MAP_API_KEY = "2D16m-0MldWtZBO8ymMUMxz-qRlneZkQUx_s-VhRmBo";
 export const DUTY_START_TIME = "10:00";    //format should always be in HH:mm
 export const DUTY_END_TIME = "18:00";

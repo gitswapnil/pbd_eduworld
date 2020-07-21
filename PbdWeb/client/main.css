@@ -361,7 +361,7 @@ table.tbl > tbody > tr.row-selectable:hover {
 	max-height: 100%;	
 }
 
-.history-details-list > div:first-child {
+.history-details-list > form {
 	padding: 7px;
 	border-bottom: 1px solid #ddd;
 }

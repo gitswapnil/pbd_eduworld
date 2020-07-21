@@ -7,7 +7,6 @@ if(Meteor.isServer) {
 		//authorization
 		if(this.userId && Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
 			// console.log("userId: " +JSON.stringify(userIds));
-			let userIds = [];
 			let initializing = true;		//flag to skip the huge loading during initial time.
 
 			const handle = Meteor.users.find({}).observeChanges({
@@ -17,7 +16,6 @@ if(Meteor.isServer) {
 						const userDoc = Meteor.users.findOne({ _id }, {fields: {"services": 0, apiKey: 0}});
 						userDoc.isExecutive = true;
 						if(userDoc.active) {
-							userIds.push(_id);
 							this.added('users', _id, userDoc);		//just send the ids.
 						}
 					}
@@ -28,6 +26,7 @@ if(Meteor.isServer) {
 			this.ready();
 			this.onStop(() => {
 				handle.stop();
+				this.stop();
 				console.log("Publication, \"history.getExecutivesList\" is stopped.");
 			});
 		} else {
@@ -35,59 +34,219 @@ if(Meteor.isServer) {
 		}
 	});
 
-	Meteor.publish('history.getExecutiveHistory', function({ executiveId, skip, limit, keyword }){
+	Meteor.publish('history.getExecutiveHistory', function({ executiveId, skip, limit, searchCriterion }){
 		console.log("Publishing the history.getExecutiveHistory...");
 		console.log("executiveId: " + executiveId);
 		//authorization
 		if(this.userId && Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
-			// console.log("userId: " +JSON.stringify(userIds));
-			let userIds = [];
+			console.log("searchCriterion: " +JSON.stringify(searchCriterion));
 			let initializing = true;		//flag to skip the huge loading during initial time.
 
-			const getHistory = () => {
-				let tasks = Collections.tasks.find({ userId: executiveId }, { sort: { createdAt: -1 } }).fetch();
-				let receipts = Collections.receipts.find({ userId: executiveId }, { sort: { createdAt: -1 } }).fetch();
-				let followUps = Collections.followUps.find({ userId: executiveId }, { sort: { createdAt: -1 } }).fetch();
-
-				let data = tasks.concat(receipts, followUps);
-				data.splice(0, skip);
-				data.splice(limit, (data.length - limit));
-				data.sort((a, b) => (b.createdAt - a.createdAt));
-
-				data.forEach(item => {
-					if(typeof item.type !== "undefined") {
-						item.category = "task";
-						if(item.type === 0) {
-							item.party = Meteor.users.findOne({ _id: item.partyId }, { fields: {services: 0, availableTo: 0} });
-						}
-					} else if(typeof item.receiptNo !== "undefined") {
-						item.category = "receipt";
-						item.party = Meteor.users.findOne({ _id: item.partyId }, { fields: {services: 0, availableTo: 0} });
-					} else if(typeof item.taskId !== "undefined") {
-						item.category = "followUp";
-						item.party = Meteor.users.findOne({ _id: item.partyId }, { fields: {services: 0, availableTo: 0} });
+			let searchCondition = {};
+			if(searchCriterion.searchDate) {
+				searchCondition = {
+					createdAt: {
+						$gte: moment(searchCriterion.searchDate).startOf("day").toDate(),
+						$lte: moment(searchCriterion.searchDate).endOf("day").toDate(),
 					}
+				}
+			} else if(searchCriterion.category) {
+				if(searchCriterion.category === "tasks") {
+					searchCondition = {
+						category: "task"
+					} 
+				} else if(searchCriterion.category === "followups") {
+					searchCondition = {
+						category: "followUp"
+					}
+				} else if(searchCriterion.category === "receipts") {
+					searchCondition = {
+						category: "receipt"
+					}
+				}
+			} else if(searchCriterion.reason !== -1 ) {
+				searchCondition = {
+					$expr: { $or: [ { $eq: ["$followUpFor", searchCriterion.reason] }, { $and: [{ $eq: ["$type", 0] }, { $eq: ["$reason", searchCriterion.reason] }] } ] }
+				}
+			} else {
+				searchCondition = {
+					$expr: {
+			            $or: [
+			                { $regexMatch: { input: "$party.profile.name", regex: `${searchCriterion.string}`, options: "i" } },
+			                { $regexMatch: { input: "$party.username", regex: `${searchCriterion.string}`, options: "i" } },
+			                { $regexMatch: { input: "$amount", regex: `^${searchCriterion.string}$`, options: "i" } },
+			                { $regexMatch: { input: "$receiptNo", regex: `${searchCriterion.string}`, options: "i" } },
+			                { $regexMatch: { input: "$subject", regex: `${searchCriterion.string}`, options: "i" } },
+			            ]
+			        }
+				}
+			}
 
-					this.added("tasks", item._id, item);
-				});
+			console.log("searchCondition: " + JSON.stringify(searchCondition));
 
-				initializing = false;
+			const getHistory = async () => {
+				const getData = (resolve, reject) => {
+					Meteor.users.rawCollection().aggregate([
+						{
+					        $match: { _id: executiveId }
+					    },
+					    {
+					        $lookup: {
+					            from: "tasks",
+					            foreignField: "userId",
+					            localField: "_id",
+					            as: "tasks"
+					        }
+					    },
+					    {
+					        $lookup: {
+					            from: "receipts",
+					            foreignField: "userId",
+					            localField: "_id",
+					            as: "receipts"
+					        }
+					    },
+					    {
+					        $lookup: {
+					            from: "followUps",
+					            foreignField: "userId",
+					            localField: "_id",
+					            as: "followUps"
+					        }
+					    },
+					    {
+					        $project: {
+					            _id: 1,
+					            execProfile: "$profile",
+					            history: { $concatArrays: ["$tasks", "$receipts", "$followUps"] }
+					        }
+					    },
+					    { $unwind: "$history" },
+					    {
+					        $project: {
+					            _id: "$history._id",
+					            partyId: "$history.partyId",
+					            taskId: "$history.taskId",
+					            type: "$history.type",
+					            cpName: "$history.cpName",
+					            cpNumber: "$history.cpNumber",
+					            reason: "$history.reason",
+					            doneWithTask: "$history.doneWithTask",
+					            reminder: "$history.reminder",
+					            reminderDate: "$history.reminderDate",
+					            followUpFor: "$history.followUpFor",
+					            remarks: "$history.remarks",
+					            subject: "$history.subject",
+					            receiptNo: { $concat: ["$execProfile.receiptSeries", { $toString: "$history.receiptNo"} ] },
+					            cpList: "$history.cpList",
+					            amount: { $toString: "$history.amount" },
+					            paidBy: "$history.paidBy",
+					            ddNo: "$history.ddNo",
+					            payment: "$history.payment",
+					            chequeNo: "$history.chequeNo",
+					            userId: "$history.userId",
+					            createdAt: "$history.createdAt",
+					        }
+					    },
+					    {
+					        $lookup: {
+					            from: "users",
+					            foreignField: "_id",
+					            localField: "partyId",
+					            as: "party",
+					        }
+					    },
+					    { $unwind: { path: "$party", preserveNullAndEmptyArrays: true } },
+					    {
+					        $project: {
+					            _id: 1,
+					            partyId: 1,
+					            taskId: 1,
+					            type: 1,
+					            cpName: 1,
+					            cpNumber: 1,
+					            reason: 1,
+					            doneWithTask: 1,
+					            reminder: 1,
+					            reminderDate: 1,
+					            followUpFor: 1,
+					            remarks: 1,
+					            subject: 1,
+					            receiptNo: { $cond: [{ $eq: ["$receiptNo", null] }, "$$REMOVE", "$receiptNo"]},
+					            cpList: 1,
+					            amount: { $cond: [{ $eq: ["$amount", null] }, "$$REMOVE", "$amount"]},
+					            paidBy: 1,
+					            ddNo: 1,
+					            payment: 1,
+					            chequeNo: 1,
+					            "party._id": 1,
+					            "party.username": 1,
+					            "party.emails": 1,
+					            "party.profile": 1,
+					            userId: 1,
+					            createdAt: 1,
+					            category: { 
+					                $cond: [
+					                    { $or: [ {$eq: ["$type", 0]}, {$eq: ["$type", 1]} ] }, 
+					                    "task", 
+					                    {
+					                        $cond: [
+					                            { $ifNull: ["$receiptNo", false] }, 
+					                            "receipt",
+					                            "followUp"
+					                        ]
+					                    }
+					                ]
+					            }
+					        }
+					    },
+					    { $match: searchCondition },
+					    { $sort: { "createdAt": -1 } },
+					    { $skip: skip },
+					    { $limit: limit },
+					], ((err, cursor) => {
+						if(err) reject(err);
+
+						cursor.toArray(((error, docs) => {
+							if(error) reject(error);
+							console.log("docs: " + JSON.stringify(docs));
+
+							resolve.apply(this, [docs]);
+						}).bind(this));
+					}).bind(this));
+				};
+
+
+				const prmse = new Promise(getData.bind(this));
+
+				const history = await prmse;
+
+				return history;
+				
 			};
 
 			const handle1 = Collections.tasks.find({ userId: executiveId }).observeChanges({
 				added: (_id, doc) => {
 					// console.log("Fields added: " + JSON.stringify(doc));
 					if(!initializing) {
-						this.added("tasks", _id, doc);
+						if(doc.type === 0) {
+							doc.party = Meteor.users.findOne({ _id: doc.partyId }, { fields: { services: 0, availableTo: 0 } });
+						}
+						doc.category = "task";
+						this.added("temp", _id, doc);
 					}
 				},
 
 				changed: (_id, doc) => {
-					this.changed("tasks", _id, doc);
+					if(doc.type === 0) {
+						doc.party = Meteor.users.findOne({ _id: doc.partyId }, { fields: { services: 0, availableTo: 0 } });
+					}
+					doc.category = "task";
+					this.changed("temp", _id, doc);
 				},
 
 				removed: (_id) => {
-					this.removed("tasks", _id);
+					this.removed("temp", _id);
 				}
 			});
 
@@ -95,16 +254,20 @@ if(Meteor.isServer) {
 				added: (_id, doc) => {
 					// console.log("Fields added: " + JSON.stringify(doc));
 					if(!initializing) {
-						this.added("tasks", _id, doc);
+						doc.party = Meteor.users.findOne({ _id: doc.partyId }, { fields: { services: 0, availableTo: 0 } });
+						doc.category = "receipt";
+						this.added("temp", _id, doc);
 					}
 				},
 
 				changed: (_id, doc) => {
-					this.changed("tasks", _id, doc);
+					doc.party = Meteor.users.findOne({ _id: doc.partyId }, { fields: { services: 0, availableTo: 0 } });
+					doc.category = "receipt";
+					this.changed("temp", _id, doc);
 				},
 
 				removed: (_id) => {
-					this.removed("tasks", _id);
+					this.removed("temp", _id);
 				}
 			});
 
@@ -112,27 +275,40 @@ if(Meteor.isServer) {
 				added: (_id, doc) => {
 					// console.log("Fields added: " + JSON.stringify(doc));
 					if(!initializing) {
-						this.added("tasks", _id, doc);
+						doc.party = Meteor.users.findOne({ _id: doc.partyId }, { fields: { services: 0, availableTo: 0 } });
+						doc.category = "followUp";
+						this.added("temp", _id, doc);
 					}
 				},
 
 				changed: (_id, doc) => {
-					this.changed("tasks", _id, doc);
+					doc.party = Meteor.users.findOne({ _id: doc.partyId }, { fields: { services: 0, availableTo: 0 } });
+					doc.category = "followUp";
+					this.changed("temp", _id, doc);
 				},
 
 				removed: (_id) => {
-					this.removed("tasks", _id);
+					this.removed("temp", _id);
 				}
 			});
 
-			getHistory.apply(this);
+			getHistory.apply(this).then(docs => {			
+				docs.forEach(item => {
+					this.added("temp", item._id, item);
+				});
+
+				initializing = false;
+				this.ready();
+			}).catch(err => {
+				throw new Meteor.Error("publication-error", err);
+			});
 
 			console.log("data publication for \"history.getExecutiveHistory is complete.\"");
-			this.ready();
 			this.onStop(() => {
 				handle1.stop();
 				handle2.stop();
 				handle3.stop();
+				this.stop();
 				console.log("Publication, \"history.getExecutiveHistory\" is stopped.");
 			});
 		} else {
@@ -142,11 +318,11 @@ if(Meteor.isServer) {
 }
 
 if(Meteor.isClient) {
-	import React, { useState, useEffect } from 'react';
+	import React, { useState, useEffect, useRef } from 'react';
 	import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 	import { faSearch, faCircleNotch } from '@fortawesome/free-solid-svg-icons';
 	import { Tracker } from 'meteor/tracker';
-	import { getReasonFromCode } from 'meteor/pbd-apis';
+	import { getReasonFromCode, getCodeFromReason } from 'meteor/pbd-apis';
 
 	const ExecutivesList = (props) => {
 		const [executives, setExecutives] = useState([]);
@@ -164,19 +340,16 @@ if(Meteor.isClient) {
 
 				onReady() {
 					console.log("history.getExecutivesList is ready to get the data.");
-				}
-			});
-
-			Tracker.autorun(() => {
-				if(handle.ready()) {
 					const execs = Meteor.users.find({"isExecutive": true}).fetch();
 
 					setExecutives(execs);
 					setSelectedExec(execs[0]._id);
 					props.onExecutiveSelection(execs[0]._id);
 					setLoading(false);
+
+					this.stop();
 				}
-			})
+			});
 
 			return function() {
 				handle.stop();
@@ -207,23 +380,66 @@ if(Meteor.isClient) {
 	};
 
 	const ExecutiveHistory = (props) => {
-		const [selectedExecId, setSelectedExecId] = useState("0");
 		const [listItems, setListItems] = useState([]);
 		const [selectedItemId, setSelectedItemId] = useState("0");
+		const [selectedExecutiveId, setSelectedExecutiveId] = useState("0");
+		const [searchString, setSearchString] = useState("");
+		const [searchStart, setSearchStart] = useState("");
 		const [skip, setSkip] = useState(0);
 		const [loading, setLoading] = useState(true);
 		const limit = 20;
 
+		const getSearchCriteria = () => {
+			let string = searchString.toLowerCase();
+
+			let retObj ={
+				searchDate: false,
+				category: false,
+				reason: -1,
+				string
+			};
+
+			if(/^(0[1-9]|[1-2][0-9]|3[0-1])-(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)-(20[2-9][0-9])$/.test(string)){
+				retObj.searchDate = moment(string, "DD-MMM-YYYY").toDate();
+			} else if(/^(0[1-9]|[1-2][0-9]|3[0-1])\/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\/(20[2-9][0-9])$/.test(string)){
+				retObj.searchDate = moment(string, "DD/MMM/YYYY").toDate();
+			} else if(/^(0[1-9]|[1-2][0-9]|3[0-1])-(0[1-9]|1[0-2])-(20[2-9][0-9])$/.test(string)) {
+				retObj.searchDate = moment(string, "DD-MM-YYYY").toDate();
+			} else if(/^(0[1-9]|[1-2][0-9]|3[0-1])\/(0[1-9]|1[0-2])\/(20[2-9][0-9])$/.test(string)) {
+				retObj.searchDate = moment(string, "DD/MM/YYYY").toDate();
+			} else if(/^([1-9]|[1-2][0-9]|3[0-1])-([1-9]|1[0-2])-(20[2-9][0-9])$/.test(string)) {
+				retObj.searchDate = moment(string, "D-M-YYYY").toDate();
+			} else if(/^([1-9]|[1-2][0-9]|3[0-1])\/([1-9]|1[0-2])\/(20[2-9][0-9])$/.test(string)) {
+				retObj.searchDate = moment(string, "D/M/YYYY").toDate();
+			} else if(/^(task|followup|follow up|receipt|followups|follow ups|receipts|tasks)$/.test(string)) {
+				if(/^(task|tasks)$/.test(string)) {
+					retObj.category = "tasks";
+				} else if(/^(followup|follow up|followups|follow ups)$/.test(string)) {
+					retObj.category = "followups";
+				} else if(/^(receipt|receipts)$/.test(string)) {
+					retObj.category = "receipts";
+				}
+			} else if(getCodeFromReason(string) !== -1) {
+				retObj.reason = getCodeFromReason(string);
+			}
+
+			return retObj;
+		};
+
+		const ref = useRef(searchStart);
+
 		useEffect(() => {
-			if(selectedExecId !== props.selectedExecutiveId) {
-				setSelectedExecId(props.selectedExecutiveId);
-				setSelectedItemId("0");
+			if(props.selectedExecutiveId !== selectedExecutiveId) {
+				setLoading(true);
 				setListItems([]);
+				setSelectedItemId("0");
+				setSelectedExecutiveId(props.selectedExecutiveId);
 			}
 		}, [props.selectedExecutiveId]);
 
 		useEffect(() => {
-			const handle = Meteor.subscribe('history.getExecutiveHistory', { executiveId: props.selectedExecutiveId, skip, limit }, {
+			const searchCriterion = getSearchCriteria();
+			handle = Meteor.subscribe('history.getExecutiveHistory', { executiveId: props.selectedExecutiveId, skip, limit, searchCriterion }, {
 				onStop(error) {
 					console.log("history.getExecutiveHistory is stopped.");
 					if(error) {
@@ -238,10 +454,10 @@ if(Meteor.isClient) {
 
 			Tracker.autorun(() => {
 				if(handle.ready()) {
-					let data = [...listItems];
+					let data = (ref.current.searchStart !== searchStart) ? [] : [...listItems];
 					const localIds = data.map((item, i) => item._id);
 
-					Collections.tasks.find({ _id: { $in: [localIds] } }).forEach((serverItem, i) => {
+					Collections.temp.find({ _id: { $in: [localIds] } }).forEach((serverItem, i) => {
 						const index = localIds.indexOf(serverItem._id);
 
 						if(index !== -1) {
@@ -249,7 +465,7 @@ if(Meteor.isClient) {
 						}
 					});
 
-					Collections.tasks.find({ _id: { $nin: [localIds] } }).forEach((serverItem, i) => {
+					Collections.temp.find({ _id: { $nin: [localIds] } }).forEach((serverItem, i) => {
 						data.push(serverItem);
 					});
 
@@ -261,78 +477,95 @@ if(Meteor.isClient) {
 					if(selectedItemId === "0" && data.length) {
 						setSelectedItemId(data[0]._id);
 					}
+
+					ref.current = { searchStart };
 				}
 			})
 
 			return function() {
 				handle.stop();
 			}
-		}, [skip, selectedExecId]);
+		}, [skip, selectedExecutiveId, searchStart]);
 
-		return 	<div className="list-group history-list">
-					{
-						loading ?
-						<div className="text-center"><FontAwesomeIcon icon={faCircleNotch} spin/> Loading...</div>
-						:
-						listItems && (listItems.length !== 0) ?
-						(() => {
-							let prevDate = moment().format("DD-MMM-YYYY");
+		return 	<React.Fragment>
+					<form onSubmit={(e) => { e.preventDefault(); setSearchStart(searchString); }}>
+						<div className="input-group">
+							<div className="input-group-prepend">
+							    <span className="input-group-text" id="basic-addon1" style={{ background: "#fff" }}>
+									<FontAwesomeIcon icon={faSearch} />
+							    </span>
+							</div>
+						  	<input type="text" className="form-control" placeholder="Search keyword" aria-label="search keyword" style={{ borderLeft: "none" }} value={searchString} onChange={(e) => { setSearchString(e.target.value) }}/>
+							<div className="input-group-append">
+								<button className="btn btn-outline-secondary" type="submit" style={{ border: "1px solid #ced4da" }}>Search</button>
+							</div>
+						</div>
+					</form>
+					<div className="list-group history-list">
+						{
+							loading ?
+							<div className="text-center"><FontAwesomeIcon icon={faCircleNotch} spin/> Loading...</div>
+							:
+							listItems && (listItems.length !== 0) ?
+							(() => {
+								let prevDate = moment().format("DD-MMM-YYYY");
 
-							return listItems.map(item => {
-								console.log("item: " + JSON.stringify(item));
-								const date = moment(item.createdAt).format("DD-MMM-YYYY");
-								let dateRow = "";
-								if(prevDate !== date) {
-									prevDate = date;
-									dateRow = 	<div className="history-date-title">
-													<div><b>{date}</b></div>
-													<div>
-														<button className="btn btn-info" style={{ borderRadius: 0, fontSize: "small" }}>Snapshot</button>
+								return listItems.map(item => {
+									// console.log("item: " + JSON.stringify(item));
+									const date = moment(item.createdAt).format("DD-MMM-YYYY");
+									let dateRow = "";
+									if(prevDate !== date) {
+										prevDate = date;
+										dateRow = 	<div className="history-date-title">
+														<div><b>{date}</b></div>
+														<div>
+															<button className="btn btn-info" style={{ borderRadius: 0, fontSize: "small" }}>Snapshot</button>
+														</div>
 													</div>
-												</div>
-								}
+									}
 
-								return 	<React.Fragment key={item._id}>
-											{ dateRow }
-											<a 	href="#" 
-												className={`list-group-item custom-list-group-item list-group-item-action ${(item._id === selectedItemId) ? "active" : ""}`}
-												onClick={() => {
-													setSelectedItemId(item._id);
-													props.onHistoryItemSelection(item._id);
-												}}>
-												{
-													(item.category === "task") ? 
-													<div>
-														<div className="text-primary">Task</div>
-														<div style={{ fontSize: "smaller" }}>{ item.party ? getReasonFromCode(item.reason) : null}</div>
-														<div style={{ fontSize: "large" }}>{(item.party) ? (item.party.profile.name).substring(0, 30) : (item.subject).substring(0, 30)}</div>
-													</div>
-													: 
-													(item.category === "receipt") ? 
-													<div>
-														<div style={{ color: "#BE7A04" }}>Receipt</div>
-														<div style={{ fontSize: "smaller" }}>₹ {item.amount}</div>
-														<div style={{ fontSize: "large" }}>{(item.party) ? (item.party.profile.name).substring(0, 30) : (item.subject).substring(0, 30)}</div>
-													</div>
-													:
-													(item.category === "followUp") ? 
-													<div>
-														<div style={{ color: "#DA2D6D" }}>Follow up</div>
-														<div style={{ fontSize: "smaller" }}>{getReasonFromCode(item.followUpFor)}</div>
-														<div style={{ fontSize: "large" }}>{(item.party) ? (item.party.profile.name).substring(0, 30) : (item.subject).substring(0, 30)}</div>
-													</div>
-													: null
-												}
-												
-											</a>
-										</React.Fragment>
+									return 	<React.Fragment key={item._id}>
+												{ dateRow }
+												<a 	href="#" 
+													className={`list-group-item custom-list-group-item list-group-item-action ${(item._id === selectedItemId) ? "active" : ""}`}
+													onClick={() => {
+														setSelectedItemId(item._id);
+														props.onHistoryItemSelection(item._id);
+													}}>
+													{
+														(item.category === "task") ? 
+														<div>
+															<div className="text-primary">Task</div>
+															<div style={{ fontSize: "smaller" }}>{ item.party ? getReasonFromCode(item.reason) : null}</div>
+															<div style={{ fontSize: "large" }}>{(item.party) ? (item.party.profile.name).substring(0, 30) : (item.subject).substring(0, 30)}</div>
+														</div>
+														: 
+														(item.category === "receipt") ? 
+														<div>
+															<div style={{ color: "#BE7A04" }}>Receipt</div>
+															<div style={{ fontSize: "smaller" }}>₹ {item.amount}</div>
+															<div style={{ fontSize: "large" }}>{(item.party) ? (item.party.profile.name).substring(0, 30) : (item.subject).substring(0, 30)}</div>
+														</div>
+														:
+														(item.category === "followUp") ? 
+														<div>
+															<div style={{ color: "#DA2D6D" }}>Follow up</div>
+															<div style={{ fontSize: "smaller" }}>{getReasonFromCode(item.followUpFor)}</div>
+															<div style={{ fontSize: "large" }}>{(item.party) ? (item.party.profile.name).substring(0, 30) : (item.subject).substring(0, 30)}</div>
+														</div>
+														: null
+													}
+													
+												</a>
+											</React.Fragment>
 
-							})
-						})()
-						: 
-						<div className="text-center">No History Present</div>
-					}
-				</div>
+								})
+							})()
+							: 
+							<div className="text-center">No History Present</div>
+						}
+					</div>
+				</React.Fragment>
 	};
 
 	const History = (props) => {
@@ -350,19 +583,7 @@ if(Meteor.isClient) {
 						<ExecutivesList onExecutiveSelection={onExecutiveSelection.bind(this)}/>
 					</div>
 					<div className="col-4 history-details-list">
-						<div>
-							<div className="input-group">
-								<div className="input-group-prepend">
-								    <span className="input-group-text" id="basic-addon1" style={{ background: "#fff" }}>
-										<FontAwesomeIcon icon={faSearch} />
-								    </span>
-								</div>
-							  	<input type="text" className="form-control" placeholder="Search keyword" aria-label="search keyword" style={{ borderLeft: "none" }} />
-							</div>
-						</div>
-						<div>
-							<ExecutiveHistory selectedExecutiveId={selectedExecutiveId}/>
-						</div>
+						<ExecutiveHistory selectedExecutiveId={selectedExecutiveId}/>
 					</div>
 					<div className="col-6" style={{border: "1px solid black"}}>
 

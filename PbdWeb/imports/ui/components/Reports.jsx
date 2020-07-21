@@ -6,7 +6,7 @@ if(Meteor.isServer) {
 	import { Random } from 'meteor/random';
 	import fs from 'fs';
 	import PdfMake from 'pdfmake';
-	import { DUTY_START_TIME, DUTY_END_TIME } from 'meteor/pbd-apis';
+	import { getReasonFromCode, DUTY_START_TIME, DUTY_END_TIME } from 'meteor/pbd-apis';
 
 	Meteor.publish('reports.getCollections', function({from, to}){
 		console.log("Publishing the reports.getCollections...");
@@ -239,6 +239,7 @@ if(Meteor.isServer) {
 			this.ready();
 			this.onStop(() => {
 				handle1.stop();
+				this.stop();
 				console.log("Publication, \"reports.getCollections\" is stopped.");
 			});
 		} else {
@@ -387,6 +388,7 @@ if(Meteor.isServer) {
 			this.ready();
 			this.onStop(() => {
 				handle1.stop();
+				this.stop();
 				console.log("Publication, \"reports.getEfficiencies\" is stopped.");
 			});
 		} else {
@@ -602,7 +604,7 @@ if(Meteor.isServer) {
 
 						exec.visits.forEach((visit, visitIndex) => {
 							const si = ++visitIndex;
-							worksheet.addRow([si, visit.date, `${visit.party.name}\n${visit.party.address}`, visit.party.code, `${visit.cp.name}\n(${visit.cp.number})`, visit.reason, visit.remarks]);
+							worksheet.addRow([si, visit.date, `${visit.party.name}\n${visit.party.address}`, visit.party.code, `${visit.cp.name}\n(${visit.cp.number})`, getReasonFromCode(visit.reason), visit.remarks]);
 							worksheet.getRow(3 + si).height = 30;
 							worksheet.getRow(3 + si).style.font = normalText;
 						});
@@ -676,7 +678,7 @@ if(Meteor.isServer) {
 					  	};
 
 					  	exec.visits.forEach((visit, visitIndex) => {
-							visitsTableData.body.push([++visitIndex, visit.date, `${visit.party.name}\n${visit.party.address}`, visit.party.code, `${visit.cp.name}\n(${visit.cp.number})`, visit.reason, visit.remarks]);
+							visitsTableData.body.push([++visitIndex, visit.date, `${visit.party.name}\n${visit.party.address}`, visit.party.code, `${visit.cp.name}\n(${visit.cp.number})`, getReasonFromCode(visit.reason), visit.remarks]);
 					  	});
 
 					  	let otherTableData = {

@@ -11,7 +11,8 @@ const Collections = {
 	locations,
 	tasks,
 	followUps,
-	receipts
+	receipts,
+	temp: new Mongo.Collection("temp"),
 }
 
 export default Collections;
