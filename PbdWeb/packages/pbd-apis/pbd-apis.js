@@ -51,3 +51,11 @@ export const getCodeFromReason = (reason) => {
 export const MAP_API_KEY = "2D16m-0MldWtZBO8ymMUMxz-qRlneZkQUx_s-VhRmBo";
 export const DUTY_START_TIME = "10:00";    //format should always be in HH:mm
 export const DUTY_END_TIME = "18:00";
+
+export const PBD_NAME = "M/S. PBD Eduworld PVT. LTD.";
+export const PBD_ADDRESS = "Prasad Arcade 4th floor, Mahatma Phule Road, Opp. Shree Datta Mandir, Shahapur, Belgavi - 03, KARNATAKA";
+export const PBD_EMAIL = "prasadbookdist@gmail.com";
+export const PBD_PHONE1 = "0831-4208621";
+export const PBD_PHONE2 = "0831-4208622";
+export const PBD_MOBILE1 = "9341108584";
+export const PBD_MOBILE2 = "9845646605";

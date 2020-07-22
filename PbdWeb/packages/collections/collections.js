@@ -1,4 +1,5 @@
 // Write your package code here!
+import { Meteor } from 'meteor/meteor';
 import locations from './locations.js';
 import tasks from './tasks.js';
 import followUps from './followUps.js';
@@ -13,6 +14,7 @@ const Collections = {
 	followUps,
 	receipts,
 	temp: new Mongo.Collection("temp"),
+	null: new Mongo.Collection(null),
 }
 
 export default Collections;

@@ -39,7 +39,7 @@ if(Meteor.isServer) {
 		console.log("executiveId: " + executiveId);
 		console.log("skip: " + skip);
 		console.log("limit: " + limit);
-		console.log("searchCriterion: " + searchCriterion);
+		console.log("searchCriterion: " + JSON.stringify(searchCriterion));
 
 		//authorization
 		if(this.userId && Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
@@ -85,7 +85,7 @@ if(Meteor.isServer) {
 				}
 			}
 
-			console.log("searchCondition: " + JSON.stringify(searchCondition));
+			// console.log("searchCondition: " + JSON.stringify(searchCondition));
 
 			const getHistory = async () => {
 				const getData = (resolve, reject) => {
@@ -155,6 +155,7 @@ if(Meteor.isServer) {
 					    {
 					        $project: {
 					            _id: "$history._id",
+					            execProfile: 1,
 					            partyId: "$history.partyId",
 					            taskId: "$history.taskId",
 					            type: "$history.type",
@@ -186,10 +187,27 @@ if(Meteor.isServer) {
 					            as: "party",
 					        }
 					    },
+					    {
+					        $lookup: {
+					            from: "followUps",
+					            foreignField: "taskId",
+					            localField: "_id",
+					            as: "taksFollowUp",
+					        }
+					    },
+					    {
+					        $lookup: {
+					            from: "tasks",
+					            foreignField: "_id",
+					            localField: "taskId",
+					            as: "followUpTask",
+					        }
+					    },
 					    { $unwind: { path: "$party", preserveNullAndEmptyArrays: true } },
 					    {
 					        $project: {
 					            _id: 1,
+					            execProfile: 1,
 					            partyId: 1,
 					            taskId: 1,
 					            type: 1,
@@ -227,7 +245,9 @@ if(Meteor.isServer) {
 					                        ]
 					                    }
 					                ]
-					            }
+					            },
+					            taskFollowUp: { $arrayElemAt: [ "$taksFollowUp", 0 ] },
+					            followUpTask: { $arrayElemAt: [ "$followUpTask", 0 ] },
 					        }
 					    },
 					    { $match: searchCondition },
@@ -239,7 +259,7 @@ if(Meteor.isServer) {
 
 						cursor.toArray(((error, docs) => {
 							if(error) reject(error);
-							console.log("docs: " + JSON.stringify(docs));
+							// console.log("docs: " + JSON.stringify(docs));
 
 							resolve.apply(this, [docs]);
 						}).bind(this));
@@ -358,9 +378,17 @@ if(Meteor.isServer) {
 if(Meteor.isClient) {
 	import React, { useState, useEffect, useRef } from 'react';
 	import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-	import { faSearch, faCircleNotch } from '@fortawesome/free-solid-svg-icons';
+	import { faSearch, faCircleNotch, faCheck, faCross } from '@fortawesome/free-solid-svg-icons';
 	import { Tracker } from 'meteor/tracker';
-	import { getReasonFromCode, getCodeFromReason } from 'meteor/pbd-apis';
+	import { 	getReasonFromCode, 
+				getCodeFromReason,
+				PBD_NAME,
+				PBD_ADDRESS,
+				PBD_EMAIL,
+				PBD_PHONE1,
+				PBD_PHONE2,
+				PBD_MOBILE1,
+				PBD_MOBILE2 } from 'meteor/pbd-apis';
 
 	const ExecutivesList = (props) => {
 		const [executives, setExecutives] = useState([]);
@@ -422,7 +450,6 @@ if(Meteor.isClient) {
 		const [selectedItemId, setSelectedItemId] = useState("0");
 		const [selectedExecutiveId, setSelectedExecutiveId] = useState("0");
 		const [searchString, setSearchString] = useState("");
-		const [searchStart, setSearchStart] = useState("");
 		const [skip, setSkip] = useState(0);
 		const [loading, setLoading] = useState(false);
 		const limit = 10;
@@ -477,12 +504,11 @@ if(Meteor.isClient) {
 			}
 		};
 
-		const ref = useRef(searchStart);
-
 		useEffect(() => {
 			if(props.selectedExecutiveId !== selectedExecutiveId) {
 				setSkip(0);
 				setListItems([{ _id: "ABCD", category: "loading" }]);
+				Collections.null.remove({});
 				setSelectedItemId("0");
 				setSelectedExecutiveId(props.selectedExecutiveId);
 			}
@@ -511,11 +537,9 @@ if(Meteor.isClient) {
 						let data = [...listItems];
 						data.splice(-1, 1);
 
-						const tempList = Collections.temp.find({}).fetch();
-						console.log("tempList: " + JSON.stringify(tempList));
-
 						Collections.temp.find({}).forEach((serverItem, i) => {
 							data.push(serverItem);
+							Collections.null.insert(serverItem);
 						});
 
 						data.sort((a, b) => (b.createdAt - a.createdAt));
@@ -526,8 +550,6 @@ if(Meteor.isClient) {
 						if((selectedItemId === "0") && data.length) {
 							setSelectedItemId(data[0]._id);
 						}
-
-						ref.current = { searchStart };
 					}
 				});
 
@@ -537,13 +559,20 @@ if(Meteor.isClient) {
 			} else {
 				return;
 			}
-		}, [skip, selectedExecutiveId, searchStart, lazyLoaderTrigger]);
+		}, [skip, selectedExecutiveId, lazyLoaderTrigger]);
+
+		useEffect(() => {
+			props.onHistoryItemSelection(selectedItemId);
+		}, [selectedItemId]);
 
 		return 	<React.Fragment>
 					<form onSubmit={(e) => { 
 							e.preventDefault(); 
+							setSkip(0);
 							setListItems([{ _id: "ABCD", category: "loading" }]);
-							setSearchStart(searchString); 
+							Collections.null.remove({});
+							setSelectedItemId("0");
+							setLazyLoaderTrigger(lazyLoaderTrigger + 1);
 						}}>
 						<div className="input-group">
 							<div className="input-group-prepend">
@@ -583,10 +612,7 @@ if(Meteor.isClient) {
 												{ dateRow }
 												<a 	href="#" 
 													className={`list-group-item custom-list-group-item list-group-item-action ${(item._id === selectedItemId) ? "active" : ""}`}
-													onClick={() => {
-														setSelectedItemId(item._id);
-														props.onHistoryItemSelection(item._id);
-													}}
+													onClick={() => setSelectedItemId(item._id)}
 													disabled={(item.category === "loading")}>
 													{
 														(item.category === "task") ? 
@@ -599,7 +625,14 @@ if(Meteor.isClient) {
 														(item.category === "receipt") ? 
 														<div>
 															<div style={{ color: "#BE7A04" }}>Receipt</div>
-															<div style={{ fontSize: "smaller" }}>₹ {item.amount}</div>
+															<div style={{ fontSize: "smaller" }}>₹ 
+																{
+																	(() => {
+																		let numStr = (parseFloat(item.amount) + 0.00001).toString().split(".");
+																		return `${numStr[0]}.${numStr[1].slice(0, 2)}`
+																	})()
+																}
+															</div>
 															<div style={{ fontSize: "large" }}>{(item.party) ? (item.party.profile.name).substring(0, 30) : ""}</div>
 														</div>
 														:
@@ -638,13 +671,250 @@ if(Meteor.isClient) {
 				</React.Fragment>
 	};
 
+	const ItemDetails = (props) => {
+		// console.log("props.itemId: " + JSON.stringify(props.itemId));
+		let itemDetails = Collections.null.findOne({ _id: props.itemId });
+		// console.log("itemDetails: " + JSON.stringify(itemDetails));
+
+		if(!itemDetails) {
+			return <div></div>;
+		}
+
+		const TaskDetails = (props) => {
+			const details = props.details;
+
+			return <div className="task-details-block">
+						<table className="table table-bordered">
+							<tbody>
+								{
+									(details.type === 0) ?
+
+									<React.Fragment>
+										<tr>
+											<td>Visited to:</td>
+											<td><b>{details.party.profile.name}</b><br/>{details.party.profile.address}</td>
+										</tr>
+										<tr>
+											<td>Reason for visit:</td>
+											<td>{getReasonFromCode(details.reason)}</td>
+										</tr>
+										<tr>
+											<td>Contact Person:</td>
+											<td>{(!details.cpName || (details.cpName === "")) ? <span>---</span> : details.cpName}</td>
+										</tr>
+										<tr>
+											<td>Phone Number:</td>
+											<td>{(!details.cpNumber || (details.cpNumber === "")) ? <span>---</span> : details.cpNumber}</td>
+										</tr>
+										<tr>
+											<td>
+												Done with {(details.reason === 0) ? "Sampling" : (details.reason === 1) ? "Receiving order" : "Payment" }:
+											</td>
+											<td>
+											{
+												details.doneWithTask ? 
+													<FontAwesomeIcon icon={faCheck}/> : "No"
+													// <FontAwesomeIcon icon={faCross}/>
+											}
+											</td>
+										</tr>
+										<tr>
+											<td>Follow up reminder set at: </td>
+											<td>
+												{
+													(details.taskFollowUp && details.taskFollowUp.reminderDate) ?
+													moment(details.taskFollowUp.reminderDate).format("DD-MMM-YYYY") : <span>---</span>
+												}
+											</td>
+										</tr>
+										<tr>
+											<td>Remarks: </td>
+											<td>{(!details.remarks || (details.remarks == "")) ? "---" : details.remarks}</td>
+										</tr>
+									</React.Fragment>
+
+									:
+
+									<React.Fragment>
+										<tr>
+											<td>Subject: </td>
+											<td>{details.subject}</td>
+										</tr>
+										<tr>
+											<td>Remarks: </td>
+											<td>{(!details.remarks || (details.remarks == "")) ? "---" : details.remarks}</td>
+										</tr>
+									</React.Fragment>
+								}
+							</tbody>
+						</table>
+						<p style={{ fontSize: "small", color: "#aaa" }}>
+							Task created At: {moment(details.createdAt).format("DD-MMM-YYYY HH:mm")}
+						</p>
+					</div>;
+		};
+
+		const FollowUpDetails = (props) => {
+			const details = props.details;
+
+			return <div className="followUp-details-block">
+						<table className="table table-bordered">
+							<tbody>
+								<tr>
+									<td>Party Name:</td>
+									<td><b>{details.party.profile.name}</b><br/>{details.party.profile.address}</td>
+								</tr>
+								<tr>
+									<td>Contact Person:</td>
+									<td>{(!details.followUpTask.cpName || (details.followUpTask.cpName === "")) ? <span>---</span> : details.followUpTask.cpName}</td>
+								</tr>
+								<tr>
+									<td>Phone Number:</td>
+									<td>{(!details.followUpTask.cpNumber || (details.followUpTask.cpNumber === "")) ? <span>---</span> : details.followUpTask.cpNumber}</td>
+								</tr>
+								<tr>
+									<td>Reminder set at: </td>
+									<td>
+										{
+											(details.reminderDate) ?
+											moment(details.reminderDate).format("DD-MMM-YYYY") : <span>---</span>
+										}
+									</td>
+								</tr>
+								<tr>
+									<td>Follow up for: </td>
+									<td>{getReasonFromCode(details.followUpFor)}</td>
+								</tr>
+							</tbody>
+						</table>
+						<p style={{ fontSize: "small", color: "#aaa" }}>
+							Follow up created At: {moment(details.createdAt).format("DD-MMM-YYYY HH:mm")}
+						</p>
+					</div>;
+		};
+
+		const ReceiptDetails = (props) => {
+			const details = props.details;
+
+			return 	<div className="receipt-details-block">
+						<h5><b>{PBD_NAME}</b></h5>
+						<div className="small-text">{PBD_ADDRESS}</div>
+						<div className="small-text"><b>Email: </b>{PBD_EMAIL}</div>
+						<div className="small-text"><b>Phone: </b>{PBD_PHONE1}, {PBD_PHONE2}</div>
+						<div className="small-text"><b>Mobile: </b>{PBD_MOBILE1}, {PBD_MOBILE2}</div>
+						<table className="receipt-details-table">
+							<tbody>
+								<tr>
+									<td>Representative:</td>
+									<td>{details.execProfile.name}</td>
+								</tr>
+								<tr>
+									<td>Receipt No.:</td>
+									<td>{details.receiptNo}</td>
+								</tr>
+								<tr>
+									<td>Date:</td>
+									<td>{moment(details.createdAt).format("DD-MMM-YYYY")}</td>
+								</tr>
+								<tr>
+									<td>Customer Code:</td>
+									<td>{details.party.username}</td>
+								</tr>
+								<tr>
+									<td>Name:</td>
+									<td>{details.party.profile.name}</td>
+								</tr>
+								<tr>
+									<td>Address:</td>
+									<td>{details.party.profile.address}</td>
+								</tr>
+								<tr>
+									<td>Customer Contact:</td>
+									<td>{details.party.profile.phoneNumber}</td>
+								</tr>
+								<tr>
+									<td>Paid By:</td>
+									<td>{(details.paidBy === 0) ? <span>Cash</span> : (details.paidBy === 1) ? <span>Cheque</span> : <span>Demand Draft</span>}</td>
+								</tr>
+								<tr>
+									<td>Cheque No.:</td>
+									<td>{(details.paidBy === 1) ? details.chequeNo : <span>---</span>}</td>
+								</tr>
+								<tr>
+									<td>Demand Draft No.:</td>
+									<td>{(details.paidBy === 2) ? details.ddNo : <span>---</span>}</td>
+								</tr>
+								<tr>
+									<td>Payment:</td>
+									<td>{(details.payment === 0) ? <span>Part</span> : <span>Full</span>}</td>
+								</tr>
+								<tr>
+									<td>Paid:</td>
+									<td>
+										<h4>₹
+											{(() => {
+												let numStr = (parseFloat(details.amount) + 0.00001).toString().split(".");
+												return `${numStr[0]}.${numStr[1].slice(0, 2)}`
+											})()}
+										</h4>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+						<div className="small-text">Receipt is valid subject to realization of Cheque</div>
+						<div className="small-text">This receipt is sent to:</div>
+						<div className="small-text">
+						{
+							details.cpList.map(cp => {
+								return <div>{cp.cpNumber}, ({cp.cpName}) at {moment(cp.createdAt).format("DD/MM/YY HH:mm")}</div>
+							})
+						}
+						</div>
+						<br/>
+						<div>
+							<button className="btn btn-outline-secondary">Print</button>
+						</div>
+					</div>
+		};
+
+		let retObj = <div></div>;
+
+		if(itemDetails.category === "task") {
+
+			retObj = <TaskDetails details={itemDetails}/>
+
+		} else if(itemDetails.category === "receipt") {
+
+			retObj = <ReceiptDetails details={itemDetails}/>
+
+		} else if(itemDetails.category === "followUp") {
+
+			retObj = <FollowUpDetails details={itemDetails}/>
+
+		}
+
+		return retObj;
+	};
+
 	const History = (props) => {
 		const [selectedExecutiveId, setSelectedExecutiveId] = useState("0");
-		const [selectedHistoryItem, setSelectedHistoryItem] = useState();
+		const [selectedHistoryItemId, setSelectedHistoryItemId] = useState();
 
 		onExecutiveSelection = (executiveId) => {
 			setSelectedExecutiveId(executiveId);
 		}
+
+		onHistoryItemSelection = (itemId) => {
+			setSelectedHistoryItemId(itemId);
+		}
+
+		useEffect(() => {
+			$(".tabs-content-container").css({ padding: "0 0 0 20px" });
+
+			return function() {
+				$(".tabs-content-container").css({ padding: "0 20px" });
+			}
+		}, [])
 
 		return <div style={{ height: "100%" }}>
 			<div className="container-fluid" style={{ height: "100%" }}>
@@ -653,10 +923,10 @@ if(Meteor.isClient) {
 						<ExecutivesList onExecutiveSelection={onExecutiveSelection.bind(this)}/>
 					</div>
 					<div className="col-4 history-details-list">
-						<ExecutiveHistory selectedExecutiveId={selectedExecutiveId}/>
+						<ExecutiveHistory selectedExecutiveId={selectedExecutiveId} onHistoryItemSelection={onHistoryItemSelection.bind(this)}/>
 					</div>
-					<div className="col-6" style={{border: "1px solid black"}}>
-
+					<div className="col-6 history-details">
+						<ItemDetails itemId={selectedHistoryItemId} />
 					</div>
 				</div>
 			</div>
