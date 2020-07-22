@@ -37,9 +37,12 @@ if(Meteor.isServer) {
 	Meteor.publish('history.getExecutiveHistory', function({ executiveId, skip, limit, searchCriterion }){
 		console.log("Publishing the history.getExecutiveHistory...");
 		console.log("executiveId: " + executiveId);
+		console.log("skip: " + skip);
+		console.log("limit: " + limit);
+		console.log("searchCriterion: " + searchCriterion);
+
 		//authorization
 		if(this.userId && Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
-			console.log("searchCriterion: " +JSON.stringify(searchCriterion));
 			let initializing = true;		//flag to skip the huge loading during initial time.
 
 			let searchCondition = {};
@@ -114,6 +117,33 @@ if(Meteor.isServer) {
 					            as: "followUps"
 					        }
 					    },
+					    { $unwind: "$followUps" },
+                        {
+                            $match: {
+                                "followUps.followUpFor": { $exists: true }
+                            }
+                        },
+                        {
+                            $group: {
+                                _id: "$_id",
+                                active: { $first: "$active" },
+                                createdAt: { $first: "$createdAt" },
+                                services: { $first: "$services" },
+                                username: { $first: "$username" },
+                                emails: { $first: "$emails" },
+                                apiKey: { $first: "$apiKey" },
+                                profile: { $first: "$profile" },
+                                updatedAt: { $first: "$updatedAt" },
+                                tasks: { $first: "$tasks" },
+                                receipts: { $first: "$receipts" },
+                                followUps: { $addToSet: "$followUps" }
+                            }
+                        },
+					    {
+                            $match: {
+                                "followUps.followUpFor": { $exists: true }
+                            }
+                        },
 					    {
 					        $project: {
 					            _id: 1,
@@ -216,7 +246,6 @@ if(Meteor.isServer) {
 					}).bind(this));
 				};
 
-
 				const prmse = new Promise(getData.bind(this));
 
 				const history = await prmse;
@@ -237,7 +266,8 @@ if(Meteor.isServer) {
 					}
 				},
 
-				changed: (_id, doc) => {
+				changed: (_id, changedDoc) => {
+					let doc = Collections.tasks.findOne({ _id });
 					if(doc.type === 0) {
 						doc.party = Meteor.users.findOne({ _id: doc.partyId }, { fields: { services: 0, availableTo: 0 } });
 					}
@@ -254,13 +284,18 @@ if(Meteor.isServer) {
 				added: (_id, doc) => {
 					// console.log("Fields added: " + JSON.stringify(doc));
 					if(!initializing) {
+						doc.receiptNo = `${Meteor.users.findOne({ _id: executiveId }).profile.receiptSeries}${doc.receiptNo}`;
+						doc.amount = `${doc.amount}`;
 						doc.party = Meteor.users.findOne({ _id: doc.partyId }, { fields: { services: 0, availableTo: 0 } });
 						doc.category = "receipt";
 						this.added("temp", _id, doc);
 					}
 				},
 
-				changed: (_id, doc) => {
+				changed: (_id, changedDoc) => {
+					let doc = Collections.receipts.findOne({ _id });
+					doc.receiptNo = `${Meteor.users.findOne({ _id: executiveId }).profile.receiptSeries}${doc.receiptNo}`;
+					doc.amount = `${doc.amount}`;
 					doc.party = Meteor.users.findOne({ _id: doc.partyId }, { fields: { services: 0, availableTo: 0 } });
 					doc.category = "receipt";
 					this.changed("temp", _id, doc);
@@ -275,13 +310,16 @@ if(Meteor.isServer) {
 				added: (_id, doc) => {
 					// console.log("Fields added: " + JSON.stringify(doc));
 					if(!initializing) {
-						doc.party = Meteor.users.findOne({ _id: doc.partyId }, { fields: { services: 0, availableTo: 0 } });
-						doc.category = "followUp";
-						this.added("temp", _id, doc);
+						if(typeof doc.followUpFor !== "undefined") {
+							doc.party = Meteor.users.findOne({ _id: doc.partyId }, { fields: { services: 0, availableTo: 0 } });
+							doc.category = "followUp";
+							this.added("temp", _id, doc);
+						}
 					}
 				},
 
-				changed: (_id, doc) => {
+				changed: (_id, changedDoc) => {
+					let doc = Collections.followUps.findOne({ _id });
 					doc.party = Meteor.users.findOne({ _id: doc.partyId }, { fields: { services: 0, availableTo: 0 } });
 					doc.category = "followUp";
 					this.changed("temp", _id, doc);
@@ -380,14 +418,15 @@ if(Meteor.isClient) {
 	};
 
 	const ExecutiveHistory = (props) => {
-		const [listItems, setListItems] = useState([]);
+		const [listItems, setListItems] = useState([{ _id: "ABCD", category: "loading" }]);
 		const [selectedItemId, setSelectedItemId] = useState("0");
 		const [selectedExecutiveId, setSelectedExecutiveId] = useState("0");
 		const [searchString, setSearchString] = useState("");
 		const [searchStart, setSearchStart] = useState("");
 		const [skip, setSkip] = useState(0);
-		const [loading, setLoading] = useState(true);
-		const limit = 20;
+		const [loading, setLoading] = useState(false);
+		const limit = 10;
+		const [lazyLoaderTrigger, setLazyLoaderTrigger] = useState(0);
 
 		const getSearchCriteria = () => {
 			let string = searchString.toLowerCase();
@@ -426,12 +465,24 @@ if(Meteor.isClient) {
 			return retObj;
 		};
 
+		const loadLazily = () => {
+			if(!loading) {
+				const listContainer = this.historyList;
+				if((listContainer.scrollTop + listContainer.clientHeight) === listContainer.scrollHeight) {
+					setListItems( [...listItems].concat([{ _id: "ABCD", category: "loading" }]) );
+					setSkip(listItems.length);
+					setLazyLoaderTrigger(lazyLoaderTrigger + 1);
+					console.log("reached to bottom...");
+				}
+			}
+		};
+
 		const ref = useRef(searchStart);
 
 		useEffect(() => {
 			if(props.selectedExecutiveId !== selectedExecutiveId) {
-				setLoading(true);
-				setListItems([]);
+				setSkip(0);
+				setListItems([{ _id: "ABCD", category: "loading" }]);
 				setSelectedItemId("0");
 				setSelectedExecutiveId(props.selectedExecutiveId);
 			}
@@ -439,56 +490,61 @@ if(Meteor.isClient) {
 
 		useEffect(() => {
 			const searchCriterion = getSearchCriteria();
-			handle = Meteor.subscribe('history.getExecutiveHistory', { executiveId: props.selectedExecutiveId, skip, limit, searchCriterion }, {
-				onStop(error) {
-					console.log("history.getExecutiveHistory is stopped.");
-					if(error) {
-						console.log(error);
-					}
-				},
 
-				onReady() {
-					console.log("history.getExecutiveHistory is ready to get the data.");
-				}
-			});
-
-			Tracker.autorun(() => {
-				if(handle.ready()) {
-					let data = (ref.current.searchStart !== searchStart) ? [] : [...listItems];
-					const localIds = data.map((item, i) => item._id);
-
-					Collections.temp.find({ _id: { $in: [localIds] } }).forEach((serverItem, i) => {
-						const index = localIds.indexOf(serverItem._id);
-
-						if(index !== -1) {
-							data[index] = serverItem;
+			if(!loading && (selectedExecutiveId !== "0")) {
+				setLoading(true);
+				let handle = Meteor.subscribe('history.getExecutiveHistory', { executiveId: selectedExecutiveId, skip, limit, searchCriterion }, {
+					onStop(error) {
+						console.log("history.getExecutiveHistory is stopped.");
+						if(error) {
+							console.log(error);
 						}
-					});
+					},
 
-					Collections.temp.find({ _id: { $nin: [localIds] } }).forEach((serverItem, i) => {
-						data.push(serverItem);
-					});
-
-					data.sort((a, b) => (b.createdAt - a.createdAt));
-					
-					setListItems(data);
-					setLoading(false);
-
-					if(selectedItemId === "0" && data.length) {
-						setSelectedItemId(data[0]._id);
+					onReady() {
+						console.log("history.getExecutiveHistory is ready to get the data.");
 					}
+				});
 
-					ref.current = { searchStart };
+				Tracker.autorun(() => {
+					if(handle.ready()) {
+						let data = [...listItems];
+						data.splice(-1, 1);
+
+						const tempList = Collections.temp.find({}).fetch();
+						console.log("tempList: " + JSON.stringify(tempList));
+
+						Collections.temp.find({}).forEach((serverItem, i) => {
+							data.push(serverItem);
+						});
+
+						data.sort((a, b) => (b.createdAt - a.createdAt));
+
+						setListItems(data);
+						setLoading(false);
+
+						if((selectedItemId === "0") && data.length) {
+							setSelectedItemId(data[0]._id);
+						}
+
+						ref.current = { searchStart };
+					}
+				});
+
+				return function() {
+					handle.stop();
 				}
-			})
-
-			return function() {
-				handle.stop();
+			} else {
+				return;
 			}
-		}, [skip, selectedExecutiveId, searchStart]);
+		}, [skip, selectedExecutiveId, searchStart, lazyLoaderTrigger]);
 
 		return 	<React.Fragment>
-					<form onSubmit={(e) => { e.preventDefault(); setSearchStart(searchString); }}>
+					<form onSubmit={(e) => { 
+							e.preventDefault(); 
+							setListItems([{ _id: "ABCD", category: "loading" }]);
+							setSearchStart(searchString); 
+						}}>
 						<div className="input-group">
 							<div className="input-group-prepend">
 							    <span className="input-group-text" id="basic-addon1" style={{ background: "#fff" }}>
@@ -501,27 +557,26 @@ if(Meteor.isClient) {
 							</div>
 						</div>
 					</form>
-					<div className="list-group history-list">
+					<div className="list-group history-list" ref={ref => this.historyList = ref} onScroll={loadLazily.bind(this)}>
 						{
-							loading ?
-							<div className="text-center"><FontAwesomeIcon icon={faCircleNotch} spin/> Loading...</div>
-							:
 							listItems && (listItems.length !== 0) ?
 							(() => {
-								let prevDate = moment().format("DD-MMM-YYYY");
+								let prevDate;
 
 								return listItems.map(item => {
 									// console.log("item: " + JSON.stringify(item));
-									const date = moment(item.createdAt).format("DD-MMM-YYYY");
 									let dateRow = "";
-									if(prevDate !== date) {
-										prevDate = date;
-										dateRow = 	<div className="history-date-title">
-														<div><b>{date}</b></div>
-														<div>
-															<button className="btn btn-info" style={{ borderRadius: 0, fontSize: "small" }}>Snapshot</button>
+									if(item.createdAt) {
+										const date = moment(item.createdAt).format("DD-MMM-YYYY");
+										if(prevDate !== date) {
+											prevDate = date;
+											dateRow = 	<div className="history-date-title">
+															<div><b>{date}</b></div>
+															<div>
+																<button className="btn btn-info" style={{ borderRadius: 0, fontSize: "small" }}>Snapshot</button>
+															</div>
 														</div>
-													</div>
+										}
 									}
 
 									return 	<React.Fragment key={item._id}>
@@ -531,7 +586,8 @@ if(Meteor.isClient) {
 													onClick={() => {
 														setSelectedItemId(item._id);
 														props.onHistoryItemSelection(item._id);
-													}}>
+													}}
+													disabled={(item.category === "loading")}>
 													{
 														(item.category === "task") ? 
 														<div>
@@ -544,14 +600,28 @@ if(Meteor.isClient) {
 														<div>
 															<div style={{ color: "#BE7A04" }}>Receipt</div>
 															<div style={{ fontSize: "smaller" }}>₹ {item.amount}</div>
-															<div style={{ fontSize: "large" }}>{(item.party) ? (item.party.profile.name).substring(0, 30) : (item.subject).substring(0, 30)}</div>
+															<div style={{ fontSize: "large" }}>{(item.party) ? (item.party.profile.name).substring(0, 30) : ""}</div>
 														</div>
 														:
-														(item.category === "followUp") ? 
+														((item.category === "followUp") || (typeof item.followUpFor !== "undefined")) ? 
 														<div>
 															<div style={{ color: "#DA2D6D" }}>Follow up</div>
 															<div style={{ fontSize: "smaller" }}>{getReasonFromCode(item.followUpFor)}</div>
-															<div style={{ fontSize: "large" }}>{(item.party) ? (item.party.profile.name).substring(0, 30) : (item.subject).substring(0, 30)}</div>
+															<div style={{ fontSize: "large" }}>{(item.party) ? (item.party.profile.name).substring(0, 30) : ""}</div>
+														</div>
+														: 
+														(item.category === "loading") ?
+														<div>
+															<div className="text-center" style={{ fontSize: "large" }}>
+																<FontAwesomeIcon icon={faCircleNotch} spin/> Loading...
+															</div>
+														</div>
+														: 
+														(item.category === "endOfList") ?
+														<div>
+															<div className="text-center" style={{ fontSize: "large" }}>
+																End of list is reached
+															</div>
 														</div>
 														: null
 													}
