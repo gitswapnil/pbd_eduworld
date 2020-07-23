@@ -397,14 +397,6 @@ table.tbl > tbody > tr.row-selectable:hover {
 	flex-direction: column;
 }
 
-.receipt-details-block {
-	box-shadow: 1px 1px 5px #aaa;
-	padding: 20px;
-	text-align: center;
-	color: #555;
-	margin-bottom: 20px;
-}
-
 .small-text {
 	font-size: small;
 }

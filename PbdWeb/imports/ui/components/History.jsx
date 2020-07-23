@@ -77,7 +77,7 @@ if(Meteor.isServer) {
 			            $or: [
 			                { $regexMatch: { input: "$party.profile.name", regex: `${searchCriterion.string}`, options: "i" } },
 			                { $regexMatch: { input: "$party.username", regex: `${searchCriterion.string}`, options: "i" } },
-			                { $regexMatch: { input: "$amount", regex: `^${searchCriterion.string}$`, options: "i" } },
+			                { $eq: ["$amount", parseFloat(searchCriterion.string)] },
 			                { $regexMatch: { input: "$receiptNo", regex: `${searchCriterion.string}`, options: "i" } },
 			                { $regexMatch: { input: "$subject", regex: `${searchCriterion.string}`, options: "i" } },
 			            ]
@@ -170,7 +170,7 @@ if(Meteor.isServer) {
 					            subject: "$history.subject",
 					            receiptNo: { $concat: ["$execProfile.receiptSeries", { $toString: "$history.receiptNo"} ] },
 					            cpList: "$history.cpList",
-					            amount: { $toString: "$history.amount" },
+					            amount: "$history.amount",
 					            paidBy: "$history.paidBy",
 					            ddNo: "$history.ddNo",
 					            payment: "$history.payment",
@@ -378,7 +378,7 @@ if(Meteor.isServer) {
 if(Meteor.isClient) {
 	import React, { useState, useEffect, useRef } from 'react';
 	import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-	import { faSearch, faCircleNotch, faCheck, faCross } from '@fortawesome/free-solid-svg-icons';
+	import { faSearch, faCircleNotch, faCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
 	import { Tracker } from 'meteor/tracker';
 	import { 	getReasonFromCode, 
 				getCodeFromReason,
@@ -713,13 +713,13 @@ if(Meteor.isClient) {
 											<td>
 											{
 												details.doneWithTask ? 
-													<FontAwesomeIcon icon={faCheck}/> : "No"
-													// <FontAwesomeIcon icon={faCross}/>
+													<FontAwesomeIcon icon={faCheck}/> : 
+													<FontAwesomeIcon icon={faTimes}/>
 											}
 											</td>
 										</tr>
 										<tr>
-											<td>Follow up reminder set at: </td>
+											<td>Follow up reminder set on: </td>
 											<td>
 												{
 													(details.taskFollowUp && details.taskFollowUp.reminderDate) ?
@@ -773,7 +773,7 @@ if(Meteor.isClient) {
 									<td>{(!details.followUpTask.cpNumber || (details.followUpTask.cpNumber === "")) ? <span>---</span> : details.followUpTask.cpNumber}</td>
 								</tr>
 								<tr>
-									<td>Reminder set at: </td>
+									<td>Reminder set on: </td>
 									<td>
 										{
 											(details.reminderDate) ?
@@ -796,61 +796,98 @@ if(Meteor.isClient) {
 		const ReceiptDetails = (props) => {
 			const details = props.details;
 
-			return 	<div className="receipt-details-block">
+			function closePrint() {
+				document.body.removeChild(this.__container__);
+			}
+
+			function setPrint() {
+				this.contentWindow.__container__ = this;
+				this.contentWindow.onbeforeunload = closePrint.bind(this);
+				this.contentWindow.onafterprint = closePrint.bind(this);
+				this.contentWindow.focus(); // Required for IE
+				this.contentWindow.print();
+			}
+
+			function printPage(sURL) {
+				var oHiddFrame = document.createElement("iframe");
+				oHiddFrame.onload = setPrint;
+				oHiddFrame.style.position = "fixed";
+				oHiddFrame.style.right = "0";
+				oHiddFrame.style.bottom = "0";
+				oHiddFrame.style.width = "0";
+				oHiddFrame.style.height = "0";
+				oHiddFrame.style.border = "0";
+
+				const receiptDetailsBlock = document.getElementsByClassName("receipt-details-block")[0];
+				const virtualBlock = document.createElement("div");
+				virtualBlock.innerHTML = receiptDetailsBlock.innerHTML;
+
+				virtualBlock.style.padding = "20px";
+				virtualBlock.style.textAlign = "center";
+				virtualBlock.style.color = "#555";
+				virtualBlock.style.marginBottom = "20px";
+				
+				virtualBlock.removeChild(virtualBlock.querySelector("#btnPrint"));
+				oHiddFrame.srcdoc = virtualBlock.outerHTML;
+
+				document.body.appendChild(oHiddFrame);
+			}
+
+			return 	<div className="receipt-details-block" style={{ boxShadow: "1px 1px 5px #aaa", padding: "20px", textAlign: "center", color: "#555", marginBottom: "20px" }}>
 						<h5><b>{PBD_NAME}</b></h5>
-						<div className="small-text">{PBD_ADDRESS}</div>
-						<div className="small-text"><b>Email: </b>{PBD_EMAIL}</div>
-						<div className="small-text"><b>Phone: </b>{PBD_PHONE1}, {PBD_PHONE2}</div>
-						<div className="small-text"><b>Mobile: </b>{PBD_MOBILE1}, {PBD_MOBILE2}</div>
-						<table className="receipt-details-table">
+						<div style={{ fontSize: "small" }}>{PBD_ADDRESS}</div>
+						<div style={{ fontSize: "small" }}><b>Email: </b>{PBD_EMAIL}</div>
+						<div style={{ fontSize: "small" }}><b>Phone: </b>{PBD_PHONE1}, {PBD_PHONE2}</div>
+						<div style={{ fontSize: "small" }}><b>Mobile: </b>{PBD_MOBILE1}, {PBD_MOBILE2}</div>
+						<table className="receipt-details-table" style={{ width: "100%", marginTop: "10px" }}>
 							<tbody>
 								<tr>
-									<td>Representative:</td>
-									<td>{details.execProfile.name}</td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Representative:</td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.execProfile.name}</td>
 								</tr>
 								<tr>
-									<td>Receipt No.:</td>
-									<td>{details.receiptNo}</td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Receipt No.:</td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.receiptNo}</td>
 								</tr>
 								<tr>
-									<td>Date:</td>
-									<td>{moment(details.createdAt).format("DD-MMM-YYYY")}</td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Date:</td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{moment(details.createdAt).format("DD-MMM-YYYY")}</td>
 								</tr>
 								<tr>
-									<td>Customer Code:</td>
-									<td>{details.party.username}</td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Customer Code:</td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.party.username}</td>
 								</tr>
 								<tr>
-									<td>Name:</td>
-									<td>{details.party.profile.name}</td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Name:</td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.party.profile.name}</td>
 								</tr>
 								<tr>
-									<td>Address:</td>
-									<td>{details.party.profile.address}</td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Address:</td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.party.profile.address}</td>
 								</tr>
 								<tr>
-									<td>Customer Contact:</td>
-									<td>{details.party.profile.phoneNumber}</td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Customer Contact:</td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.party.profile.phoneNumber}</td>
 								</tr>
 								<tr>
-									<td>Paid By:</td>
-									<td>{(details.paidBy === 0) ? <span>Cash</span> : (details.paidBy === 1) ? <span>Cheque</span> : <span>Demand Draft</span>}</td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Paid By:</td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{(details.paidBy === 0) ? <span>Cash</span> : (details.paidBy === 1) ? <span>Cheque</span> : <span>Demand Draft</span>}</td>
 								</tr>
 								<tr>
-									<td>Cheque No.:</td>
-									<td>{(details.paidBy === 1) ? details.chequeNo : <span>---</span>}</td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Cheque No.:</td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{(details.paidBy === 1) ? details.chequeNo : <span>---</span>}</td>
 								</tr>
 								<tr>
-									<td>Demand Draft No.:</td>
-									<td>{(details.paidBy === 2) ? details.ddNo : <span>---</span>}</td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Demand Draft No.:</td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{(details.paidBy === 2) ? details.ddNo : <span>---</span>}</td>
 								</tr>
 								<tr>
-									<td>Payment:</td>
-									<td>{(details.payment === 0) ? <span>Part</span> : <span>Full</span>}</td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Payment:</td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{(details.payment === 0) ? <span>Part</span> : <span>Full</span>}</td>
 								</tr>
 								<tr>
-									<td>Paid:</td>
-									<td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Paid:</td>
+									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>
 										<h4>₹
 											{(() => {
 												let numStr = (parseFloat(details.amount) + 0.00001).toString().split(".");
@@ -861,18 +898,18 @@ if(Meteor.isClient) {
 								</tr>
 							</tbody>
 						</table>
-						<div className="small-text">Receipt is valid subject to realization of Cheque</div>
-						<div className="small-text">This receipt is sent to:</div>
-						<div className="small-text">
+						<div style={{ fontSize: "small" }}>Receipt is valid subject to realization of Cheque</div>
+						<div style={{ fontSize: "small" }}>This receipt is sent to:</div>
+						<div style={{ fontSize: "small" }}>
 						{
 							details.cpList.map(cp => {
-								return <div>{cp.cpNumber}, ({cp.cpName}) at {moment(cp.createdAt).format("DD/MM/YY HH:mm")}</div>
+								return <div key={cp.cpNumber}>{cp.cpNumber}, ({cp.cpName}) at {moment(cp.createdAt).format("DD/MM/YY HH:mm")}</div>
 							})
 						}
 						</div>
 						<br/>
-						<div>
-							<button className="btn btn-outline-secondary">Print</button>
+						<div id="btnPrint">
+							<button className="btn btn-outline-secondary" onClick={printPage.bind(this)}>Print</button>
 						</div>
 					</div>
 		};
