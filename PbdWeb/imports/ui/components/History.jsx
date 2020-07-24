@@ -95,6 +95,14 @@ if(Meteor.isServer) {
 					    },
 					    {
 					        $lookup: {
+					            from: "locations",
+					            foreignField: "userId",
+					            localField: "_id",
+					            as: "locations"
+					        }
+					    },
+					    {
+					        $lookup: {
 					            from: "tasks",
 					            foreignField: "userId",
 					            localField: "_id",
@@ -126,6 +134,7 @@ if(Meteor.isServer) {
                         {
                             $group: {
                                 _id: "$_id",
+                                userId: { $first: "$_id" },
                                 active: { $first: "$active" },
                                 createdAt: { $first: "$createdAt" },
                                 services: { $first: "$services" },
@@ -136,19 +145,72 @@ if(Meteor.isServer) {
                                 updatedAt: { $first: "$updatedAt" },
                                 tasks: { $first: "$tasks" },
                                 receipts: { $first: "$receipts" },
-                                followUps: { $addToSet: "$followUps" }
+                                followUps: { $addToSet: "$followUps" },
+                                locations: { $first: "$locations" },
                             }
                         },
-					    {
+                        {
                             $match: {
                                 "followUps.followUpFor": { $exists: true }
+                            }
+                        },
+                        { $unwind: "$locations" },
+                        {
+                            $project: {
+                                _id: 1,
+                                userId: 1,
+                                active: 1,
+                                createdAt: 1,
+                                username: 1,
+                                emails: 1,
+                                apiKey: 1,
+                                profile: 1,
+                                updatedAt: 1,
+                                tasks: 1,
+                                receipts: 1,
+                                followUps: 1,
+                                locationsCreatedAt: { $dateToString: { date: "$locations.createdAt", format: "%Y-%m-%d", timezone: "Asia/Kolkata" } },
+                                locations: 1,
+                            }
+                        },
+                        {
+                            $group: {
+                                _id: "$locationsCreatedAt",
+                                userId: { $first: "$userId" },
+                                active: { $first: "$active" },
+                                createdAt: { $first: "$createdAt" },
+                                username: { $first: "$username" },
+                                emails: { $first: "$emails" },
+                                apiKey: { $first: "$apiKey" },
+                                profile: { $first: "$profile" },
+                                updatedAt: { $first: "$updatedAt" },
+                                tasks: { $first: "$tasks" },
+                                receipts: { $first: "$receipts" },
+                                followUps: { $first: "$followUps" },
+                                locations: { $first: "$locations" },
+                            }
+                        },
+                        {
+                            $group: {
+                                _id: "$userId",
+                                active: { $first: "$active" },
+                                createdAt: { $first: "$createdAt" },
+                                username: { $first: "$username" },
+                                emails: { $first: "$emails" },
+                                apiKey: { $first: "$apiKey" },
+                                profile: { $first: "$profile" },
+                                updatedAt: { $first: "$updatedAt" },
+                                tasks: { $first: "$tasks" },
+                                receipts: { $first: "$receipts" },
+                                followUps: { $first: "$followUps" },
+                                locations: { $addToSet: "$locations" },
                             }
                         },
 					    {
 					        $project: {
 					            _id: 1,
 					            execProfile: "$profile",
-					            history: { $concatArrays: ["$tasks", "$receipts", "$followUps"] }
+					            history: { $concatArrays: ["$tasks", "$receipts", "$followUps", "$locations"] }
 					        }
 					    },
 					    { $unwind: "$history" },
@@ -176,7 +238,7 @@ if(Meteor.isServer) {
 					            payment: "$history.payment",
 					            chequeNo: "$history.chequeNo",
 					            userId: "$history.userId",
-					            createdAt: "$history.createdAt",
+					            createdAt: { $ifNull: ["$history.createdAt", "$history"] },
 					        }
 					    },
 					    {
@@ -230,7 +292,7 @@ if(Meteor.isServer) {
 					            "party._id": 1,
 					            "party.username": 1,
 					            "party.emails": 1,
-					            "party.profile": 1,
+					            "party.profile": { $ifNull: [ "$party.profile", { name: "", phoneNumber: "", address: "" } ] },
 					            userId: 1,
 					            createdAt: 1,
 					            category: { 
@@ -241,7 +303,13 @@ if(Meteor.isServer) {
 					                        $cond: [
 					                            { $ifNull: ["$receiptNo", false] }, 
 					                            "receipt",
-					                            "followUp"
+                                                {
+                                                    $cond: [
+                                                        { $ifNull: ["$taskId", false] },
+                                                        "followUp",
+                                                        null
+                                                    ]
+                                                }
 					                        ]
 					                    }
 					                ]
@@ -352,6 +420,7 @@ if(Meteor.isServer) {
 
 			getHistory.apply(this).then(docs => {			
 				docs.forEach(item => {
+					// console.log("createdAt: " + item.createdAt);
 					this.added("temp", item._id, item);
 				});
 
@@ -389,6 +458,7 @@ if(Meteor.isClient) {
 				PBD_PHONE2,
 				PBD_MOBILE1,
 				PBD_MOBILE2 } from 'meteor/pbd-apis';
+	import ExecutiveDaySnapshot from './ExecutiveDaySnapshot';
 
 	const ExecutivesList = (props) => {
 		const [executives, setExecutives] = useState([]);
@@ -538,6 +608,7 @@ if(Meteor.isClient) {
 						data.splice(-1, 1);
 
 						Collections.temp.find({}).forEach((serverItem, i) => {
+							// console.log("got createdAt: " + serverItem.createdAt);
 							data.push(serverItem);
 							Collections.null.insert(serverItem);
 						});
@@ -602,7 +673,7 @@ if(Meteor.isClient) {
 											dateRow = 	<div className="history-date-title">
 															<div><b>{date}</b></div>
 															<div>
-																<button className="btn btn-info" style={{ borderRadius: 0, fontSize: "small" }}>Snapshot</button>
+																<button className="btn btn-info" style={{ borderRadius: 0, fontSize: "small" }} onClick={() => setSelectedItemId(`${moment(item.createdAt).format("DD-MM-YYYY")}:${item.userId}`)}>Day Report</button>
 															</div>
 														</div>
 										}
@@ -610,56 +681,62 @@ if(Meteor.isClient) {
 
 									return 	<React.Fragment key={item._id}>
 												{ dateRow }
-												<a 	href="#" 
-													className={`list-group-item custom-list-group-item list-group-item-action ${(item._id === selectedItemId) ? "active" : ""}`}
-													onClick={() => setSelectedItemId(item._id)}
-													disabled={(item.category === "loading")}>
-													{
-														(item.category === "task") ? 
-														<div>
-															<div className="text-primary">Task</div>
-															<div style={{ fontSize: "smaller" }}>{ item.party ? getReasonFromCode(item.reason) : null}</div>
-															<div style={{ fontSize: "large" }}>{(item.party) ? (item.party.profile.name).substring(0, 30) : (item.subject).substring(0, 30)}</div>
-														</div>
-														: 
-														(item.category === "receipt") ? 
-														<div>
-															<div style={{ color: "#BE7A04" }}>Receipt</div>
-															<div style={{ fontSize: "smaller" }}>₹ 
-																{
-																	(() => {
-																		let numStr = (parseFloat(item.amount) + 0.00001).toString().split(".");
-																		return `${numStr[0]}.${numStr[1].slice(0, 2)}`
-																	})()
-																}
+												{
+													(item.category != null) ? 
+
+													<a 	href="#" 
+														className={`list-group-item custom-list-group-item list-group-item-action ${(item._id === selectedItemId) ? "active" : ""}`}
+														onClick={() => setSelectedItemId(item._id)}
+														disabled={(item.category === "loading")}>
+														{
+															(item.category === "task") ? 
+															<div>
+																<div className="text-primary">Task</div>
+																<div style={{ fontSize: "smaller" }}>{ item.party ? getReasonFromCode(item.reason) : null}</div>
+																<div style={{ fontSize: "large" }}>{(item.party) ? (item.party.profile.name).substring(0, 30) : (item.subject).substring(0, 30)}</div>
 															</div>
-															<div style={{ fontSize: "large" }}>{(item.party) ? (item.party.profile.name).substring(0, 30) : ""}</div>
-														</div>
-														:
-														((item.category === "followUp") || (typeof item.followUpFor !== "undefined")) ? 
-														<div>
-															<div style={{ color: "#DA2D6D" }}>Follow up</div>
-															<div style={{ fontSize: "smaller" }}>{getReasonFromCode(item.followUpFor)}</div>
-															<div style={{ fontSize: "large" }}>{(item.party) ? (item.party.profile.name).substring(0, 30) : ""}</div>
-														</div>
-														: 
-														(item.category === "loading") ?
-														<div>
-															<div className="text-center" style={{ fontSize: "large" }}>
-																<FontAwesomeIcon icon={faCircleNotch} spin/> Loading...
+															: 
+															(item.category === "receipt") ? 
+															<div>
+																<div style={{ color: "#BE7A04" }}>Receipt</div>
+																<div style={{ fontSize: "smaller" }}>₹ 
+																	{
+																		(() => {
+																			let numStr = (parseFloat(item.amount) + 0.00001).toString().split(".");
+																			return `${numStr[0]}.${numStr[1].slice(0, 2)}`
+																		})()
+																	}
+																</div>
+																<div style={{ fontSize: "large" }}>{(item.party) ? (item.party.profile.name).substring(0, 30) : ""}</div>
 															</div>
-														</div>
-														: 
-														(item.category === "endOfList") ?
-														<div>
-															<div className="text-center" style={{ fontSize: "large" }}>
-																End of list is reached
+															:
+															((item.category === "followUp") || (typeof item.followUpFor !== "undefined")) ? 
+															<div>
+																<div style={{ color: "#DA2D6D" }}>Follow up</div>
+																<div style={{ fontSize: "smaller" }}>{getReasonFromCode(item.followUpFor)}</div>
+																<div style={{ fontSize: "large" }}>{(item.party) ? (item.party.profile.name).substring(0, 30) : ""}</div>
 															</div>
-														</div>
-														: null
-													}
-													
-												</a>
+															: 
+															(item.category === "loading") ?
+															<div>
+																<div className="text-center" style={{ fontSize: "large" }}>
+																	<FontAwesomeIcon icon={faCircleNotch} spin/> Loading...
+																</div>
+															</div>
+															: 
+															(item.category === "endOfList") ?
+															<div>
+																<div className="text-center" style={{ fontSize: "large" }}>
+																	End of list is reached
+																</div>
+															</div>
+															: null
+														}
+														
+													</a>
+													:
+													null
+												}
 											</React.Fragment>
 
 								})
@@ -672,8 +749,20 @@ if(Meteor.isClient) {
 	};
 
 	const ItemDetails = (props) => {
-		// console.log("props.itemId: " + JSON.stringify(props.itemId));
-		let itemDetails = Collections.null.findOne({ _id: props.itemId });
+		if(!props.itemId) {
+			return <div></div>;
+		}
+
+		let splittedString = props.itemId.split(":");
+		let itemId = splittedString[0];
+		let execId = splittedString[1];
+
+		if(execId){
+			return <ExecutiveDaySnapshot execId={execId} date={moment(itemId, "DD-MM-YYYY").toDate()}/>;
+		};
+
+
+		let itemDetails = Collections.null.findOne({ _id: itemId });
 		// console.log("itemDetails: " + JSON.stringify(itemDetails));
 
 		if(!itemDetails) {
@@ -826,7 +915,7 @@ if(Meteor.isClient) {
 				virtualBlock.style.textAlign = "center";
 				virtualBlock.style.color = "#555";
 				virtualBlock.style.marginBottom = "20px";
-				
+
 				virtualBlock.removeChild(virtualBlock.querySelector("#btnPrint"));
 				oHiddFrame.srcdoc = virtualBlock.outerHTML;
 
@@ -962,7 +1051,7 @@ if(Meteor.isClient) {
 					<div className="col-4 history-details-list">
 						<ExecutiveHistory selectedExecutiveId={selectedExecutiveId} onHistoryItemSelection={onHistoryItemSelection.bind(this)}/>
 					</div>
-					<div className="col-6 history-details">
+					<div className="col-6 history-details" style={{ height: "100%" }}>
 						<ItemDetails itemId={selectedHistoryItemId} />
 					</div>
 				</div>

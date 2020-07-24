@@ -3,3 +3,4 @@ import '../../ui/components/PartyDefinitions.jsx';
 import '../../ui/components/CurrentStatus.jsx';
 import '../../ui/components/Reports.jsx';
 import '../../ui/components/History.jsx';
+import '../../ui/components/ExecutiveDaySnapshot.jsx';

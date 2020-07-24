@@ -527,7 +527,6 @@ if(Meteor.isServer) {
 					                $addToSet: {
 					                    $cond: [
 					                        { $eq: [ "$type", 1 ] },
-					                    
 					                        "$others",
 					                        null
 					                    ]
@@ -1359,7 +1358,7 @@ if(Meteor.isClient) {
 
 									<div className="text-center">
 										<h5>Total Collections: 
-											<b>₹{collectionsPieData.reduce((accumulator, currObj) => (parseFloat(accumulator + currObj.value).toFixed(2)), 0)}</b>
+											<b>₹{(collectionsPieData.reduce((accumulator, currObj) => (accumulator + currObj.value), 0) + 0.00001).toString().match(/[0-9]+\.[0-9][0-9]/)[0]}</b>
 										</h5>
 									</div>
 								</React.Fragment>

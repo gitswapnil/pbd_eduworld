@@ -396,25 +396,3 @@ table.tbl > tbody > tr.row-selectable:hover {
 	padding-left: 20px;
 	flex-direction: column;
 }
-
-.small-text {
-	font-size: small;
-}
-
-.receipt-details-table {
-	width: 100%;
-	margin-top: 10px; 
-}
-
-.receipt-details-table > tbody > tr > td {
-	border-bottom: 1px solid #ddd;
-}
-
-.receipt-details-table > tbody > tr > td:first-child {
-	text-align: left;
-}
-
-.receipt-details-table > tbody > tr > td:nth-child(2) {
-	text-align: right;
-	color: #000;
-}
