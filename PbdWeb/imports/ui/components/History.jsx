@@ -619,7 +619,8 @@ if(Meteor.isClient) {
 						setLoading(false);
 
 						if((selectedItemId === "0") && data.length) {
-							setSelectedItemId(data[0]._id);
+							const nonNullCategoryItem = data.find(elem => (elem.category != null));
+							setSelectedItemId(nonNullCategoryItem._id);
 						}
 					}
 				});

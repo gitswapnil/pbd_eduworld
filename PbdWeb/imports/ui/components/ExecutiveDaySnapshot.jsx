@@ -98,6 +98,7 @@ if(Meteor.isClient) {
 
 	const ExecutiveDaySnapshot = (props) => {
 		const [loading, setLoading] = useState(true);
+		const [noData, setNoData] = useState(false);
 		
 		const [markerObj, setMarkerObj] = useState({});
 		const [mapUIObj, setMapUIObj] = useState({});
@@ -114,29 +115,32 @@ if(Meteor.isClient) {
 			const map = new H.Map(
 			 	document.getElementById("routeMapContainer"), 
 			 	defaultLayers.vector.normal.map,
-			 	{
-			      zoom: props.zoom,
-			      center: { lat: 52.5324261, lng: 13.3959818 }
-			    });
+			 	{ zoom: props.zoom, center: { lat: locations[0].locations[0].latitude, lng: locations[0].locations[0].longitude } });
 
 			// Define points to represent the vertices of a short route in Berlin, Germany:
 			let linePoints = [];
 			let markers = [];
 
-			console.log("locations: " + JSON.stringify(locations));
 			locations.forEach(session => {
-				console.log("session: " + JSON.stringify(session));
 				let tempArr = [];
+
+				let prevLocationString = "";
 				session.locations.forEach(location => {
-					tempArr.push({ lat: location.latitude, lng: location.longitude });
+					// console.log("location: " + JSON.stringify(location));
+					if(prevLocationString !== location.locationString) {
+						tempArr.push({ lat: location.latitude, lng: location.longitude });
+						prevLocationString = location.locationString;
+					}
 				});
 				linePoints.push(tempArr);
 			});
 
 			let polyline;
 
+			linePoints = linePoints.filter(points => points.length > 1);
+
 			console.log("linePoints: " + JSON.stringify(linePoints));
-			linePoints.forEach(arr => {
+			linePoints.forEach((arr, index) => {
 				let linestring = new H.geo.LineString();
 
 				arr.forEach(points => {
@@ -147,8 +151,10 @@ if(Meteor.isClient) {
 				map.addObject(polyline);
 			});
 
-			// Zoom the map to fit the rectangle:
-			map.getViewModel().setLookAtData({bounds: polyline.getBoundingBox()});
+			if(polyline) {
+				// Zoom the map to fit the rectangle:
+				map.getViewModel().setLookAtData({bounds: polyline.getBoundingBox()});
+			}
 
 			// Enable the event system on the map instance:
 			const mapEvents = new H.mapevents.MapEvents(map);
@@ -159,6 +165,7 @@ if(Meteor.isClient) {
 
 		useEffect(() => {
 			setLoading(true);
+			setNoData(false);
 			document.getElementById("routeMapContainer").innerHTML = "";
 
 			const handle = Meteor.subscribe('history.getExecutiveDayTransitDetails', { execId: props.execId, date: props.date }, {
@@ -174,7 +181,12 @@ if(Meteor.isClient) {
 					const newLocations = Collections.locations.find().fetch();
 
 					setLoading(false);
-					createMap(newLocations);
+
+					if(newLocations.length) {
+						createMap(newLocations);
+					} else {
+						setNoData(true);
+					}
 
 					this.stop();
 				}
@@ -190,6 +202,7 @@ if(Meteor.isClient) {
 					<div style={{ display: loading ? "block" : "none" }}>
 						<FontAwesomeIcon icon={faCircleNotch} spin/> Loading...
 					</div>
+					{ noData ? <div> No location data present for {moment(props.date).format("DD-MMM-YYYY")} </div> : null }
 					<div id="routeMapContainer" style={{height: "100%", width: "100%", display: loading ? "none" : "block"}}></div>
 				</div>
 	};
