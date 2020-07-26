@@ -160,7 +160,7 @@ if(Meteor.isServer) {
 							let retArr = [];
 							let serialDate = moment(from);
 
-							console.log("docs: " + JSON.stringify(docs));
+							// console.log("docs: " + JSON.stringify(docs));
 
 							if(docs && (noOfDays > 1) && (docs.length) && (docs.length < noOfDays)) {
 								for(let i = 1; i <= noOfDays; i++){
@@ -434,9 +434,11 @@ if(Meteor.isServer) {
 					            execName: { $first: { $arrayElemAt: ["$execInfo.profile.name", 0] } },
 					            others: {
 					                $addToSet: {
+					                	type: "$type",
 					                    date: { $dateToString: { date: "$createdAt", format: "%d-%m-%Y", timezone: "Asia/Kolkata" } },
 					                    subject: "$subject",
-					                    remarks: "$remarks"
+					                    remarks: "$remarks",
+					                    createdAt: "$createdAt",
 					                }
 					            },
 					            otherFields: {
@@ -457,6 +459,11 @@ if(Meteor.isServer) {
 					    {
 					        $unwind: "$others"
 					    },
+					    {
+                            $match: {
+                                "others.type": 1
+                            }
+                        },
 					    {
 					        $unwind: "$otherFields"
 					    },
@@ -499,6 +506,7 @@ if(Meteor.isServer) {
 					            reason: 1,
 					            remarks: 1,
 					            others: 1,
+					            createdAt: 1,
 					        }
 					    },
 					    {
@@ -515,7 +523,8 @@ if(Meteor.isServer) {
 					                            party: "$party",
 					                            cp: "$cp",
 					                            reason: "$reason",
-					                            remarks: "$remarks"
+					                            remarks: "$remarks",
+					                            createdAt: "$createdAt",
 					                        },
 					                        
 					                        null
@@ -559,7 +568,7 @@ if(Meteor.isServer) {
 
 						cursor.toArray(((error, docs) => {
 							if(error) reject(error);
-							console.log("docs: " + JSON.stringify(docs));
+							// console.log("docs: " + JSON.stringify(docs));
 
 							resolve.apply(this, [docs]);
 						}).bind(this));
@@ -601,7 +610,9 @@ if(Meteor.isServer) {
 						worksheet.getRow(1).style.font = boldTextProps;
 						worksheet.getRow(3).style.font = boldTextProps;
 
-						exec.visits.forEach((visit, visitIndex) => {
+						const visits = exec.visits.sort((a, b) => b.createdAt - a.createdAt);
+
+						visits.forEach((visit, visitIndex) => {
 							const si = ++visitIndex;
 							worksheet.addRow([si, visit.date, `${visit.party.name}\n${visit.party.address}`, visit.party.code, `${visit.cp.name}\n(${visit.cp.number})`, getReasonFromCode(visit.reason), visit.remarks]);
 							worksheet.getRow(3 + si).height = 30;
@@ -615,7 +626,9 @@ if(Meteor.isServer) {
 						worksheet.getRow(otherStartIndex).style.font = boldTextProps;
 						worksheet.mergeCells(`D${otherStartIndex}:F${otherStartIndex}`);
 
-						exec.others.forEach((other, otherIndex) => {
+						const others = exec.others.sort((a, b) => b.createdAt - a.createdAt);
+
+						others.forEach((other, otherIndex) => {
 							otherStartIndex++;
 							worksheet.addRow([++otherIndex, other.date, other.subject, other.remarks]);
 							worksheet.getRow(otherStartIndex).style.font = normalText;
@@ -676,8 +689,9 @@ if(Meteor.isServer) {
 				        	]
 					  	};
 
-					  	exec.visits.forEach((visit, visitIndex) => {
-							visitsTableData.body.push([++visitIndex, visit.date, `${visit.party.name}\n${visit.party.address}`, visit.party.code, `${visit.cp.name}\n(${visit.cp.number})`, getReasonFromCode(visit.reason), visit.remarks]);
+					  	const visits = exec.visits.sort((a, b) => b.createdAt - a.createdAt);
+					  	visits.forEach((visit, visitIndex) => {
+							visitsTableData.body.push([++visitIndex, visit.date, `${visit.party.name}\n${visit.party.address}`, visit.party.code, `${visit.cp.name}\n(${visit.cp.number})`, getReasonFromCode(visit.reason), (visit.remarks || "")]);
 					  	});
 
 					  	let otherTableData = {
@@ -693,8 +707,9 @@ if(Meteor.isServer) {
 				        	]
 					  	};
 
-					  	exec.others.forEach((other, otherIndex) => {
-							otherTableData.body.push([++otherIndex, other.date, other.subject, other.remarks]);
+					  	const others = exec.others.sort((a, b) => b.createdAt - a.createdAt);
+					  	others.forEach((other, otherIndex) => {
+							otherTableData.body.push([++otherIndex, other.date, (other.subject || ""), (other.remarks || "")]);
 					  	});
 
 					  	if(execIndex !== 0) {
@@ -708,9 +723,13 @@ if(Meteor.isServer) {
 						}
 
 						if(exec.others.length !== 0) {
+							content.push({ text: " " });
+							content.push({ text: "Other Tasks", fontSize: 12 });
 							content.push({ layout: tableLayout, table: otherTableData });
 						}
 					});
+
+					// console.log("content: " + JSON.stringify(content));
 
 					const docDefinition = {
 						pageSize: 'A4',
@@ -767,7 +786,7 @@ if(Meteor.isServer) {
 				fromMoment.add(1, "days");
 			} while(fromMoment.unix() < endMoment.unix())
 
-			// console.log("datesArr: " + JSON.stringify(datesArr));
+			console.log("datesArr: " + JSON.stringify(datesArr));
 
 			const asyncWrapper = async () => {
 				const getData = (resolve, reject) => {
@@ -829,7 +848,7 @@ if(Meteor.isServer) {
 
 						cursor.toArray(((error, docs) => {
 							if(error) reject(error);
-							console.log("docs: " + JSON.stringify(docs));
+							// console.log("docs: " + JSON.stringify(docs));
 
 							resolve.apply(this, [docs]);
 						}).bind(this));
