@@ -115,31 +115,38 @@ if(Meteor.isClient) {
 			const map = new H.Map(
 			 	document.getElementById("routeMapContainer"), 
 			 	defaultLayers.vector.normal.map,
-			 	{ zoom: props.zoom, center: { lat: locations[0].locations[0].latitude, lng: locations[0].locations[0].longitude } });
+			 	{ zoom: props.zoom, center: { lat: locations[0].locations[0].latitude, lng: locations[0].locations[0].longitude } }
+			);
 
 			// Define points to represent the vertices of a short route in Berlin, Germany:
 			let linePoints = [];
-			let markers = [];
+			let markerPoints = [];
 
 			locations.forEach(session => {
 				let tempArr = [];
 
+				const locations = session.locations.sort((a, b) => (a.createdAt - b.createdAt));
+
 				let prevLocationString = "";
-				session.locations.forEach(location => {
+				locations.forEach((location, index) => {
 					// console.log("location: " + JSON.stringify(location));
 					if(prevLocationString !== location.locationString) {
 						tempArr.push({ lat: location.latitude, lng: location.longitude });
 						prevLocationString = location.locationString;
+						markerPoints.push({ lat: location.latitude, lng: location.longitude, startAt: location.createdAt, endAt: location.createdAt });
+					} else {
+						if(markerPoints.length) {
+							markerPoints[markerPoints.length - 1].endAt = location.createdAt;
+						}
 					}
 				});
 				linePoints.push(tempArr);
 			});
 
-			let polyline;
-
 			linePoints = linePoints.filter(points => points.length > 1);
+			// console.log("linePoints: " + JSON.stringify(linePoints));
 
-			console.log("linePoints: " + JSON.stringify(linePoints));
+			let polyline;
 			linePoints.forEach((arr, index) => {
 				let linestring = new H.geo.LineString();
 
@@ -155,6 +162,74 @@ if(Meteor.isClient) {
 				// Zoom the map to fit the rectangle:
 				map.getViewModel().setLookAtData({bounds: polyline.getBoundingBox()});
 			}
+
+			// console.log("markerPoints: " + JSON.stringify(markerPoints));
+
+			markerPoints.forEach(markerPoint => {
+				let markerElement = document.createElement('div');
+				markerElement.innerHTML = 	`<div style="display: inline-block; 
+													margin-left: -11px; 
+													margin-top: -57px; 
+													position: absolute;
+													width: 1px">
+												<div style="position: absolute;">
+													<div style="margin-left: -50%;
+																font-size: 18px; 
+																background: #e3e3e3; 
+																display: inline-block; 
+																border: 1px solid #999; 
+																padding: 3px; 
+																opacity: 0;
+																width: max-content;
+																border-radius: 3px;">
+														${moment(markerPoint.startAt).format("HH:mm")} to ${moment(markerPoint.endAt).format("HH:mm")}
+													</div>
+												</div>
+												<br/>
+												<div id="markerSVG" style="margin-top: 11px; position: relative; width: 22px; z-index: 100;">
+													<svg 	enable-background="new 0 0 20.961 26.25" 
+															height="26.25px"  
+															version="1.1" 
+															viewBox="0 0 20.961 26.25" 
+															preserveAspectRatio="xMidYMid meet" 
+															width="20.961px" 
+															xml:space="preserve" 
+															xmlns="http://www.w3.org/2000/svg" 
+															xmlns:xlink="http://www.w3.org/1999/xlink">
+														<path stroke="red" fill="red" d="M20.961,10.481C20.961,4.692,16.27,0,10.481,0C4.692,0,0,4.692,0,10.481c0,1.036,0.153,2.036,0.433,2.983  C1.925,19.5,10.528,26.25,10.528,26.25s9.718-7.623,10.291-13.911l-0.023-0.005C20.902,11.732,20.961,11.114,20.961,10.481z   M10.624,12.815c-2.368,0-4.288-1.92-4.288-4.288c0-2.368,1.92-4.288,4.288-4.288c2.367,0,4.287,1.92,4.287,4.288  C14.91,10.895,12.991,12.815,10.624,12.815z" />
+													</svg>
+												</div>
+											</div>`;
+
+				//create dom icon and add/remove opacity listeners
+				var domIcon = new H.map.DomIcon(markerElement, {
+					onAttach: function(clonedElement, domIcon, domMarker) {
+						$(clonedElement).children().children("#markerSVG").mouseover(function() {
+							console.log("entered");
+							$(this).prev().prev().children().css("opacity", "1");
+						});
+
+						$(clonedElement).children().children("#markerSVG").mouseout(function() {
+							$(this).prev().prev().children().css("opacity", "0");
+						});
+					},
+					// the function is called every time marker leaves the viewport
+					onDetach: function(clonedElement, domIcon, domMarker) {
+						$(clonedElement).children().children("#markerSVG").mouseover(function() {
+							$(this).prev().prev().children().css("opacity", "1");
+						});
+
+						$(clonedElement).children().children("#markerSVG").mouseout(function() {
+							$(this).prev().prev().children().css("opacity", "0");
+						});
+					}
+				});
+
+				const marker = new H.map.DomMarker({ lat: markerPoint.lat, lng: markerPoint.lng }, { icon: domIcon });
+
+				map.addObject(marker);
+			})
+
 
 			// Enable the event system on the map instance:
 			const mapEvents = new H.mapevents.MapEvents(map);
