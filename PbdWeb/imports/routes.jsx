@@ -821,6 +821,23 @@ if(Meteor.isClient) {
 			return;
 		}
 
+		const party = Meteor.users.findOne({ _id: receiptDetails.partyId });
+		if(!party.active) {
+			throw new Error("Forbidden action. Trying to create receipt for inactive party.");
+			return;
+		}
+
+		if(party.availableTo) {
+			const userAvailable = party.availableTo.find(elem => elem === userId)
+			if(typeof userAvailable === "undefined") {
+				throw new Error("Forbidden action. This party is not available for this executive.");
+				return;
+			}
+		} else {
+			throw new Error("This party is not available for this executive.");
+			return;
+		}
+
 		if(!receiptDetails.cpName || (receiptDetails.cpName == "")) {
 			throw new Error("Invalid contact Person Name.");
 			return;
