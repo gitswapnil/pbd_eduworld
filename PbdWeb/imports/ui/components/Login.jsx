@@ -37,7 +37,9 @@ const Login = () => {
 				</div>
 			</div>
 			<div className="row">
-				<div className="col-6">
+				<div className="offset-1 col-5">
+					<br/>
+					<br/>
 					<img src={`${Meteor.absoluteUrl('pbd_logo.png')}`} width="300px"/>
 				</div>
 				<div className="col-6">

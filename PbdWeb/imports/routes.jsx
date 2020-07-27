@@ -12,6 +12,7 @@ if(Meteor.isClient) {
 	import NavigationTabs from './ui/components/NavigationTabs';
 	import NotFound from './ui/components/NotFound';
 
+	import Settings from './ui/components/Settings';
 	import CurrentStatus from './ui/components/CurrentStatus';
 	import Reports from './ui/components/Reports';
 	import History from './ui/components/History';
@@ -151,7 +152,7 @@ if(Meteor.isClient) {
 
 		Router.route('/profile/settings', () => {
 			checkAuthenticationAndExecute(() => {
-				renderComponent(<div>This is Settings Page</div>);
+				renderComponent(<Settings />);
 			});
 		});
 
