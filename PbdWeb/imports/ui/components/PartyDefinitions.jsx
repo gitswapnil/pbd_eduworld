@@ -18,9 +18,7 @@ if(Meteor.isServer) {
 					if(doc.user && doc.user._id) {
 						const userDoc = Meteor.users.findOne({"_id": doc.user._id}, {fields: {"services": 0, apiKey: 0}});
 						userDoc.isParty = true;
-						if(userDoc.active) {
-							this.added('users', userDoc._id, userDoc);
-						}
+						this.added('users', userDoc._id, userDoc);
 					}
 				}
 			});
@@ -31,17 +29,13 @@ if(Meteor.isServer) {
 						let tempDoc = Meteor.users.findOne({ _id }, {fields: {services: 0, apiKey: 0}});
 						tempDoc.isParty = true;
 
-						if(tempDoc.active) {
-							this.changed('users', _id, tempDoc);
-						} else {
-							this.removed('users', _id);
-						}
+						this.changed('users', _id, tempDoc);
 					}
 				}
 			});
 
 			Meteor.roleAssignment.find({"role._id": "executive"}).fetch().forEach(role => {
-				const userObj = Meteor.users.findOne({ _id: role.user._id, active: true }, {fields: {"profile.name": 1}});
+				const userObj = Meteor.users.findOne({ _id: role.user._id }, {fields: {"profile.name": 1}});
 				userObj.isExecutive = true;
 
 				this.added('users', userObj._id, userObj);
@@ -98,6 +92,7 @@ Meteor.methods({
 			},
 			active: {
 				type: Boolean,
+				label: "Keep this party active",
 				defaultValue: true,
 			},
 			selectedExIds: {
@@ -172,7 +167,7 @@ Meteor.methods({
 						address: cleanedInputs.partyAddress,
 					},
 					availableTo: cleanedInputs.selectedExIds,
-					active: true
+					active: cleanedInputs.active
 				};
 
 				if(!insertData.email) {			//if email is not given, then remove it while inserting as new user
@@ -216,6 +211,9 @@ if(Meteor.isClient) {
 		const [partyAddress, setPartyAddress] = useState("");
 		const [partyAddressError, setPartyAddressError] = useState("");
 
+		const [keepUserActive, setKeepUserActive] = useState(true);
+		const [keepUserActiveError, setKeepUserActiveError] = useState("");
+
 		const [partyAvailableTo, setPartyAvailableTo] = useState("selectAll");
 
 		const [showModal, setShowModal] = useState(false);
@@ -232,6 +230,7 @@ if(Meteor.isClient) {
 			setPartyPhoneNo("");
 			setPartyEmail("");
 			setPartyAddress("");
+			setKeepUserActive(true);
 
 			const exs = Meteor.users.find({ isExecutive: true }).map(executive => Object.assign(executive, { selected: false }));
 			setExecutives(exs);
@@ -244,6 +243,7 @@ if(Meteor.isClient) {
 			setPartyEmailError("");
 			setPartyAddressError("");
 			setGeneralError("");
+			setKeepUserActiveError("");
 		}
 
 		function clearModal() {
@@ -260,6 +260,7 @@ if(Meteor.isClient) {
 			setPartyPhoneNo((party.profile && party.profile.phoneNumber) || "");
 			setPartyEmail((party.emails && party.emails[party.emails.length - 1] && party.emails[party.emails.length - 1].address) || "");
 			setPartyAddress(party.profile && party.profile.address);
+			setKeepUserActive(party.active);
 			
 			const exs = Meteor.users.find({ isExecutive: true }).map(executive => {
 				let selected = party.availableTo ? party.availableTo.indexOf(executive._id) != -1 : false;
@@ -283,6 +284,7 @@ if(Meteor.isClient) {
 						case "partyPhoneNo": setPartyPhoneNoError(value); break;
 						case "partyEmail": setPartyEmailError(value); break;
 						case "partyAddress": setPartyAddressError(value); break;
+						case "active": setKeepUserActiveError(value); break;
 						case "generalError": setGeneralError(value); break;
 					}
 				}
@@ -297,7 +299,7 @@ if(Meteor.isClient) {
 			});
 
 			Meteor.apply('party.saveParty', 
-				[{ partyCode, partyName, partyPhoneNo, partyEmail, partyAddress, selectedExIds }, editId], 
+				[{ partyCode, partyName, partyPhoneNo, partyEmail, partyAddress, active: keepUserActive, selectedExIds }, editId], 
 				{returnStubValues: true, throwStubExceptions: true}, 
 				(err, res) => {
 					// console.log("err: " + err);
@@ -340,11 +342,11 @@ if(Meteor.isClient) {
 					let arr = Meteor.users.find({ isParty: true }).map((doc, index) => {
 						return {
 							cells: [
-								{ style: {"textAlign": "right"}, content: (index + 1)}, 
-								{ content: doc.username}, 
-								{ key: ((doc.profile && doc.profile.name) + (doc.profile && doc.profile.address)), content: <div>{doc.profile && doc.profile.name}<br/>{doc.profile && doc.profile.address}</div>},
-								{ content: (doc.profile && doc.profile.phoneNumber)},
-								{ content: moment(doc.updatedAt).format("Do MMM YYYY h:mm:ss a")}
+								{ style: {"textAlign": "right", "color": !doc.active ? "#AAA" : null}, content: (index + 1)}, 
+								{ style: {"color": !doc.active ? "#AAA" : null}, content: doc.username}, 
+								{ style: {"color": !doc.active ? "#AAA" : null}, key: ((doc.profile && doc.profile.name) + (doc.profile && doc.profile.address)), content: <div>{doc.profile && doc.profile.name}<br/>{doc.profile && doc.profile.address}</div>},
+								{ style: {"color": !doc.active ? "#AAA" : null}, content: (doc.profile && doc.profile.phoneNumber)},
+								{ style: {"color": !doc.active ? "#AAA" : null}, content: moment(doc.updatedAt).format("Do MMM YYYY h:mm:ss a")}
 							],
 							rowAttributes: {
 								key: doc._id,
@@ -454,6 +456,25 @@ if(Meteor.isClient) {
 										      					onChange={e => setPartyAddress(e.target.value)}/>
 										      		<div className="invalid-feedback text-left">
 											        	{partyAddressError}
+											        </div>
+										    	</div>
+											</div>
+											<div className="form-group row">
+												<label htmlFor="userActive" className="col-4 col-form-label-sm text-right">Keep this party active:</label>
+										    	<div className="col-7">
+										    		<div className="form-check text-left">
+											    		<input 	className="form-check-input" 
+											    				type="checkbox" 
+											    				checked={keepUserActive}
+											    				onChange={(e => { setKeepUserActive(!keepUserActive) }).bind(this)} 
+											    				id="userActive"/>
+											    	</div>
+											    	<br/>
+								      				<small id="companysPhNoHelperBlock" className="form-text text-info text-left">
+														When inactive, this party will not be available to any executive.
+													</small>
+											    	<div className="invalid-feedback text-left">
+											        	{keepUserActiveError}
 											        </div>
 										    	</div>
 											</div>

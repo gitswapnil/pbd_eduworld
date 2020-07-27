@@ -15,9 +15,7 @@ if(Meteor.isServer) {
 					if(_id && Meteor.roleAssignment.findOne({"user._id": _id, "role._id": "executive"})) {
 						const userDoc = Meteor.users.findOne({ _id }, {fields: {"services": 0, apiKey: 0}});
 						userDoc.isExecutive = true;
-						if(userDoc.active) {
-							this.added('users', _id, userDoc);		//just send the ids.
-						}
+						this.added('users', _id, userDoc);		//just send the ids.
 					}
 				},
 			});

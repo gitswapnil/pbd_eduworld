@@ -13,7 +13,7 @@ Meteor.startup(() => {
   	// console.log("options: " + JSON.stringify(options));
   	let customizedUser = Object.assign({ active: true }, user);
   	if(options.apiKey) {
-	  	console.log(`adding an API key: ${apiKey}, to the user with id: ${user._id}.`);
+	  	console.log(`adding an API key: ${options.apiKey}, to the user with id: ${user._id}.`);
   		customizedUser.apiKey = options.apiKey;
   	}
   	

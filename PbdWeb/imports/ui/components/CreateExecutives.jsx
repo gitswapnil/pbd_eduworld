@@ -17,9 +17,7 @@ if(Meteor.isServer) {
 					if(doc.user && doc.user._id) {
 						const userDoc = Meteor.users.findOne({"_id": doc.user._id}, {fields: {"services": 0}});
 						userDoc.isExecutive = true;
-						if(userDoc.active) {
-							this.added('users', userDoc._id, userDoc);
-						}
+						this.added('users', userDoc._id, userDoc);
 					}
 				}
 			});
@@ -30,11 +28,7 @@ if(Meteor.isServer) {
 						let tempDoc = Meteor.users.findOne({ _id }, {fields: {services: 0, apiKey: 0}});
 						tempDoc.isExecutive = true;
 
-						if(tempDoc.active) {
-							this.changed('users', _id, tempDoc);
-						} else {
-							this.removed('users', _id);
-						}
+						this.changed('users', _id, tempDoc);
 					}
 				},
 			});
@@ -104,6 +98,7 @@ Meteor.methods({
 			},
 			active: {
 				type: Boolean,
+				label: "Keep this executive active",
 				defaultValue: true,
 			}
 		};
@@ -184,7 +179,7 @@ Meteor.methods({
 						receiptSeries: cleanedInputs.receiptSeries,
 					},
 					apiKey: Random.hexString(32),
-					active: true,
+					active: cleanedInputs.active,
 				});
 				console.log(`An executive with username: ${cleanedInputs.cPhNo} is created.`);
 				console.log("Now adding user the previlege of an executive...");
@@ -233,6 +228,9 @@ if(Meteor.isClient) {
 		const [pwd, setPwd] = useState("");
 		const [pwdError, setPwdError] = useState("");
 
+		const [keepUserActive, setKeepUserActive] = useState(true);
+		const [keepUserActiveError, setKeepUserActiveError] = useState("");
+
 		const [generalError, setGeneralError] = useState("");
 
 		const [executives, setExecutives] = useState(null);
@@ -250,6 +248,7 @@ if(Meteor.isClient) {
 			setResAddress("");
 			setReceiptSeries("");
 			setPwd("");
+			setKeepUserActive(true);
 		}
 
 		function removeAllErrors() {
@@ -262,6 +261,7 @@ if(Meteor.isClient) {
 			setReceiptSeriesError("");
 			setPwdError("");
 			setGeneralError("");
+			setKeepUserActiveError("");
 		}
 
 		function removeUserImg() {
@@ -284,6 +284,7 @@ if(Meteor.isClient) {
 			setEmail((executive.emails && executive.emails[executive.emails.length - 1] && executive.emails[executive.emails.length - 1].address) || "");
 			setResAddress(executive.profile && executive.profile.address);
 			setReceiptSeries(executive.profile && executive.profile.receiptSeries);
+			setKeepUserActive(executive.active);
 
 			setEditId(editId);
 			setShowModal(true);
@@ -304,13 +305,14 @@ if(Meteor.isClient) {
 						case "resAddress": setResAddressError(value); break;
 						case "receiptSeries": setReceiptSeriesError(value); break;
 						case "pwd": setPwdError(value); break;
+						case "active": setKeepUserActiveError(value); break;
 						case "generalError": setGeneralError(value); break;
 					}
 				}
 			});
 
 			Meteor.apply('executives.saveExecutive', 
-				[{ userImg, cPhNo, name, pPhNo, email, resAddress, receiptSeries, pwd }, editId], 
+				[{ userImg, cPhNo, name, pPhNo, email, resAddress, receiptSeries, pwd, active: keepUserActive }, editId], 
 				{returnStubValues: true, throwStubExceptions: true}, 
 				(err, res) => {
 					// console.log("err: " + err);
@@ -330,7 +332,6 @@ if(Meteor.isClient) {
 						clearModal();
 					}
 				});
-
 		}
 
 		//subscribe for the list here.
@@ -353,10 +354,10 @@ if(Meteor.isClient) {
 					let arr = Meteor.users.find({"isExecutive": true}).map((doc, index) => {
 						return {
 							cells: [
-								{ style: {"textAlign": "right"}, content: (index + 1)}, 
-								{ content: (doc.profile && doc.profile.name)}, 
-								{ content: doc.username}, 
-								{ content: moment(doc.updatedAt).format("Do MMM YYYY h:mm:ss a")}
+								{ style: {"textAlign": "right", "color": !doc.active ? "#AAA" : null}, content: (index + 1)}, 
+								{ style: {"color": !doc.active ? "#AAA" : null}, content: (doc.profile && doc.profile.name)}, 
+								{ style: {"color": !doc.active ? "#AAA" : null}, content: doc.username}, 
+								{ style: {"color": !doc.active ? "#AAA" : null}, content: moment(doc.updatedAt).format("Do MMM YYYY h:mm:ss a")},
 							],
 							rowAttributes: {
 								key: doc._id,
@@ -517,6 +518,25 @@ if(Meteor.isClient) {
 											        </div>
 										    	</div>
 											</div>
+											<div className="form-group row">
+												<label htmlFor="userActive" className="col-5 col-form-label-sm text-right">Keep this executive active:</label>
+										    	<div className="col-7">
+										    		<div className="form-check text-left">
+											    		<input 	className="form-check-input" 
+											    				type="checkbox" 
+											    				checked={keepUserActive}
+											    				onChange={(e => { setKeepUserActive(!keepUserActive) }).bind(this)} 
+											    				id="userActive"/>
+											    	</div>
+											    	<br/>
+								      				<small id="companysPhNoHelperBlock" className="form-text text-info text-left">
+														When inactive, this user will not be able to access the app.
+													</small>
+											    	<div className="invalid-feedback text-left">
+											        	{keepUserActiveError}
+											        </div>
+										    	</div>
+											</div>
 										</div>
 										<div className="col-4">
 											<div className="text-center">
@@ -581,8 +601,8 @@ if(Meteor.isClient) {
 							<Table.Header dataArray={[
 								{ "content": "SI. No." },
 								{ "content": "Name" },
-								{ "content": "Company Phone No."}, 
-								{ "content": "Updated on"}
+								{ "content": "Company Phone No." }, 
+								{ "content": "Updated on" },
 							]}/>
 							<Table.Body dataArray={executives}/>
 						</Table>

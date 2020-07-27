@@ -16,10 +16,8 @@ if(Meteor.isServer) {
 					if(_id && Meteor.roleAssignment.findOne({"user._id": _id, "role._id": "executive"})) {
 						const userDoc = Meteor.users.findOne({ _id }, {fields: {"services": 0, apiKey: 0}});
 						userDoc.isExecutive = true;
-						if(userDoc.active) {
-							userIds.push(_id);
-							this.added('users', _id, userDoc);		//just send the ids.
-						}
+						userIds.push(_id);
+						this.added('users', _id, userDoc);		//just send the ids.
 					}
 				},
 
@@ -27,10 +25,8 @@ if(Meteor.isServer) {
 					if(_id && Meteor.roleAssignment.findOne({"user._id": _id, "role._id": "executive"})) {
 						const userDoc = Meteor.users.findOne({ _id }, {fields: {"services": 0, apiKey: 0}});
 						userDoc.isExecutive = true;
-						if(userDoc.active) {
-							userIds.push(_id);
-							this.added('users', _id, userDoc);		//just send the ids.
-						}
+						userIds.push(_id);
+						this.added('users', _id, userDoc);		//just send the ids.
 					}
 				}
 			});
