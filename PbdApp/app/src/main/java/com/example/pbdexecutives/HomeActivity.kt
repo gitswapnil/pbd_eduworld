@@ -322,9 +322,9 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 val state = intent.getBooleanExtra(TrackingService.locationInfo, false)
 
                 if(state) {
-                    bldr.cancel()
-                } else {
                     bldr.show()
+                } else {
+                    bldr.cancel()
                 }
             }
         }

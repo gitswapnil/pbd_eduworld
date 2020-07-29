@@ -56,7 +56,7 @@ class TrackingService : Service() {
             override fun onLocationResult(locationResult: LocationResult) {
                 super.onLocationResult(locationResult)
 
-                obtainingLocation = true
+                obtainingLocation = false
                 val intent = Intent(actionLocationObtainedBroadcast)
                 intent.putExtra(locationInfo, obtainingLocation)
                 LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
@@ -155,7 +155,7 @@ class TrackingService : Service() {
             return
         }
 
-        obtainingLocation = false
+        obtainingLocation = true
         val intent = Intent(actionLocationObtainedBroadcast)
         intent.putExtra(locationInfo, obtainingLocation)
         LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
