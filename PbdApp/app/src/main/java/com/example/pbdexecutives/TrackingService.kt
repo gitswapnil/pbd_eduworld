@@ -28,11 +28,17 @@ import java.util.concurrent.TimeUnit
 
 
 class TrackingService : Service() {
+    companion object {
+        var obtainingLocation: Boolean = false
+        val actionSwitchStateBroadcast: String = "$PACKAGE_NAME.broadcastSwitchState";
+        val actionTimeUpdateBroadcast: String = "$PACKAGE_NAME.broadcastTimeUpdate";
+        val actionLocationObtainedBroadcast: String = "$PACKAGE_NAME.broadcastLocationObtained";
+        val locationInfo: String = "$PACKAGE_NAME.locationInfo";
+        val switchInfo: String = "$PACKAGE_NAME.switchInfo";
+    }
+
     private lateinit var gpsSwitchStateReceiver: BroadcastReceiver;
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-    val actionSwitchStateBroadcast: String = "$PACKAGE_NAME.broadcastSwitchState";
-    val actionTimeUpdateBroadcast: String = "$PACKAGE_NAME.broadcastTimeUpdate";
-    val switchInfo: String = "$PACKAGE_NAME.switchInfo";
     private lateinit var locationRequest: LocationRequest;
     private val updateIntervalMilliseconds: Long = 1000 * 60;       //in milliseconds
     private val fastestUpdateIntervalMilliseconds: Long = updateIntervalMilliseconds / 2;
@@ -49,6 +55,17 @@ class TrackingService : Service() {
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 super.onLocationResult(locationResult)
+
+                obtainingLocation = true
+                val intent = Intent(actionLocationObtainedBroadcast)
+                intent.putExtra(locationInfo, obtainingLocation)
+                LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
+
+                //create a notification and set it to the top and broadcast the ON event
+                val notification = createNotification()
+                startForeground(64, notification);      //start the service in the foreground
+                broadcastSwitchState(true);
+
                 saveLocation(locationResult.lastLocation)
             }
         }
@@ -127,11 +144,7 @@ class TrackingService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId);
-        Log.i("pbdLog", "Starting the Tracker Service");
-        val notification = createNotification();
-
-        startForeground(64, notification);      //start the service in the foreground
-        broadcastSwitchState(true);
+        Log.i("pbdLog", "Starting the Tracker Service")
         startTracking();
 
         return START_STICKY;
@@ -141,6 +154,12 @@ class TrackingService : Service() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return
         }
+
+        obtainingLocation = false
+        val intent = Intent(actionLocationObtainedBroadcast)
+        intent.putExtra(locationInfo, obtainingLocation)
+        LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
+
         sessionId = (100000..999999).random();
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
     }
@@ -193,5 +212,5 @@ class TrackingService : Service() {
     override fun onBind(intent: Intent): IBinder {
         TODO("Return the communication channel to the service.")
     }
-
 }
+

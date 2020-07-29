@@ -2,6 +2,7 @@ package com.example.pbdexecutives
 
 import android.Manifest
 import android.app.Activity
+import android.app.Dialog
 import android.app.SearchManager
 import android.content.*
 import android.content.pm.PackageManager
@@ -21,6 +22,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -37,6 +39,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.collections.ArrayList
 
 class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsResultCallback, LifecycleOwner {
+    private lateinit var locationObtainedStateReceiver: BroadcastReceiver
     private lateinit var gpsSwitchStateReceiver: BroadcastReceiver
     private lateinit var dutyTimeUpdateReceiver: BroadcastReceiver
     private lateinit var userLoginStateReceiver: BroadcastReceiver
@@ -292,13 +295,50 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         setTabConfigurations()
     }
 
+    private fun locationObjectMonitor() {
+        val filter = IntentFilter(TrackingService.actionLocationObtainedBroadcast)
+        val builder = AlertDialog.Builder(this)
+        // Set the dialog title
+        builder.setView(this.layoutInflater.inflate(R.layout.getting_location_object, null))
+            // Add action buttons
+            .setNegativeButton(R.string.cancel, DialogInterface.OnClickListener { dialog, id ->
+                PbdExecutivesUtils().stopTrackingService(applicationContext)
+            })
+            .setCancelable(false)
+
+        val bldr = builder.create()
+        bldr.setCanceledOnTouchOutside(false)
+//        bldr.setOnDismissListener(DialogInterface.OnDismissListener() {
+//
+//        });
+
+        Log.i("pbdLog", "TrackingService.obtainingLocation: ${TrackingService.obtainingLocation}")
+        if(TrackingService.obtainingLocation) {
+            bldr.show()
+        }
+
+        locationObtainedStateReceiver = object : BroadcastReceiver() {         //receiver always called only when the duty switch is OFF.
+            override fun onReceive(context: Context, intent: Intent) {
+                val state = intent.getBooleanExtra(TrackingService.locationInfo, false)
+
+                if(state) {
+                    bldr.cancel()
+                } else {
+                    bldr.show()
+                }
+            }
+        }
+
+        LocalBroadcastManager.getInstance(this).registerReceiver(locationObtainedStateReceiver, filter)
+    }
+
     //This function monitors the state of the switch. It listens to the broadcast from the service
     private fun gpsSwitchMonitor() {
-        val filter = IntentFilter(TrackingService().actionSwitchStateBroadcast)
+        val filter = IntentFilter(TrackingService.actionSwitchStateBroadcast)
 
         gpsSwitchStateReceiver = object : BroadcastReceiver() {         //receiver always called only when the duty switch is OFF.
             override fun onReceive(context: Context, intent: Intent) {
-                val switchState = intent.getBooleanExtra(TrackingService().switchInfo, false)
+                val switchState = intent.getBooleanExtra(TrackingService.switchInfo, false)
                 dutySwitch(switchState)
             }
         }
@@ -307,7 +347,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     }
 
     private fun dutyTimeMonitor() {
-        val filter = IntentFilter(TrackingService().actionTimeUpdateBroadcast)
+        val filter = IntentFilter(TrackingService.actionTimeUpdateBroadcast)
 
         dutyTimeUpdateReceiver = object : BroadcastReceiver() {         //receiver always called only when the duty switch is OFF.
             override fun onReceive(context: Context, intent: Intent) {
@@ -332,6 +372,10 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         LocalBroadcastManager.getInstance(this).registerReceiver(userLoginStateReceiver, filter)
     }
 
+    private fun locationObjectUnmonitor() {
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(locationObtainedStateReceiver)
+    }
+
     private fun gpsSwitchUnmonitor() {
         LocalBroadcastManager.getInstance(this).unregisterReceiver(gpsSwitchStateReceiver)
     }
@@ -348,6 +392,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         super.onResume()
 
         dutySwitch(PbdExecutivesUtils().isMyServiceRunning(applicationContext, TrackingService::class.java)); //check if the service is running or not.
+        locationObjectMonitor()
         gpsSwitchMonitor()         //Keep monitoring the switch state.
         calculateDutyTime()
         dutyTimeMonitor()
@@ -357,6 +402,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     override fun onPause() {
         super.onPause();
 
+        locationObjectUnmonitor()
         gpsSwitchUnmonitor()       //Leave the resources.
         dutyTimeUnmonitor()
         userLoginStatusUnonitor()

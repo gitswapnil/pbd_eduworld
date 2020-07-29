@@ -339,6 +339,7 @@ interface ReceiptsDAO{
     suspend fun clearReceipts()
 }
 
+
 @Database (entities = [ DeletedIds::class,
                         UserDetails::class,
                         Locations::class,
