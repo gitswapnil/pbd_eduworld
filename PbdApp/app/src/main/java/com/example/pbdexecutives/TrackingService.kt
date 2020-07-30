@@ -56,15 +56,17 @@ class TrackingService : Service() {
             override fun onLocationResult(locationResult: LocationResult) {
                 super.onLocationResult(locationResult)
 
-                obtainingLocation = false
-                val intent = Intent(actionLocationObtainedBroadcast)
-                intent.putExtra(locationInfo, obtainingLocation)
-                LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
-
-                //create a notification and set it to the top and broadcast the ON event
-                val notification = createNotification()
-                startForeground(64, notification);      //start the service in the foreground
-                broadcastSwitchState(true);
+                //only initially start the service and broadcast the states
+                if(obtainingLocation) {
+                    obtainingLocation = false
+                    val intent = Intent(actionLocationObtainedBroadcast)
+                    intent.putExtra(locationInfo, obtainingLocation)
+                    LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
+                    //create a notification and set it to the top and broadcast the ON event
+                    val notification = createNotification()
+                    startForeground(64, notification);      //start the service in the foreground
+                    broadcastSwitchState(true);
+                }
 
                 saveLocation(locationResult.lastLocation)
             }
@@ -165,23 +167,22 @@ class TrackingService : Service() {
     }
 
     private fun stopTracking() {
-        getLastLocation();
         fusedLocationClient.removeLocationUpdates(locationCallback)
-    }
 
-    private fun getLastLocation() {
         try {
-            val lastLocation = fusedLocationClient.lastLocation;
+            val lastLocation = fusedLocationClient.lastLocation
             lastLocation.addOnSuccessListener { lastLocation ->
                 Log.i("pbdLog","Last location is obtained Latitude: ${lastLocation?.latitude}, Longitude: ${lastLocation?.longitude}")
-                saveLocation(lastLocation);
+                if(lastLocation != null) {
+                    saveLocation(lastLocation)
+                }
             }
 
             lastLocation.addOnFailureListener { exception ->
-                Log.i("pbdLog", "Failed to get Last Location, error: $exception.");
+                Log.i("pbdLog", "Failed to get Last Location, error: $exception.")
             }
         } catch (unlikely: SecurityException) {
-            Log.e("pbdLog","Lost location permission.$unlikely");
+            Log.e("pbdLog","Lost location permission.$unlikely")
         }
     }
 
