@@ -329,7 +329,7 @@ interface ReceiptsDAO{
     @Insert
     suspend fun addReceipt(receipts: Receipts)
 
-    @Query("SELECT * FROM (SELECT r.id, r.receiptNo, r.partyId, p.code as partyCode, p.name as partyName, p.address as partyAddress, p.cNumber as partyPhNumber, r.cpName, r.cpNumber, r.cpEmail, r.amount, r.paidBy, r.chequeNo, r.ddNo, r.payment, r.createdAt, r.serverId, null as concatCreatedAt FROM Receipts AS r LEFT JOIN Parties AS p ON r.partyId=p.id ORDER BY r.createdAt ASC) GROUP BY serverId LIMIT :limit OFFSET :offset")
+    @Query("SELECT r.id, r.receiptNo, r.partyId, p.code as partyCode, p.name as partyName, p.address as partyAddress, p.cNumber as partyPhNumber, r.cpName, r.cpNumber, r.cpEmail, r.amount, r.paidBy, r.chequeNo, r.ddNo, r.payment, r.createdAt, r.serverId FROM Receipts AS r LEFT JOIN Parties AS p ON r.partyId=p.id GROUP BY r.serverId ORDER BY r.createdAt DESC LIMIT :limit OFFSET :offset")
     suspend fun getReceipts(limit: Int, offset: Int): List<ReceiptsWithJoins>
 
     @Query("SELECT rr.id, rr.receiptNo, rr.partyId, rr.partyCode, rr.partyName, rr.partyAddress, rr.partyPhNumber, group_concat(cpName) as cpName, group_concat(cpNumber) as cpNumber, group_concat(cpEmail) as cpEmail, rr.amount, rr.paidBy, rr.chequeNo, rr.ddNo, rr.payment, rr.serverId, rr.createdAt, group_concat(createdAt) as concatCreatedAt FROM (SELECT r.*, p.code as partyCode, p.name as partyName, p.address as partyAddress, p.cNumber as partyPhNumber FROM Receipts AS r LEFT JOIN Parties AS p ON r.partyId=p.id ORDER BY r.createdAt DESC) AS rr LEFT JOIN (SELECT rt.serverId FROM Receipts AS rt WHERE rt.id=:id) AS rs ON rr.serverId=rs.serverId WHERE rr.serverId=rs.serverId GROUP BY rr.serverId")
