@@ -67,6 +67,7 @@ class FollowUpsRecyclerViewAdapter(
             if(item.reminderDate == "Reminder not set") {
                 holder.imageView6.visibility = View.GONE
                 reminderDate = item.reminderDate
+                holder.reminderDate.setTextColor(Color.rgb(100, 100, 100))
             } else {
                 val reminderInfo = item.reminderDate.split(",")
 

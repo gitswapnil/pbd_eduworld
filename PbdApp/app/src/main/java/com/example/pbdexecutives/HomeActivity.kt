@@ -50,10 +50,37 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         inflater.inflate(R.menu.main_menu, menu)
 
 //         Associate searchable configuration with the SearchView
-        val searchManager = getSystemService(Context.SEARCH_SERVICE) as SearchManager
-        (menu.findItem(R.id.option_search).actionView as SearchView).apply {
-            setSearchableInfo(searchManager.getSearchableInfo(componentName))
+        val searchView = menu.findItem(R.id.option_search).actionView as SearchView
+        searchView.maxWidth = Integer.MAX_VALUE;
+
+        searchView.setOnQueryTextFocusChangeListener { v, hasFocus ->
+            Log.i("pbdLog", "hasFocus: ${hasFocus}")
+
+            if (hasFocus) {
+                menu.findItem(R.id.option_notifications).isVisible = false
+                toolbar4.visibility = View.GONE
+                tabs_layout.visibility = View.GONE
+            }
         }
+
+        searchView.setOnCloseListener {
+            Log.i("pbdLog", "searchVIew focus removed.")
+            menu.findItem(R.id.option_notifications).isVisible = true
+            toolbar4.visibility = View.VISIBLE
+            tabs_layout.visibility = View.VISIBLE
+            false
+        }
+
+        searchView.setOnQueryTextListener(object: SearchView.OnQueryTextListener {
+            override fun onQueryTextChange(newText: String?): Boolean {
+                return false
+            }
+
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                Log.i("pbdLog", "query: ${query}")
+                return false
+            }
+        })
 
         return true
     }
@@ -281,7 +308,6 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         }
 
         TabLayoutMediator(tabs_layout, tabs_pager) { tab, position ->
-            //To get the first name of doppelganger celebrities
 //            Log.i("pbdLog", "${tabsText[position]}")
             tab.text = tabsText[position]
         }.attach()
