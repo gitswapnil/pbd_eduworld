@@ -1,14 +1,19 @@
 package com.example.pbdexecutives
 
 import android.app.Activity.RESULT_OK
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
+import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.room.Room
@@ -24,12 +29,14 @@ import kotlin.collections.ArrayList
  * A fragment representing a list of Items.
  */
 class MyTasksFragment : Fragment() {
+    private lateinit var searchReceiver: BroadcastReceiver
     private var linearLayoutManager: LinearLayoutManager = LinearLayoutManager(context)
     private lateinit var recyclerViewAdapter: MyTasksRecyclerViewAdapter
     private lateinit var listItems: MutableList<MyTaskListItemModel?>
     private var columnCount = 1
     private var limit = 20
     private var offset: Int = 0
+    private var searchQuery: String = "%%"
     private var isLoading = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,6 +69,26 @@ class MyTasksFragment : Fragment() {
 
         tasks_list.addOnScrollListener(OnScrollListener())
         reloadData()
+    }
+
+    private fun searchReceiverMonitor() {
+        val filter = IntentFilter(SearchActivity.actionSearchQueryBroadcast)
+
+        searchReceiver = object : BroadcastReceiver() {         //receiver always called only when the duty switch is OFF.
+            override fun onReceive(context: Context, intent: Intent) {
+                val sQuery = intent.getStringExtra(SearchActivity.searchQuery)
+
+                searchQuery = "%${sQuery}%"
+                Log.i("pbdLog", "Search Query: $searchQuery")
+                reloadData()
+            }
+        }
+
+        activity?.let { LocalBroadcastManager.getInstance(it).registerReceiver(searchReceiver, filter) }
+    }
+
+    private fun searchReceiverUnmonitor() {
+        activity?.let { LocalBroadcastManager.getInstance(it).unregisterReceiver(searchReceiver) }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -122,16 +149,27 @@ class MyTasksFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).visibility = View.VISIBLE
-        activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).setOnClickListener { view ->
-            createNewTask(view)
+        selected = true
+
+        if(activity!!.findViewById<FloatingActionButton>(R.id.floating_btn) != null) {
+            activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).visibility = View.VISIBLE
+            activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).setOnClickListener { view ->
+                createNewTask(view)
+            }
+        } else {
+            searchReceiverMonitor()
         }
     }
 
     override fun onPause() {
         super.onPause()
+        selected = false
 
-        activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).setOnClickListener(null)
+        if(activity!!.findViewById<FloatingActionButton>(R.id.floating_btn) != null) {
+            activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).setOnClickListener(null)
+        } else {
+            searchReceiverUnmonitor()
+        }
     }
 
     private fun loadData() {
@@ -148,7 +186,7 @@ class MyTasksFragment : Fragment() {
                 recyclerViewAdapter.notifyItemRemoved(listItems.size)
             }
 
-            val tasks = db.tasksDao().getTasks(limit, offset)
+            val tasks = db.tasksDao().getTasks(limit, offset, searchQuery)
             if(tasks.isEmpty()) {
                 isLoading = false
                 return@launch
@@ -208,6 +246,7 @@ class MyTasksFragment : Fragment() {
     }
 
     companion object {
+        var selected: Boolean = false
 
         // TODO: Customize parameter argument names
         const val ARG_COLUMN_COUNT = "column-count"

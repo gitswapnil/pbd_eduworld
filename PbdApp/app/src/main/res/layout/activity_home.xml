@@ -104,5 +104,5 @@
         android:layout_gravity="bottom|end"
         android:layout_margin="16dp"
         android:clickable="true"
-        android:src="@drawable/ic_outline_add_24" />
+        app:srcCompat="@drawable/ic_outline_add_24" />
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

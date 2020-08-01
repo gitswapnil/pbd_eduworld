@@ -49,45 +49,27 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         val inflater: MenuInflater = menuInflater
         inflater.inflate(R.menu.main_menu, menu)
 
-//         Associate searchable configuration with the SearchView
-        val searchView = menu.findItem(R.id.option_search).actionView as SearchView
-        searchView.maxWidth = Integer.MAX_VALUE;
-
-        searchView.setOnQueryTextFocusChangeListener { v, hasFocus ->
-            Log.i("pbdLog", "hasFocus: ${hasFocus}")
-
-            if (hasFocus) {
-                menu.findItem(R.id.option_notifications).isVisible = false
-                toolbar4.visibility = View.GONE
-                tabs_layout.visibility = View.GONE
-            }
-        }
-
-        searchView.setOnCloseListener {
-            Log.i("pbdLog", "searchVIew focus removed.")
-            menu.findItem(R.id.option_notifications).isVisible = true
-            toolbar4.visibility = View.VISIBLE
-            tabs_layout.visibility = View.VISIBLE
-            false
-        }
-
-        searchView.setOnQueryTextListener(object: SearchView.OnQueryTextListener {
-            override fun onQueryTextChange(newText: String?): Boolean {
-                return false
-            }
-
-            override fun onQueryTextSubmit(query: String?): Boolean {
-                Log.i("pbdLog", "query: ${query}")
-                return false
-            }
-        })
-
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
         R.id.option_notifications -> {
 
+            true
+        }
+
+        R.id.option_search -> {
+            val intent = Intent(this, SearchActivity::class.java)
+
+            if(MyTasksFragment.selected) {
+                intent.putExtra("selectedTab", 0)
+            } else if(ReceiptsFragment.selected) {
+                intent.putExtra("selectedTab", 1)
+            } else if(FollowUpsFragment.selected) {
+                intent.putExtra("selectedTab", 2)
+            }
+
+            startActivity(intent)
             true
         }
 

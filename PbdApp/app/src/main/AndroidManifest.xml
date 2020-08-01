@@ -17,7 +17,8 @@
         android:roundIcon="@mipmap/pbd_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".ReceiptPreviewActivity"></activity>
+        <activity android:name=".SearchActivity"></activity>
+        <activity android:name=".ReceiptPreviewActivity" />
         <activity android:name=".AddNewReceiptActivity" />
         <activity android:name=".FollowUpDetailActivity" />
         <activity

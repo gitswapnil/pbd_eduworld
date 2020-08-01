@@ -1,7 +1,9 @@
 package com.example.pbdexecutives
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import android.util.Log
 import androidx.fragment.app.Fragment
@@ -12,6 +14,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.lifecycle.lifecycleScope
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.example.pbdexecutives.dummy.DummyContent
@@ -27,6 +30,7 @@ import kotlin.collections.ArrayList
  * A fragment representing a list of Items.
  */
 class FollowUpsFragment : Fragment() {
+    private lateinit var searchReceiver: BroadcastReceiver
     private var linearLayoutManager: LinearLayoutManager = LinearLayoutManager(context)
     private lateinit var recyclerViewAdapter: FollowUpsRecyclerViewAdapter
     private lateinit var listItems: MutableList<FollowUpsListItemModel?>
@@ -34,10 +38,30 @@ class FollowUpsFragment : Fragment() {
     private var columnCount = 1
     private var limit = 20
     private var offset: Int = 0
+    private var searchQuery: String = "%%"
     private var isLoading = false
     private var initializing = true
-
     private lateinit var db: AppDB
+
+    private fun searchReceiverMonitor() {
+        val filter = IntentFilter(SearchActivity.actionSearchQueryBroadcast)
+
+        searchReceiver = object : BroadcastReceiver() {         //receiver always called only when the duty switch is OFF.
+            override fun onReceive(context: Context, intent: Intent) {
+                val sQuery = intent.getStringExtra(SearchActivity.searchQuery)
+
+                searchQuery = "%${sQuery}%"
+                Log.i("pbdLog", "Search Query: $searchQuery")
+                reloadData()
+            }
+        }
+
+        activity?.let { LocalBroadcastManager.getInstance(it).registerReceiver(searchReceiver, filter) }
+    }
+
+    private fun searchReceiverUnmonitor() {
+        activity?.let { LocalBroadcastManager.getInstance(it).unregisterReceiver(searchReceiver) }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -107,7 +131,7 @@ class FollowUpsFragment : Fragment() {
                 recyclerViewAdapter.notifyItemRemoved(listItems.size)
             }
 
-            val followUps = db.followUpsDao().getFollowUps(limit = limit, offset = offset)
+            val followUps = db.followUpsDao().getFollowUps(limit = limit, offset = offset, searchQuery = searchQuery)
             if(followUps.isEmpty()) {
                 isLoading = false
                 return@launch
@@ -160,7 +184,13 @@ class FollowUpsFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).visibility = View.GONE
+        selected = true
+
+        if(activity!!.findViewById<FloatingActionButton>(R.id.floating_btn) != null) {
+            activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).visibility = View.GONE
+        } else {
+            searchReceiverMonitor()
+        }
 
         if(initializing || isLoading) {
             initializing = false
@@ -168,7 +198,7 @@ class FollowUpsFragment : Fragment() {
         }
 
         lifecycleScope.launch {
-            val updatedList = db.followUpsDao().getFollowUps(limit = offset + limit, offset = 0)
+            val updatedList = db.followUpsDao().getFollowUps(limit = offset + limit, offset = 0, searchQuery = searchQuery)
 
             if(updatedList.size != listForComparing.size) {
                 reloadData()
@@ -191,6 +221,12 @@ class FollowUpsFragment : Fragment() {
 
     override fun onPause() {
         super.onPause()
+
+        selected = false
+
+        if(activity!!.findViewById<FloatingActionButton>(R.id.floating_btn) == null) {
+            searchReceiverUnmonitor()
+        }
     }
 
     inner class OnItemClick(private val followUpId: Long, private val position: Int): View.OnClickListener {
@@ -203,6 +239,7 @@ class FollowUpsFragment : Fragment() {
     }
 
     companion object {
+        var selected: Boolean = false
 
         // TODO: Customize parameter argument names
         const val ARG_COLUMN_COUNT = "column-count"

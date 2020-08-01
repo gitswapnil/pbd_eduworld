@@ -12,7 +12,6 @@
         android:id="@+id/option_search"
         android:title="@string/search_title"
         android:icon="@drawable/ic_baseline_search_24"
-        app:actionViewClass="android.widget.SearchView"
         app:showAsAction="always" />
 
     <item

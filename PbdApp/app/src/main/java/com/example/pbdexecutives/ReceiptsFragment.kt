@@ -1,7 +1,9 @@
 package com.example.pbdexecutives
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -9,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.room.Room
@@ -24,6 +27,7 @@ import java.util.*
  * A fragment representing a list of Items.
  */
 class ReceiptsFragment : Fragment() {
+    private lateinit var searchReceiver: BroadcastReceiver
     private var linearLayoutManager: LinearLayoutManager = LinearLayoutManager(context)
     private lateinit var recyclerViewAdapter: ReceiptsRecyclerViewAdapter
     private lateinit var listItems: MutableList<ReceiptsListItemModel?>
@@ -31,9 +35,30 @@ class ReceiptsFragment : Fragment() {
     private var columnCount = 1
     private var limit = 20
     private var offset: Int = 0
+    private var searchQuery: String = "%%"
     private var isLoading = false
     private var initializing = true
     private lateinit var db: AppDB
+
+    private fun searchReceiverMonitor() {
+        val filter = IntentFilter(SearchActivity.actionSearchQueryBroadcast)
+
+        searchReceiver = object : BroadcastReceiver() {         //receiver always called only when the duty switch is OFF.
+            override fun onReceive(context: Context, intent: Intent) {
+                val sQuery = intent.getStringExtra(SearchActivity.searchQuery)
+
+                searchQuery = "%${sQuery}%"
+                Log.i("pbdLog", "Search Query: $searchQuery")
+                reloadData()
+            }
+        }
+
+        activity?.let { LocalBroadcastManager.getInstance(it).registerReceiver(searchReceiver, filter) }
+    }
+
+    private fun searchReceiverUnmonitor() {
+        activity?.let { LocalBroadcastManager.getInstance(it).unregisterReceiver(searchReceiver) }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -107,7 +132,7 @@ class ReceiptsFragment : Fragment() {
                     db.userDetailsDao().getCurrentUser();
                 }
 
-            val receipts = db.receiptsDao().getReceipts(limit = limit, offset = offset)
+            val receipts = db.receiptsDao().getReceipts(limit = limit, offset = offset, searchQuery = searchQuery)
             if(receipts.isEmpty()) {
                 isLoading = false
                 return@launch
@@ -157,9 +182,15 @@ class ReceiptsFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).visibility = View.VISIBLE
-        activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).setOnClickListener { view ->
-            createNewReceipt(view)
+        selected = true
+
+        if(activity!!.findViewById<FloatingActionButton>(R.id.floating_btn) != null) {
+            activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).visibility = View.VISIBLE
+            activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).setOnClickListener { view ->
+                createNewReceipt(view)
+            }
+        } else {
+            searchReceiverMonitor()
         }
 
         if(initializing || isLoading) {
@@ -168,7 +199,7 @@ class ReceiptsFragment : Fragment() {
         }
 
         lifecycleScope.launch {
-            val updatedList = db.receiptsDao().getReceipts(limit = offset + limit, offset = 0)
+            val updatedList = db.receiptsDao().getReceipts(limit = offset + limit, offset = 0, searchQuery = searchQuery)
 
             if(updatedList.size != listForComparing.size) {
                 reloadData()
@@ -191,7 +222,13 @@ class ReceiptsFragment : Fragment() {
 
     override fun onPause() {
         super.onPause()
-        activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).setOnClickListener(null)
+        selected = false
+
+        if(activity!!.findViewById<FloatingActionButton>(R.id.floating_btn) != null) {
+            activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).setOnClickListener(null)
+        } else {
+            searchReceiverUnmonitor()
+        }
     }
 
     private fun createNewReceipt(view: View) {
@@ -208,6 +245,7 @@ class ReceiptsFragment : Fragment() {
     }
 
     companion object {
+        var selected: Boolean = false
 
         // TODO: Customize parameter argument names
         const val ARG_COLUMN_COUNT = "column-count"
