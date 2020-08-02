@@ -6,6 +6,7 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
+import android.widget.ImageView
 import android.widget.SearchView
 import androidx.annotation.IdRes
 import androidx.annotation.NonNull
@@ -32,7 +33,10 @@ class SearchActivity : AppCompatActivity() {
 
         searchView.setOnQueryTextListener(object: SearchView.OnQueryTextListener {
             override fun onQueryTextChange(newText: String?): Boolean {
-                Log.i("pbdLog", "newText: $newText")
+//                Log.i("pbdLog", "newText: $newText")
+                if(newText == "") {
+                    broadcastSearchQuery("")
+                }
 
                 return false
             }
