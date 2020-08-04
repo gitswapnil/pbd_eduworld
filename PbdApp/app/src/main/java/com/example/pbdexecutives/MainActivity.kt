@@ -21,8 +21,11 @@ import com.android.volley.Request
 import com.android.volley.Response
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
+import com.google.gson.Gson
+import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.*
 import org.json.JSONObject
+import java.text.DecimalFormat
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.CoroutineContext
 
@@ -44,18 +47,162 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
         }
     }
 
-    private fun callWorkerOnce(onComplete: () -> Unit) {
-        if(PbdExecutivesUtils().isInternetExists(applicationContext)) {
-            val serverSyncRequest = OneTimeWorkRequestBuilder<ServerSyncWorker>().build()
-            WorkManager.getInstance(this).enqueueUniqueWork("initialSync", ExistingWorkPolicy.REPLACE, serverSyncRequest)
+    data class TasksResponseObject (
+        @SerializedName("_id") val _id: String,
+        @SerializedName("type") val type: Short,
+        @SerializedName("partyId") val partyId: String,
+        @SerializedName("cpName") val cpName: String,
+        @SerializedName("cpNumber") val cpNumber: String,
+        @SerializedName("reason") val reason: Short,
+        @SerializedName("doneWithTask") val doneWithTask: Boolean,
+        @SerializedName("reminder") val reminder: Boolean,
+        @SerializedName("remarks") val remarks: String,
+        @SerializedName("subject") val subject: String,
+        @SerializedName("createdAt") val createdAt: Long
+    )
 
-            WorkManager.getInstance(this).getWorkInfosForUniqueWorkLiveData("initialSync")
-                .observe(this, Observer<List<WorkInfo>>{ workInfos ->
-//                    Log.i("pbdLog", "workInfos: $workInfos")
-                    if (workInfos[0].state == WorkInfo.State.SUCCEEDED || workInfos[0].state == WorkInfo.State.FAILED) {
-                        onComplete()
+    data class ReceiptsResponseObject (
+        @SerializedName("_id") val _id: String,
+        @SerializedName("receiptNo") val receiptNo: Long,
+        @SerializedName("partyId") val partyId: String,
+        @SerializedName("cpName") val cpName: String,
+        @SerializedName("cpNumber") val cpNumber: String,
+        @SerializedName("cpEmail") val cpEmail: String,
+        @SerializedName("amount") val amount: String,
+        @SerializedName("paidBy") val paidBy: Byte,
+        @SerializedName("ddNo") val ddNo: String,
+        @SerializedName("chequeNo") val chequeNo: String,
+        @SerializedName("payment") val payment: Byte,
+        @SerializedName("createdAt") val createdAt: Long
+    )
+
+    data class FollowUpsResponseObject (
+        @SerializedName("_id") val _id: String,
+        @SerializedName("partyId") val partyId: String,
+        @SerializedName("taskId") val taskId: String,
+        @SerializedName("reminderDate") val reminderDate: Long,
+        @SerializedName("followUpFor") val followUpFor: Short,
+        @SerializedName("createdAt") val createdAt: Long
+    )
+
+    data class NotificationsResponseObject (
+        @SerializedName("_id") val _id: String
+    )
+
+    data class ResponseObject(
+        @SerializedName("tasks") val tasks: List<TasksResponseObject>,
+        @SerializedName("receipts") val receipts: List<ReceiptsResponseObject>,
+        @SerializedName("followUps") val followUps: List<FollowUpsResponseObject>,
+        @SerializedName("notifications") val notifications: List<NotificationsResponseObject>,
+        @SerializedName("totalDataLength") val totalDataLength: String
+    )
+
+    private fun restoreData(apiKey: String, offset: Long, limit: Int, callback: () -> Unit) {
+        val jsonRequestObject: JSONObject = JSONObject("{\"apiKey\": \"${apiKey}\", \"offset\": $offset, \"limit\": $limit}")
+
+        PbdExecutivesUtils().sendData(
+            this,
+            "restoredata",
+            jsonRequestObject,
+            { code: Int, response: Any ->
+                this.lifecycleScope.launch {
+                    val db = Room.databaseBuilder(this@MainActivity, AppDB::class.java, "PbdDB").build()
+//                    Log.i("pbdLog", "response: $response")
+                    val responseObject = Gson().fromJson(
+                        response.toString(),
+                        ResponseObject::class.java
+                    );      //convert the response back into JSON Object from the response string
+//                    Log.i("pbdLog", "responseObject: $responseObject")
+
+                    if(responseObject.tasks != null && responseObject.tasks.isNotEmpty()) {
+                        responseObject.tasks.forEach { task ->
+//                            Log.i("pbdLog", "task: $task")
+                            db.tasksDao().addTask(Tasks(
+                                type = task.type,
+                                partyId = task.partyId,
+                                contactPersonName = task.cpName,
+                                contactPersonNumber = task.cpNumber,
+                                reasonForVisit = task.reason,
+                                doneWithTask = task.doneWithTask,
+                                reminder = task.reminder,
+                                remarks = if(task.remarks == null) "" else task.remarks,
+                                subject = if(task.subject == null) "" else task.subject,
+                                serverId = task._id,
+                                synced = true,
+                                createdAt = task.createdAt
+                            ))
+                        }
                     }
-                })
+
+                    if(responseObject.receipts != null && responseObject.receipts.isNotEmpty()) {
+                        responseObject.receipts.forEach { receipt ->
+//                            Log.i("pbdLog", "receipts: $receipt")
+                            db.receiptsDao().addReceipt(Receipts(
+                                receiptNo = receipt.receiptNo,
+                                partyId = receipt.partyId,
+                                cpName = receipt.cpName,
+                                cpNumber = receipt.cpNumber,
+                                cpEmail = receipt.cpEmail,
+                                amount = receipt.amount,
+                                paidBy = receipt.paidBy,
+                                chequeNo = receipt.chequeNo,
+                                ddNo = receipt.ddNo,
+                                payment = receipt.payment,
+                                serverId = receipt._id,
+                                createdAt = receipt.createdAt
+                            ))
+                        }
+                    }
+
+                    if(responseObject.followUps != null && responseObject.followUps.isNotEmpty()) {
+                        responseObject.followUps.forEach { followUp ->
+                            Log.i("pbdLog", "followUp: $followUp")
+                            val task = db.tasksDao().getTaskFromServerId(followUp.taskId)
+                            db.followUpsDao().addFollowUp(FollowUps(
+                                reminderDate = followUp.reminderDate,
+                                partyId = followUp.partyId,
+                                taskId = task.id,
+                                followUpFor = followUp.followUpFor,
+                                serverId = followUp._id,
+                                synced = true,
+                                createdAt = followUp.createdAt
+                            ))
+                        }
+                    }
+
+                    callback()
+
+                }
+            },
+            { code: Int, error: Any ->
+                Toast.makeText(this, error.toString(), Toast.LENGTH_LONG).show()
+            },
+            DefaultRetryPolicy(5000, 0, 1f)
+        )
+    }
+
+    private fun syncOnce(onComplete: () -> Unit) {
+        val serverSyncRequest = OneTimeWorkRequestBuilder<ServerSyncWorker>().build()
+        WorkManager.getInstance(this).enqueueUniqueWork("initialSync", ExistingWorkPolicy.REPLACE, serverSyncRequest)
+
+        WorkManager.getInstance(this).getWorkInfosForUniqueWorkLiveData("initialSync")
+            .observe(this, Observer<List<WorkInfo>>{ workInfos ->
+                Log.i("pbdLog", "workInfos: $workInfos")
+                if (workInfos[0].state == WorkInfo.State.SUCCEEDED || workInfos[0].state == WorkInfo.State.FAILED) {
+                    onComplete()
+                }
+            })
+    }
+
+    private fun callWorkerOnce(restoreFlag: Boolean, apiKey: String, onComplete: () -> Unit) {
+        if(PbdExecutivesUtils().isInternetExists(applicationContext)) {
+            if(restoreFlag) {
+                restoreData(apiKey, 0, 100) {
+                    syncOnce(onComplete)
+                }
+            } else {
+                syncOnce(onComplete)
+            }
         } else {
             onComplete()
         }
@@ -77,6 +224,9 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_main)
+
+        val restoreData = intent.getBooleanExtra("restoreData", false)
+
         createNotificationChannel()
 
         this.lifecycleScope.launch {
@@ -90,7 +240,7 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
             }
 
             //update and check the data
-            callWorkerOnce {
+            callWorkerOnce(restoreData, apiKey) {
                 this@MainActivity.lifecycleScope.launch {
                     val newApiKey: String? = db.userDetailsDao().getApiKey()
                     Log.i("pbdLog", "newApiKey: $newApiKey")
@@ -101,7 +251,6 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
                     }
                 }
             }
-
         }
     }
 

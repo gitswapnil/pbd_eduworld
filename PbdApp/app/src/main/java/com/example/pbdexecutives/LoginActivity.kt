@@ -45,6 +45,7 @@ class LoginActivity : AppCompatActivity(), LifecycleOwner {
                     db.userDetailsDao().createUser(userDetail)        //store the apiKey in local database.
 
                     val intent = Intent(this@LoginActivity, MainActivity::class.java)        //go to home activity after save
+                    intent.putExtra("restoreData", true)
                     startActivity(intent)
                     finishAffinity()
                 }

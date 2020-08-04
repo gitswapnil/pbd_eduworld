@@ -5,6 +5,8 @@ import android.telecom.Call
 import android.util.Base64
 import android.util.Log
 import androidx.concurrent.futures.CallbackToFutureAdapter
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.MutableLiveData
 import androidx.room.PrimaryKey
 import androidx.room.Room
 import androidx.work.ListenableWorker
@@ -22,6 +24,7 @@ import java.lang.Exception
 import java.util.*
 import javax.security.auth.callback.Callback
 import kotlin.collections.ArrayList
+import kotlin.coroutines.suspendCoroutine
 
 data class DeletedIdsObject(
     @SerializedName("id") val id: Long,
@@ -107,124 +110,115 @@ data class MessageObject(
 )
 
 class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): ListenableWorker(appContext, workerParams){
-    override fun startWork(): ListenableFuture<Result> {
-        Log.i("pbdLog", "Sync worker started.")
-        return CallbackToFutureAdapter.getFuture { completer ->
-            GlobalScope.launch {
-                val db = Room.databaseBuilder(applicationContext, AppDB::class.java, "PbdDB").build()
-                val apiKey: String? = db.userDetailsDao().getApiKey()
-                if (apiKey != null) {            //if the user is not logged in then dont sync anything.
+    private fun syncFunc(completer: CallbackToFutureAdapter.Completer<ListenableWorker.Result>) {
+        GlobalScope.launch {
+            val db = Room.databaseBuilder(applicationContext, AppDB::class.java, "PbdDB").build()
+            val apiKey: String? = db.userDetailsDao().getApiKey()
+            if (apiKey != null) {            //if the user is not logged in then dont sync anything.
 
-                    //get unsynced DeletedIds
-                    val deletedIds: MutableList<DeletedIdsObject> = ArrayList()
-                    db.deletedIdsDao().getUnsyncedDeletedIds().forEach {
-                        deletedIds.add(
-                            DeletedIdsObject(
-                                id = it.id,
-                                from = it.from,
-                                serverId = it.serverId
-                            )
+                //get unsynced DeletedIds
+                val deletedIds: MutableList<DeletedIdsObject> = ArrayList()
+                db.deletedIdsDao().getUnsyncedDeletedIds().forEach {
+                    deletedIds.add(
+                        DeletedIdsObject(
+                            id = it.id,
+                            from = it.from,
+                            serverId = it.serverId
                         )
-                    }
+                    )
+                }
 
-                    //get unsynced locations
-                    val locations: MutableList<LocationObject> = ArrayList()
-                    db.locationsDao().getUnsyncedLocations().forEach {
-                        locations.add(
-                            LocationObject(
-                                id = it.id,
-                                latitude = it.latitude,
-                                longitude = it.longitude,
-                                sessionId = it.sessionId,
-                                createdAt = it.createdAt
-                            )
+                //get unsynced locations
+                val locations: MutableList<LocationObject> = ArrayList()
+                db.locationsDao().getUnsyncedLocations().forEach {
+                    locations.add(
+                        LocationObject(
+                            id = it.id,
+                            latitude = it.latitude,
+                            longitude = it.longitude,
+                            sessionId = it.sessionId,
+                            createdAt = it.createdAt
                         )
-                    }
+                    )
+                }
 
-                    //get User details last updatedAt
-                    val lastUserDetails: Long = db.userDetailsDao().getCurrentUser().updatedAt
+                //get User details last updatedAt
+                val lastUserDetails: Long = db.userDetailsDao().getCurrentUser().updatedAt
 
-                    //get parties last updatedAt
-                    val lastPartyDetails = db.partiesDao().getLastUpdatedParty()
-                    var lastPartyUpdatedAt:Long = 1
+                //get parties last updatedAt
+                val lastPartyDetails = db.partiesDao().getLastUpdatedParty()
+                var lastPartyUpdatedAt:Long = 1
 
-                    if(lastPartyDetails != null) {      //if the user is initially loading the data then Parties table wont ne there hence check for the null rule
-                        lastPartyUpdatedAt = lastPartyDetails.updatedAt
-                    }
+                if(lastPartyDetails != null) {      //if the user is initially loading the data then Parties table wont ne there hence check for the null rule
+                    lastPartyUpdatedAt = lastPartyDetails.updatedAt
+                }
 
-                    //get unsyned tasks
-                    var tasks: MutableList<TasksObject> = ArrayList()
-                    db.tasksDao().getUnsyncedTasks().forEach {
-                        tasks.add(
-                            TasksObject(
-                                id = it.id,
-                                type = it.type,
-                                partyId = it.partyId,
-                                cpName = it.contactPersonName,
-                                cpNumber = it.contactPersonNumber,
-                                reason = it.reasonForVisit,
-                                doneWithTask = it.doneWithTask,
-                                reminder = it.reminder,
-                                subject = it.subject,
-                                remarks = it.remarks,
-                                serverId = it.serverId,
-                                createdAt = it.createdAt
-                            )
+                //get unsyned tasks
+                var tasks: MutableList<TasksObject> = ArrayList()
+                db.tasksDao().getUnsyncedTasks().forEach {
+                    tasks.add(
+                        TasksObject(
+                            id = it.id,
+                            type = it.type,
+                            partyId = it.partyId,
+                            cpName = it.contactPersonName,
+                            cpNumber = it.contactPersonNumber,
+                            reason = it.reasonForVisit,
+                            doneWithTask = it.doneWithTask,
+                            reminder = it.reminder,
+                            subject = it.subject,
+                            remarks = it.remarks,
+                            serverId = it.serverId,
+                            createdAt = it.createdAt
                         )
-                    }
+                    )
+                }
 
-                    //get unsyned followUps
-                    var followUps: MutableList<FollowUpsObject> = ArrayList()
-                    db.followUpsDao().getUnsyncedFollowUps().forEach {
-                        followUps.add(
-                            FollowUpsObject(
-                                id = it.id,
-                                partyId = it.partyId,
-                                taskId = it.taskId,
-                                reminderDate = it.reminderDate,
-                                followUpFor = it.followUpFor,
-                                serverId = it.serverId,
-                                createdAt = it.createdAt
-                            )
+                //get unsyned followUps
+                var followUps: MutableList<FollowUpsObject> = ArrayList()
+                db.followUpsDao().getUnsyncedFollowUps().forEach {
+                    followUps.add(
+                        FollowUpsObject(
+                            id = it.id,
+                            partyId = it.partyId,
+                            taskId = it.taskId,
+                            reminderDate = it.reminderDate,
+                            followUpFor = it.followUpFor,
+                            serverId = it.serverId,
+                            createdAt = it.createdAt
                         )
-                    }
+                    )
+                }
 
-//                    if (locations.size != 0 ) {           //If there are no locations to be synced, just ignore
-//                        this.cancel()
-//                    }
-
-                    val requestJSONObject: JSONObject = JSONObject(Gson().toJson(RequestObject(
-                        apiKey = apiKey.toString(),
-                        deletedIds = deletedIds,
-                        locations = locations,
-                        lastUserDetails = lastUserDetails,
-                        lastPartyDetails = lastPartyUpdatedAt,
-                        tasks = tasks,
-                        followUps = followUps
-                    )))
-                    Log.i("pbdLog", "requestJSONObject: $requestJSONObject")
-
-                    PbdExecutivesUtils().sendData(
-                        applicationContext,
-                        "syncdata",
-                        requestJSONObject,
-                        { code, response ->
-                            Log.i("pbdLog", "response: $response")
-                            val responseObject = Gson().fromJson(
-                                response.toString(),
-                                MessageObject::class.java
-                            );      //convert the response back into JSON Object from the response string
+                val requestJSONObject: JSONObject = JSONObject(Gson().toJson(RequestObject(
+                    apiKey = apiKey.toString(),
+                    deletedIds = deletedIds,
+                    locations = locations,
+                    lastUserDetails = lastUserDetails,
+                    lastPartyDetails = lastPartyUpdatedAt,
+                    tasks = tasks,
+                    followUps = followUps
+                )))
+                PbdExecutivesUtils().sendData(
+                    applicationContext,
+                    "syncdata",
+                    requestJSONObject,
+                    { code, response ->
+                        Log.i("pbdLog", "response: $response")
+                        val responseObject = Gson().fromJson(
+                            response.toString(),
+                            MessageObject::class.java
+                        );      //convert the response back into JSON Object from the response string
 //                            Log.i("pbdLog", "responseObject: $responseObject")
 
+                        GlobalScope.launch {
                             if(responseObject.deletedIds != null && responseObject.deletedIds.isNotEmpty()) {
                                 var updateIds: MutableList<Long> = ArrayList()
                                 responseObject.deletedIds.forEach {
                                     updateIds.add(it);
                                 }
 
-                                GlobalScope.launch {
-                                    db.deletedIdsDao().markSynced(updateIds)     //update the locations as synced to database
-                                }
+                                db.deletedIdsDao().markSynced(updateIds)     //update the locations as synced to database
                             }
 
                             //if the response object has location ids then only update them from the local database
@@ -234,24 +228,20 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                                     updateIds.add(it);
                                 }
 
-                                GlobalScope.launch {
-                                    db.locationsDao().updateSyncStatus(updateIds)     //update the locations as synced to database
-                                }
+                                db.locationsDao().updateSyncStatus(updateIds)     //update the locations as synced to database
                             }
 
                             if(responseObject.userDetails != null) {
                                 val userDetailsRef: UserDetailsResponseObject = responseObject.userDetails
-                                GlobalScope.launch {
-                                    db.userDetailsDao().saveUserDetails(
-                                        name = userDetailsRef.name,
-                                        phoneNo = userDetailsRef.phoneNo,
-                                        email = userDetailsRef.email,
-                                        img = if(userDetailsRef.img != null) Base64.decode(userDetailsRef.img, Base64.DEFAULT) else ByteArray(0x0),
-                                        address = userDetailsRef.address,
-                                        receiptSeries = userDetailsRef.receiptSeries,
-                                        updatedAt = userDetailsRef.updatedAt
-                                    )
-                                }
+                                db.userDetailsDao().saveUserDetails(
+                                    name = userDetailsRef.name,
+                                    phoneNo = userDetailsRef.phoneNo,
+                                    email = userDetailsRef.email,
+                                    img = if(userDetailsRef.img != null) Base64.decode(userDetailsRef.img, Base64.DEFAULT) else ByteArray(0x0),
+                                    address = userDetailsRef.address,
+                                    receiptSeries = userDetailsRef.receiptSeries,
+                                    updatedAt = userDetailsRef.updatedAt
+                                )
                             }
 
                             if(responseObject.partyDetails != null) {
@@ -268,45 +258,59 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                                     }
                                 }
 
-                                GlobalScope.launch {
-                                    db.partiesDao().removeParties(idsToRemove)
-                                    db.partiesDao().addParties(partiesToUpsert)
-                                }
+                                db.partiesDao().removeParties(idsToRemove)
+                                db.partiesDao().addParties(partiesToUpsert)
                             }
 
                             if(responseObject.taskIds != null && responseObject.taskIds.isNotEmpty()) {
-                                GlobalScope.launch {
-                                    responseObject.taskIds.forEach {
-                                        db.tasksDao().markTaskSynced(id = it.id, serverId = it.serverId)
-                                    }
+                                responseObject.taskIds.forEach {
+                                    db.tasksDao().markTaskSynced(id = it.id, serverId = it.serverId)
                                 }
                             }
 
                             if(responseObject.followUpIds != null && responseObject.followUpIds.isNotEmpty()) {
-                                GlobalScope.launch {
-                                    responseObject.followUpIds.forEach {
-                                        db.followUpsDao().markFollowUpsSynced(id = it.id, serverId = it.serverId)
-                                    }
+                                responseObject.followUpIds.forEach {
+                                    db.followUpsDao().markFollowUpsSynced(id = it.id, serverId = it.serverId)
                                 }
                             }
 
-                            completer.set(Result.success())
-                        },
-                        { code, error ->
-                            Log.i("pbdLog", "Error...${error}")
-                            if(code == 401) {       //401 means, the user's password is changed by the admin
-                                PbdExecutivesUtils().logoutUser(applicationContext)
+                            val dIds = db.deletedIdsDao().getUnsyncedDeletedIds()
+                            val lIds = db.locationsDao().getUnsyncedLocations()
+                            val tIds = db.tasksDao().getUnsyncedTasks()
+                            val fIds = db.followUpsDao().getUnsyncedFollowUps()
+
+                            if(dIds.isEmpty() && lIds.isEmpty() && tIds.isEmpty() && fIds.isEmpty()) {
+                                Log.i("pbdLog", "Sync worker finished.")
+                                completer.set(Result.success())
+                            } else {
+                                syncFunc(completer)
                             }
-                            completer.setException(Throwable(error.toString()))
-                        },
-                        DefaultRetryPolicy(
-                            DefaultRetryPolicy.DEFAULT_TIMEOUT_MS,
-                            DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
-                            DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
-                        )
+
+                            Log.i("pbdLog", "requestJSONObject: $requestJSONObject")
+                        }
+                    },
+                    { code, error ->
+                        Log.i("pbdLog", "Error...${error}")
+                        if(code == 401) {       //401 means, the user's password is changed by the admin
+                            PbdExecutivesUtils().logoutUser(applicationContext)
+                        }
+                        Log.i("pbdLog", "Sync worker finished.")
+                        completer.setException(Throwable(error.toString()))
+                    },
+                    DefaultRetryPolicy(
+                        DefaultRetryPolicy.DEFAULT_TIMEOUT_MS,
+                        DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                        DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
                     )
-                }
+                )
             }
+        }
+    }
+
+    override fun startWork(): ListenableFuture<Result> {
+        Log.i("pbdLog", "Sync worker started.")
+        return CallbackToFutureAdapter.getFuture { completer ->
+            syncFunc(completer)
         }
     }
 

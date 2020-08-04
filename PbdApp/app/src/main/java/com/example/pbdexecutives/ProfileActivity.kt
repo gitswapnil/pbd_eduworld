@@ -1,5 +1,6 @@
 package com.example.pbdexecutives
 
+import android.app.Activity
 import android.content.*
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -18,8 +19,14 @@ import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.room.Room
+import com.android.volley.DefaultRetryPolicy
+import com.google.android.material.snackbar.Snackbar
+import com.google.gson.Gson
+import com.google.gson.annotations.SerializedName
+import kotlinx.android.synthetic.main.activity_receipt_preview.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import java.util.*
 
 
@@ -114,5 +121,4 @@ class ProfileActivity : AppCompatActivity() {
 
         alertDialog?.show()
     }
-
 }

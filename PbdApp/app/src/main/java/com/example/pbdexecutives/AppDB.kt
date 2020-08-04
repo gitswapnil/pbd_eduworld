@@ -21,7 +21,7 @@ data class DeletedIds (
 
 @Dao
 interface DeletedIdsDAO {
-    @Query("SELECT * FROM DeletedIds WHERE synced=0")
+    @Query("SELECT * FROM DeletedIds WHERE synced=0 LIMIT 100")
     suspend fun getUnsyncedDeletedIds(): List<DeletedIds>
 
     @Query("UPDATE DeletedIds SET synced=1 WHERE id IN (:ids)")
@@ -114,7 +114,7 @@ interface LocationsDAO {
     @Insert
     suspend fun saveLocation(location: Locations)
 
-    @Query("SELECT * FROM Locations WHERE synced=0")
+    @Query("SELECT * FROM Locations WHERE synced=0 LIMIT 100")
     suspend fun getUnsyncedLocations(): Array<Locations>
 
     @Query("UPDATE Locations SET synced=1 WHERE id IN (:ids)")
@@ -194,7 +194,7 @@ data class TasksWithJoins (
 
 @Dao
 interface TasksDAO {
-    @Query("SELECT * FROM Tasks WHERE synced=0")
+    @Query("SELECT * FROM Tasks WHERE synced=0 LIMIT 100")
     suspend fun getUnsyncedTasks(): List<Tasks>
 
     @Query("SELECT t.id, t.type, t.partyId, p.name AS partyName, p.address as partyAddress, t.contactPersonName, t.contactPersonNumber, t.reasonForVisit, t.doneWithTask, t.reminder, f.reminderDate, t.remarks, t.subject, t.serverId, t.createdAt FROM Tasks AS t LEFT JOIN Parties AS p ON t.partyId=p.id LEFT JOIN FollowUps AS f ON t.id=f.taskId WHERE t.id=:taskId")
@@ -214,6 +214,9 @@ interface TasksDAO {
 
     @Query("UPDATE Tasks SET type=:type, partyId=:partyId, contactPersonName=:contactPersonName, contactPersonNumber=:contactPersonNumber, reasonForVisit=:reasonForVisit, doneWithTask=:doneWithTask, reminder=:reminder, remarks=:remarks, subject=:subject, synced=0 WHERE id=:id")
     suspend fun updateTask(id:Long, type: Short, partyId: String?, contactPersonName: String?, contactPersonNumber: String?, reasonForVisit: Short, doneWithTask: Boolean, reminder: Boolean, remarks: String, subject: String)
+
+    @Query("SELECT * FROM Tasks WHERE serverId=:serverId")
+    suspend fun getTaskFromServerId(serverId: String): Tasks
 
     @Query("DELETE FROM Tasks")
     suspend fun clearTasks()
@@ -247,7 +250,7 @@ data class FollowUpsWithJoins(
 
 @Dao
 interface FollowUpsDAO {
-    @Query("SELECT * FROM FollowUps WHERE synced=0")
+    @Query("SELECT * FROM FollowUps WHERE synced=0 LIMIT 100")
     suspend fun getUnsyncedFollowUps(): List<FollowUps>
 
     @Query("SELECT id, reminderDate, followUpFor, partyId, taskId, partyName, partyAddress, cpName, cpNumber, createdAt FROM (SELECT f.id, f.reminderDate, ifnull((strftime('%d/%m/', datetime(f.reminderDate/1000, 'unixepoch')) || substr(strftime('%Y', datetime(f.reminderDate/1000, 'unixepoch')), 3)), 'Reminder not set') AS formattedReminderDate, f.followUpFor, (CASE f.followUpFor WHEN 0 THEN 'Sampling' WHEN 1 THEN 'To receive order' WHEN 2 THEN 'To get payment' END) AS formattedFollowUpFor, p.id as partyId, t.id as taskId, p.name as partyName, p.address as partyAddress, t.contactPersonName as cpName, t.contactPersonNumber as cpNumber, f.createdAt as createdAt FROM (SELECT * FROM (SELECT * FROM FollowUps ORDER BY createdAt ASC) GROUP BY partyId) AS f LEFT JOIN Tasks AS t ON f.taskId=t.id LEFT JOIN Parties AS p ON f.partyId=p.id WHERE f.followUpFor IN (0,1,2) AND (formattedReminderDate LIKE :searchQuery OR formattedFollowUpFor LIKE :searchQuery OR partyName LIKE :searchQuery OR partyAddress LIKE :searchQuery OR cpName LIKE :searchQuery OR cpNumber LIKE :searchQuery )) ORDER BY createdAt DESC LIMIT :limit OFFSET :offset")

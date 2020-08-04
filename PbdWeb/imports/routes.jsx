@@ -982,7 +982,7 @@ if(Meteor.isClient) {
 			return;
 		}
 
-		console.log("syncdata reqBody: " + JSON.stringify(reqBody));
+		console.log("generatereceipt reqBody: " + JSON.stringify(reqBody));
 		//first check for the APIkey;
 		console.log("apiKey: " + reqBody.apiKey);
 		if(!reqBody.apiKey || (typeof reqBody.apiKey !== "string") || reqBody.apiKey.length !== 32) {
@@ -1019,11 +1019,270 @@ if(Meteor.isClient) {
 			console.log(`values: ${JSON.stringify(values)}`);
 			const message = { ...values[0] }
 			res.end(JSON.stringify({ error: false, message, code: 200 }));
-		}
+		};
 
 		callAllFuncs().catch(error => {
 			console.log("error: " + error);
 			res.end(JSON.stringify({ error: true, message: error.message, code: 500 }));
-		})
-	})
+		});
+	});
+
+	/*
+		params: {
+			apiKey: String, 
+			offset: Long,
+			limit: Int
+		},
+		return: {
+			error: Boolean, 
+			message: "{
+				tasks: [],
+				receipts: [],
+				followUps: [],
+				notifications: [],
+				totalDataLength: Long,
+			}",
+			code: Integer
+		}	if error is false then message is the apiKey for that user.
+	*/
+
+	Router.route('/api/restoredata', {where: 'server'}).post(function(req, res, next) {
+		console.log("API: restoredata invoked.");
+		const reqBody = req.body;
+
+		//if request body is not defined, then return error
+		if(!reqBody) {
+			res.end(JSON.stringify({error: true, message: "reqBody must have atleast an apiKey. requset body is null.", code: 400}));
+			return;
+		}
+
+		console.log("restoredata reqBody: " + JSON.stringify(reqBody));
+		//first check for the APIkey;
+		console.log("apiKey: " + reqBody.apiKey);
+		if(!reqBody.apiKey || (typeof reqBody.apiKey !== "string") || reqBody.apiKey.length !== 32) {
+			res.end(JSON.stringify({error: true, message: "Invalid API key. Please check and try again.", code: 400}));
+			return;
+		}
+
+		const user = Meteor.users.findOne({"apiKey": reqBody.apiKey});
+		if(!user) {
+			res.end(JSON.stringify({error: true, message: "Unkonwn API key.", code: 401}));
+			return;
+		}
+
+		if(!user.active) {		//the user should be an active user
+			res.end(JSON.stringify({error: true, message: "Inactive User.", code: 401}));
+			return;
+		}
+
+		if(!Roles.userIsInRole(user._id, "executive", Roles.GLOBAL_GROUP)){		//if the user does not have administrative rights.
+			res.end(JSON.stringify({error: true, message: "User does not have the rights to access mobile app.", code: 400}));
+			return;
+		}
+
+		if(typeof reqBody.offset !== "number") {
+			res.end(JSON.stringify({error: true, message: "Invalid offset key. Please check and try again.", code: 400}));
+			return;
+		}
+
+		if(typeof reqBody.limit !== "number") {
+			res.end(JSON.stringify({error: true, message: "Invalid limit key. Please check and try again.", code: 400}));
+			return;
+		}
+
+		let returnObj = {
+			tasks: [],
+			receipts: [],
+			followUps: [],
+			notifications: [],
+			totalDataLength: 0
+		};
+
+		Meteor.users.rawCollection().aggregate([
+			{
+		        $match: {
+		            _id: user._id
+		        }
+		    },
+		    {
+		        $lookup: {
+		            from: "tasks",
+		            foreignField: "userId",
+		            localField: "_id",
+		            as: "tasks",
+		        }
+		    },
+		    {
+		        $lookup: {
+		            from: "receipts",
+		            foreignField: "userId",
+		            localField: "_id",
+		            as: "receipts",
+		        }
+		    },
+		    {
+		        $lookup: {
+		            from: "followUps",
+		            foreignField: "userId",
+		            localField: "_id",
+		            as: "followUps",
+		        }
+		    },
+            { $unwind: "$receipts" },
+            { $unwind: { path: "$receipts.cpList", preserveNullAndEmptyArrays: true } },
+            { 
+                $addFields: {
+                    "receipts.cpName": "$receipts.cpList.cpName",
+                    "receipts.cpNumber": "$receipts.cpList.cpNumber",
+                    "receipts.cpEmail": "$receipts.cpList.cpEmail",
+                    "receipts.createdAt": "$receipts.cpList.createdAt"
+                }
+            },
+            { $unset: ["receipts.cpList"] },
+            {
+                $group: {
+                    _id: "$_id",
+                    username: { $first: "$username" },
+                    emails: { $first: "$emails" },
+                    apiKey: { $first: "$apiKey" },
+                    profile: { $first: "$profile" },
+                    tasks: { $first: "$tasks" },
+                    receipts: { $addToSet: "$receipts" },
+                    followUps: { $first: "$followUps" }
+                }
+            },
+            { $unwind: "$followUps" },
+            {
+                $project: {
+                     _id: 1,
+                    username: 1,
+                    emails: 1,
+                    apiKey: 1,
+                    profile: 1,
+                    tasks: 1,
+                    receipts: 1,
+                    "followUps._id": 1,
+                    "followUps.partyId": 1,
+                    "followUps.reminderDate": { $ifNull: [{ $toLong: "$followUps.reminderDate"}, "$followUps.reminderDate"] },
+                    "followUps.taskId": 1,
+                    "followUps.followUpFor": 1,
+                    "followUps.userId": 1,
+                    "followUps.createdAt": 1
+                }
+            },
+            {
+                $group: {
+                    _id: "$_id",
+                    username: { $first: "$username" },
+                    emails: { $first: "$emails" },
+                    apiKey: { $first: "$apiKey" },
+                    profile: { $first: "$profile" },
+                    tasks: { $first: "$tasks" },
+                    receipts: { $first: "$receipts" },
+                    followUps: { $addToSet: "$followUps" }
+                }
+            },
+		    {
+		        $addFields: {
+		            "tasks.row": "task",
+		            "receipts.row": "receipt",
+		            "followUps.row": "followUp",
+		        }
+		    },
+		    {
+		        $project: {
+		            username: 1,
+		            emails: 1,
+		            apiKey: 1,
+		            profile: 1,
+		            data: { $concatArrays: ["$tasks", "$receipts", "$followUps"] }
+		        }
+		    },
+		    {
+		        $addFields: {
+		            dataLength: { $size: "$data" }
+		        }
+		    },
+            { $unwind: "$data" },
+            { $sort: { "data.createdAt": 1} },
+            { $skip: reqBody.offset },
+            { $limit: reqBody.limit },
+		    { $unwind: "$data" },
+                    { $unwind: { path: "$data.cpList", preserveNullAndEmptyArrays: true } },
+                    {
+                        $addFields: {
+                            "data.createdAt": { $toLong: "$data.createdAt" }
+                        }
+                    },
+		    {
+		        $group: {
+		            _id: "$_id",
+		            username: { $first: "$username" },
+		            emails: { $first: "$emails" },
+		            apiKey: { $first: "$apiKey" },
+		            profile: { $first: "$profile" },
+		            dataLength: { $first: "$dataLength" },
+		            tasks: { $addToSet: { $cond: [ { $eq: ["$data.row", "task"] }, "$data", 0] } },
+		            receipts: { $addToSet: { $cond: [ { $eq: ["$data.row", "receipt"] }, "$data", 0] } },
+		            followUps: { $addToSet: { $cond: [ { $eq: ["$data.row", "followUp"] }, "$data", 0] } },
+		        }
+		    },
+		    {
+		        $project: {
+		            _id: 1,
+		            username: 1,
+		            emails: 1,
+		            apiKey: 1,
+		            profile: 1,
+		            dataLength: 1,
+		            tasks: {
+		                $filter: {
+		                    input: "$tasks",
+		                    as: "task",
+		                    cond: { $ne: ["$$task", 0] }
+		                }
+		            },
+		            receipts: {
+		                $filter: {
+		                    input: "$receipts",
+		                    as: "receipt",
+		                    cond: { $ne: ["$$receipt", 0] }
+		                }
+		            },
+		            followUps: {
+		                $filter: {
+		                    input: "$followUps",
+		                    as: "followUp",
+		                    cond: { $ne: ["$$followUp", 0] }
+		                }
+		            },
+		        }
+		    },
+		    {
+		        $unset: [ "tasks.row", "tasks.userId", "receipts.row", "receipts.userId", "followUps.row", "followUps.userId" ]
+		    },
+		], (error, cursor) => {
+			if(error) {
+				res.end(JSON.stringify({error: true, message: error.message, code: 500}));
+				return;
+			} 
+
+			cursor.toArray((err, docs) => {
+				if(err) {
+					res.end(JSON.stringify({error: true, message: err.message, code: 500}));
+					return;
+				}
+
+				console.log("docs: " + JSON.stringify(docs));
+
+				returnObj.totalDataLength = docs.dataLength;
+				
+				returnObj.tasks = [...docs[0].tasks];
+				returnObj.receipts = [...docs[0].receipts];
+				returnObj.followUps = [...docs[0].followUps];
+
+				res.end(JSON.stringify({error: false, message: returnObj, code: 200}));
+			})
+		});
+	});
 }
