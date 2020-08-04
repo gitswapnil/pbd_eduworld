@@ -1198,11 +1198,6 @@ if(Meteor.isClient) {
 		            data: { $concatArrays: ["$tasks", "$receipts", "$followUps"] }
 		        }
 		    },
-		    {
-		        $addFields: {
-		            dataLength: { $size: "$data" }
-		        }
-		    },
             { $unwind: "$data" },
             { $sort: { "data.createdAt": 1} },
             { $skip: reqBody.offset },
@@ -1221,7 +1216,6 @@ if(Meteor.isClient) {
 		            emails: { $first: "$emails" },
 		            apiKey: { $first: "$apiKey" },
 		            profile: { $first: "$profile" },
-		            dataLength: { $first: "$dataLength" },
 		            tasks: { $addToSet: { $cond: [ { $eq: ["$data.row", "task"] }, "$data", 0] } },
 		            receipts: { $addToSet: { $cond: [ { $eq: ["$data.row", "receipt"] }, "$data", 0] } },
 		            followUps: { $addToSet: { $cond: [ { $eq: ["$data.row", "followUp"] }, "$data", 0] } },
@@ -1234,7 +1228,6 @@ if(Meteor.isClient) {
 		            emails: 1,
 		            apiKey: 1,
 		            profile: 1,
-		            dataLength: 1,
 		            tasks: {
 		                $filter: {
 		                    input: "$tasks",
@@ -1273,13 +1266,13 @@ if(Meteor.isClient) {
 					return;
 				}
 
-				console.log("docs: " + JSON.stringify(docs));
-
-				returnObj.totalDataLength = docs.dataLength;
+				// console.log("docs: " + JSON.stringify(docs));
 				
 				returnObj.tasks = [...docs[0].tasks];
 				returnObj.receipts = [...docs[0].receipts];
 				returnObj.followUps = [...docs[0].followUps];
+
+				returnObj.dataLength = returnObj.tasks.length +  returnObj.receipts.length + returnObj.followUps.length;
 
 				res.end(JSON.stringify({error: false, message: returnObj, code: 200}));
 			})

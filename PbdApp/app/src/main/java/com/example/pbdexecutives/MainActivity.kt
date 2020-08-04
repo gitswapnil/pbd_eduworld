@@ -94,7 +94,7 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
         @SerializedName("receipts") val receipts: List<ReceiptsResponseObject>,
         @SerializedName("followUps") val followUps: List<FollowUpsResponseObject>,
         @SerializedName("notifications") val notifications: List<NotificationsResponseObject>,
-        @SerializedName("totalDataLength") val totalDataLength: String
+        @SerializedName("dataLength") val dataLength: Int
     )
 
     private fun restoreData(apiKey: String, offset: Long, limit: Int, callback: () -> Unit) {
@@ -170,8 +170,12 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
                         }
                     }
 
-                    callback()
-
+                    Log.i("pbdLog", "responseObject.dataLength: ${responseObject.dataLength}, limit: $limit")
+                    if(responseObject.dataLength < limit) {
+                        callback()
+                    } else {
+                        restoreData(apiKey, offset + limit, limit) { callback() }
+                    }
                 }
             },
             { code: Int, error: Any ->
