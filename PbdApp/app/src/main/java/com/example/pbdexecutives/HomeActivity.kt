@@ -280,7 +280,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         findViewById<TextView>(R.id.duty_period).text = "${hrs.toString()} ${getString(R.string.hrs)} ${min.toString()} ${getString(R.string.mins)}"
     }
 
-    private fun setTabConfigurations() {
+    private fun setTabConfigurations(selectedTab: Int) {
         val tabsAdapter = TabsAdapter(this, 3)
         tabs_pager.adapter = tabsAdapter
 
@@ -293,14 +293,19 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 //            Log.i("pbdLog", "${tabsText[position]}")
             tab.text = tabsText[position]
         }.attach()
+
+        tabs_layout.getTabAt(selectedTab)?.select()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val selectedTab = intent.getIntExtra("selectedTab", 0)
+        Log.i("pbdLog", "selectedTab: $selectedTab")
+
         setContentView(R.layout.activity_home)
         setSupportActionBar(findViewById(R.id.home_toolbar))
-        setTabConfigurations()
+        setTabConfigurations(selectedTab)
     }
 
     private fun locationObjectMonitor() {

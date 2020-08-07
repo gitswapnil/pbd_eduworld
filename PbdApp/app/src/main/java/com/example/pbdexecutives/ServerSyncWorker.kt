@@ -199,6 +199,7 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                     tasks = tasks,
                     followUps = followUps
                 )))
+
                 PbdExecutivesUtils().sendData(
                     applicationContext,
                     "syncdata",

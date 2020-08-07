@@ -124,9 +124,11 @@ class TrackingService : Service() {
     }
 
     private fun createNotification(): Notification {
-        val pendingIntent: PendingIntent = Intent(this, HomeActivity::class.java).let { notificationIntent ->
-            PendingIntent.getActivity(this, 0, notificationIntent, 0)
+        val intent = Intent(this, HomeActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
+
+        val pendingIntent: PendingIntent = PendingIntent.getActivity(this, 0, intent, 0)
 
         var notificationBuider: Notification.Builder;
 

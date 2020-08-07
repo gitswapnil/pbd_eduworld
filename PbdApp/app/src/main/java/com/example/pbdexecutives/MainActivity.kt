@@ -214,12 +214,14 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
 
     private fun gotoLogin() {
         PbdExecutivesUtils().stopSyncing(applicationContext)
+        PbdExecutivesUtils().stopReminder(applicationContext)
         startActivity(Intent(this@MainActivity, LoginActivity::class.java))
         finishAffinity()       //remove the current activity from the activity stack so that back button makes it jump out of the application.
     }
 
     private fun gotoHome() {
         PbdExecutivesUtils().syncData(applicationContext)   //Start the background work that syncs the data to the server
+        PbdExecutivesUtils().startReminder(applicationContext)
         startActivity(Intent(this@MainActivity, HomeActivity::class.java))
         finishAffinity()       //remove the current activity from the activity stack so that back button makes it jump out of the application.
     }
