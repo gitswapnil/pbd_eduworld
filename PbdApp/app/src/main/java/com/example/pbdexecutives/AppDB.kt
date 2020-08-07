@@ -271,6 +271,9 @@ interface FollowUpsDAO {
     @Query("SELECT * FROM FollowUps WHERE taskId=:taskId")
     suspend fun getTaskAttachedFollowUp(taskId: Long): FollowUps?
 
+    @Query("SELECT f.id AS id, f.unixReminderDate AS reminderDate, f.partyId AS partyId, p.name AS partyName, p.address AS partyAddress, f.taskId AS taskId, t.contactPersonName AS cpName, t.contactPersonNumber AS cpNumber, f.followUpFor AS followUpFor, f.createdAt AS createdAt FROM (SELECT *, ((unixReminderDate - todayStart) > 0 & (todayEnd - unixReminderDate) > 0) AS difference FROM (SELECT *, (reminderDate/1000) AS unixReminderDate, strftime('%s', datetime('now', 'localtime', 'start of day')) AS todayStart, strftime('%s', datetime('now', 'localtime', 'start of day', '+1 day', '-1 second')) AS todayEnd FROM followUps) WHERE difference=1) AS f LEFT JOIN parties AS p ON p.id=f.partyId LEFT JOIN tasks AS t ON t.id=f.taskId WHERE followUpFor IS NOT NULL;")
+    suspend fun getTodaysFollowUps(): List<FollowUpsWithJoins>
+
     @Query("UPDATE FollowUps SET synced=0, reminderDate=:reminderDate, partyId=:partyId, followUpFor=:followUpFor WHERE id=:id")
     suspend fun updateFollowUp(id: Long, reminderDate: Long?, partyId: String, followUpFor: Short?)
 

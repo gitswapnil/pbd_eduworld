@@ -157,7 +157,7 @@ class PbdExecutivesUtils: Application() {
             PeriodicWorkRequestBuilder<ReminderService>(1, TimeUnit.DAYS).build()
 
         WorkManager.getInstance(context)
-            .enqueueUniquePeriodicWork("reminderManager", ExistingPeriodicWorkPolicy.REPLACE, reminderService)
+            .enqueueUniquePeriodicWork("reminderManager", ExistingPeriodicWorkPolicy.KEEP, reminderService)
     }
 
     fun stopReminder(context: Context) {
