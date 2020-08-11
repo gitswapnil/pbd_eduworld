@@ -89,6 +89,9 @@ class Modal extends React.Component {
 							<div className="modal-footer">
 								<button type="button" className="btn btn-secondary" data-dismiss="modal">Close</button>
 								{
+									this.props.customOkButton ?
+									this.props.customOkButton :
+									
 									this.props.onSave ? 
 									<button type="button" className="btn btn-primary" onClick={this.saveChanges.bind(this)}>Save changes</button>
 									: null
@@ -110,6 +113,7 @@ Modal.propTypes = {
 	onHide: PropTypes.func,
 	onShow: PropTypes.func,
 	onSave: PropTypes.func,
+	customOkButton: PropTypes.element
 }
 
 export default Modal;

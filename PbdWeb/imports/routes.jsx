@@ -14,6 +14,7 @@ if(Meteor.isClient) {
 
 	import Settings from './ui/components/Settings';
 	import CurrentStatus from './ui/components/CurrentStatus';
+	import Notifications from './ui/components/Notifications';
 	import Reports from './ui/components/Reports';
 	import History from './ui/components/History';
 	import CreateExecutives from './ui/components/CreateExecutives';
@@ -127,7 +128,7 @@ if(Meteor.isClient) {
 				renderComponent(		//If he is logged in, then go the specified page.
 					<Layout selectedSection="manageExecutives">
 						<NavigationTabs tabs={tabs}>
-							This is notifications Tab
+							<Notifications/>
 						</NavigationTabs>
 					</Layout>
 				);
