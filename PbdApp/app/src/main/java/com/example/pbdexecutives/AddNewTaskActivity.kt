@@ -197,7 +197,7 @@ class AddNewTaskActivity : AppCompatActivity() {
                     ))
                 }
 
-                PbdExecutivesUtils().syncData(applicationContext)
+                PbdExecutivesUtils.syncData(applicationContext)
 
                 val intent = Intent()
                 intent.putExtra("taskId", taskId)
@@ -557,7 +557,7 @@ class AddNewTaskActivity : AppCompatActivity() {
                 }
             }
 
-            PbdExecutivesUtils().syncData(applicationContext)
+            PbdExecutivesUtils.syncData(applicationContext)
 
             val intent = Intent()
             intent.putExtra("taskId", taskId)

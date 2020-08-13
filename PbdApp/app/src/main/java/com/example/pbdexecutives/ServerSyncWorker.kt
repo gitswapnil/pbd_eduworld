@@ -40,6 +40,11 @@ data class LocationObject(
     @SerializedName("createdAt") val createdAt: Long
 )
 
+data class UserDetailsObject(
+    @SerializedName("lastUpdatedAt") val lastUpdatedAt: Long,
+    @SerializedName("fcmToken") val fcmToken: String
+)
+
 data class TasksObject(
     @SerializedName("id") val id: Long,
     @SerializedName("type") val type: Short?,
@@ -69,7 +74,7 @@ data class RequestObject(
     @SerializedName("apiKey") val apiKey: String,
     @SerializedName("deletedIds") val deletedIds: List<DeletedIdsObject>,
     @SerializedName("locations") val locations: List<LocationObject>,
-    @SerializedName("lastUserDetails") val lastUserDetails: Long,
+    @SerializedName("userDetails") val userDetails: UserDetailsObject,
     @SerializedName("lastPartyDetails") val lastPartyDetails: Long,
     @SerializedName("tasks") val tasks: List<TasksObject>,
     @SerializedName("followUps") val followUps: List<FollowUpsObject>
@@ -143,7 +148,8 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                 }
 
                 //get User details last updatedAt
-                val lastUserDetails: Long = db.userDetailsDao().getCurrentUser().updatedAt
+                val userObject = db.userDetailsDao().getCurrentUser()
+                val userDetailsObject: UserDetailsObject = UserDetailsObject(lastUpdatedAt = userObject.updatedAt, fcmToken = userObject.fcmToken)
 
                 //get parties last updatedAt
                 val lastPartyDetails = db.partiesDao().getLastUpdatedParty()
@@ -194,13 +200,13 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                     apiKey = apiKey.toString(),
                     deletedIds = deletedIds,
                     locations = locations,
-                    lastUserDetails = lastUserDetails,
+                    userDetails = userDetailsObject,
                     lastPartyDetails = lastPartyUpdatedAt,
                     tasks = tasks,
                     followUps = followUps
                 )))
 
-                PbdExecutivesUtils().sendData(
+                PbdExecutivesUtils.sendData(
                     applicationContext,
                     "syncdata",
                     requestJSONObject,
@@ -293,7 +299,7 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                     { code, error ->
                         Log.i("pbdLog", "Error...${error}")
                         if(code == 401) {       //401 means, the user's password is changed by the admin
-                            PbdExecutivesUtils().logoutUser(applicationContext)
+                            PbdExecutivesUtils.logoutUser(applicationContext)
                         }
                         Log.i("pbdLog", "Sync worker finished.")
                         completer.setException(Throwable(error.toString()))

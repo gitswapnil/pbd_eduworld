@@ -98,12 +98,12 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         when (requestCode) {
-            PbdExecutivesUtils().REQUEST_CHECK_LOCATION_SETTINGS ->
+            PbdExecutivesUtils.REQUEST_CHECK_LOCATION_SETTINGS ->
                 when(resultCode) {
                     Activity.RESULT_OK -> {
                         Log.i("pbdLog", "Settings are changed successfully.")
 //                        findViewById<TextView>(R.id.textView2).text = ""
-                        PbdExecutivesUtils().startTrackingService(applicationContext);
+                        PbdExecutivesUtils.startTrackingService(applicationContext);
                     }
                     Activity.RESULT_CANCELED -> {
                         Log.i("pbdLog", "Settings are not changed. Hence cannot assign on duty.")
@@ -131,7 +131,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         task.addOnSuccessListener { locationSettingsResponse ->
             // All location settings are satisfied. The client can initialize
             // location requests here.
-            PbdExecutivesUtils().startTrackingService(applicationContext);
+            PbdExecutivesUtils.startTrackingService(applicationContext);
         }
 
         task.addOnFailureListener { exception ->
@@ -141,7 +141,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 try {
                     // Show the dialog by calling startResolutionForResult(),
                     // and check the result in onActivityResult().
-                    exception.startResolutionForResult(this, PbdExecutivesUtils().REQUEST_CHECK_LOCATION_SETTINGS)
+                    exception.startResolutionForResult(this, PbdExecutivesUtils.REQUEST_CHECK_LOCATION_SETTINGS)
                 } catch (sendEx: IntentSender.SendIntentException) {
                     // Ignore the error.
                 }
@@ -155,7 +155,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         permissions: Array<String>,
         grantResults: IntArray
     ) {
-        if (requestCode == PbdExecutivesUtils().PERMISSION_REQUEST_FINE_ACCESS) {
+        if (requestCode == PbdExecutivesUtils.PERMISSION_REQUEST_FINE_ACCESS) {
             // Request for camera permission.
             if (grantResults.size == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 // Permission has been granted. Start camera preview Activity.
@@ -192,7 +192,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         setPositiveButton(R.string.ok,
                             DialogInterface.OnClickListener { dialog, id ->
                                 // User clicked OK button
-                                ActivityCompat.requestPermissions(it, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PbdExecutivesUtils().PERMISSION_REQUEST_FINE_ACCESS);
+                                ActivityCompat.requestPermissions(it, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PbdExecutivesUtils.PERMISSION_REQUEST_FINE_ACCESS);
                             })
                         setNegativeButton(R.string.cancel,
                             DialogInterface.OnClickListener { dialog, id ->
@@ -219,7 +219,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 alertDialog?.show();        //show user the reason for the need of location access.
             } else {
                 //if requesting for the very first time.
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PbdExecutivesUtils().PERMISSION_REQUEST_FINE_ACCESS)
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PbdExecutivesUtils.PERMISSION_REQUEST_FINE_ACCESS)
             }
         }
         return true;
@@ -232,7 +232,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 //            findViewById<TextView>(R.id.textView2).text = "";
             checkLocationPermissionAndSettings();      //check for the permissions.
         } else {            //if the duty is OFF
-            PbdExecutivesUtils().stopTrackingService(applicationContext);
+            PbdExecutivesUtils.stopTrackingService(applicationContext);
         }
     }
 
@@ -315,7 +315,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         builder.setView(this.layoutInflater.inflate(R.layout.getting_location_object, null))
             // Add action buttons
             .setNegativeButton(R.string.cancel, DialogInterface.OnClickListener { dialog, id ->
-                PbdExecutivesUtils().stopTrackingService(applicationContext)
+                PbdExecutivesUtils.stopTrackingService(applicationContext)
             })
             .setCancelable(false)
 
@@ -372,7 +372,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     }
 
     private fun userLoginStatusMonitor() {
-        val filter = IntentFilter(PbdExecutivesUtils().actionUserLoggedOut)
+        val filter = IntentFilter(PbdExecutivesUtils.actionUserLoggedOut)
         val newIntent = Intent(this, MainActivity::class.java)        //go to home activity after save
 
         userLoginStateReceiver = object : BroadcastReceiver() {         //receiver always called only when the duty switch is OFF.
@@ -404,7 +404,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     override fun onResume() {
         super.onResume()
 
-        dutySwitch(PbdExecutivesUtils().isMyServiceRunning(applicationContext, TrackingService::class.java)); //check if the service is running or not.
+        dutySwitch(PbdExecutivesUtils.isMyServiceRunning(applicationContext, TrackingService::class.java)); //check if the service is running or not.
         locationObjectMonitor()
         gpsSwitchMonitor()         //Keep monitoring the switch state.
         calculateDutyTime()

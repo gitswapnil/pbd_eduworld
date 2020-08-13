@@ -170,7 +170,7 @@ class AddNewReceiptActivity : AppCompatActivity() {
         val ddNo = if(paidBy == 2) dd_no.text.toString() else ""
         val payment = if(payment_radio_group.checkedRadioButtonId == R.id.payment_full) 1 else 0
 
-        if(!PbdExecutivesUtils().isInternetExists(this)) {
+        if(!PbdExecutivesUtils.isInternetExists(this)) {
             Snackbar.make(add_new_receipt_layout, "${getString(R.string.cannot_generate_the_receipt)} ${getString(R.string.no_internet_connection)}", Snackbar.LENGTH_LONG).show()
             return
         }

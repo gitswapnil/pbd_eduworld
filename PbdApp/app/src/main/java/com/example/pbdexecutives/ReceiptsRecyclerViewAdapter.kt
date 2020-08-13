@@ -9,9 +9,6 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.Fragment
-
-import com.example.pbdexecutives.dummy.DummyContent.DummyItem
-import com.google.gson.annotations.SerializedName
 import kotlin.reflect.KFunction2
 
 data class ReceiptsListItemModel(

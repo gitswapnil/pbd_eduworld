@@ -1,5 +1,7 @@
 import { Accounts } from 'meteor/accounts-base';
 import { Random } from 'meteor/random';
+import admin from "firebase-admin"; 
+import { firebaseServiceAccountKey } from 'meteor/pbd-apis';
 
 //Script for creating roles.
 export const createRoles = () => {
@@ -46,9 +48,17 @@ const seedData = () => {
 	console.log("Data seed complete.");
 }
 
+const initializeFirebaseServices = () => {
+	admin.initializeApp({
+		credential: admin.credential.cert(firebaseServiceAccountKey),
+		databaseURL: "https://pbd-executives.firebaseio.com"
+	});
+}
+
 const startupScripts = () => {
 	createRoles();
 	seedData();
+	initializeFirebaseServices();
 }
 
 export default startupScripts;

@@ -133,7 +133,7 @@ class TrackingService : Service() {
         var notificationBuider: Notification.Builder;
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {       //for API level 26 and above.
-            notificationBuider = Notification.Builder(this, PbdExecutivesUtils().CHANNEL_ID);
+            notificationBuider = Notification.Builder(this, PbdExecutivesUtils.CHANNEL_ID);
         } else {
             notificationBuider = Notification.Builder(this);
         }
@@ -197,7 +197,7 @@ class TrackingService : Service() {
                 val location = Locations(latitude = newLocation.latitude, longitude = newLocation.longitude, sessionId = sessionId, createdAt = Date().time.toLong(), synced = false)
                 db.locationsDao().saveLocation(location)        //store the apiKey in local database.
                 broadcastLocationUpdate()
-                PbdExecutivesUtils().syncData(applicationContext)
+                PbdExecutivesUtils.syncData(applicationContext)
             } catch(e: Exception) {
                 Log.i("pbdLog", "Unable to store the location, exception: ${e}");
             }

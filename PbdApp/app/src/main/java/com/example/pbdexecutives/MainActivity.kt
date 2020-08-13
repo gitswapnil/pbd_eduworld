@@ -21,11 +21,14 @@ import com.android.volley.Request
 import com.android.volley.Response
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
+import com.google.android.gms.tasks.OnCompleteListener
+import com.google.firebase.iid.FirebaseInstanceId
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.*
 import org.json.JSONObject
 import java.text.DecimalFormat
+import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.CoroutineContext
 
@@ -37,7 +40,7 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
             val name = "PBD Navigation Service Channel"
             val descriptionText = "This is navigation notification description"
             val importance = NotificationManager.IMPORTANCE_DEFAULT
-            val channel = NotificationChannel(PbdExecutivesUtils().CHANNEL_ID, name, importance).apply {
+            val channel = NotificationChannel(PbdExecutivesUtils.CHANNEL_ID, name, importance).apply {
                 description = descriptionText
             }
             // Register the channel with the system
@@ -100,7 +103,7 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
     private fun restoreData(apiKey: String, offset: Long, limit: Int, callback: () -> Unit) {
         val jsonRequestObject: JSONObject = JSONObject("{\"apiKey\": \"${apiKey}\", \"offset\": $offset, \"limit\": $limit}")
 
-        PbdExecutivesUtils().sendData(
+        PbdExecutivesUtils.sendData(
             this,
             "restoredata",
             jsonRequestObject,
@@ -199,7 +202,7 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
     }
 
     private fun callWorkerOnce(restoreFlag: Boolean, apiKey: String, onComplete: () -> Unit) {
-        if(PbdExecutivesUtils().isInternetExists(applicationContext)) {
+        if(PbdExecutivesUtils.isInternetExists(applicationContext)) {
             if(restoreFlag) {
                 restoreData(apiKey, 0, 100) {
                     syncOnce(onComplete)
@@ -213,15 +216,15 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
     }
 
     private fun gotoLogin() {
-        PbdExecutivesUtils().stopSyncing(applicationContext)
-        PbdExecutivesUtils().stopReminder(applicationContext)
+        PbdExecutivesUtils.stopSyncing(applicationContext)
+        PbdExecutivesUtils.stopReminder(applicationContext)
         startActivity(Intent(this@MainActivity, LoginActivity::class.java))
         finishAffinity()       //remove the current activity from the activity stack so that back button makes it jump out of the application.
     }
 
     private fun gotoHome() {
-        PbdExecutivesUtils().syncData(applicationContext)   //Start the background work that syncs the data to the server
-        PbdExecutivesUtils().startReminder(applicationContext)
+        PbdExecutivesUtils.syncData(applicationContext)   //Start the background work that syncs the data to the server
+        PbdExecutivesUtils.startReminder(applicationContext)
         startActivity(Intent(this@MainActivity, HomeActivity::class.java))
         finishAffinity()       //remove the current activity from the activity stack so that back button makes it jump out of the application.
     }
@@ -247,15 +250,31 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
 
             //update and check the data
             callWorkerOnce(restoreData, apiKey) {
-                this@MainActivity.lifecycleScope.launch {
-                    val newApiKey: String? = db.userDetailsDao().getApiKey()
-                    Log.i("pbdLog", "newApiKey: $newApiKey")
-                    if(newApiKey == null) {
-                        gotoLogin()
-                    } else {
-                        gotoHome()
-                    }
-                }
+                FirebaseInstanceId.getInstance().instanceId
+                    .addOnCompleteListener(OnCompleteListener { task ->
+                        if (!task.isSuccessful) {
+                            Log.w("pbdLog", "FCM token fetch failed", task.exception)
+                            Toast.makeText(this@MainActivity, "FCM token fetch failed ${task.exception}", Toast.LENGTH_LONG).show()
+                        }
+
+                        val token = task.result?.token
+                        Log.d("pbdLog", token)
+
+                        this@MainActivity.lifecycleScope.launch {
+                            val newApiKey: String? = db.userDetailsDao().getApiKey()
+                            Log.i("pbdLog", "newApiKey: $newApiKey")
+
+                            if(token != null) {
+                                db.userDetailsDao().updateToken(token = token)
+                            }
+
+                            if(newApiKey == null) {
+                                gotoLogin()
+                            } else {
+                                gotoHome()
+                            }
+                        }
+                    })
             }
         }
     }

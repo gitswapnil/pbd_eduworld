@@ -81,7 +81,7 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun userLoginStatusMonitor() {
-        val filter = IntentFilter(PbdExecutivesUtils().actionUserLoggedOut)
+        val filter = IntentFilter(PbdExecutivesUtils.actionUserLoggedOut)
         val newIntent = Intent(this, MainActivity::class.java)        //go to home activity after save
 
         userLoginStateReceiver = object : BroadcastReceiver() {         //receiver always called only when the duty switch is OFF.
@@ -105,7 +105,7 @@ class ProfileActivity : AppCompatActivity() {
                 setPositiveButton(R.string.yes,
                     DialogInterface.OnClickListener { dialog, id ->
                         // User clicked OK button
-                        PbdExecutivesUtils().logoutUser(applicationContext)
+                        PbdExecutivesUtils.logoutUser(applicationContext)
                     })
                 setNegativeButton(R.string.no,
                     DialogInterface.OnClickListener { dialog, id ->

@@ -71,6 +71,11 @@ Meteor.users.attachSchema(new SimpleSchema({
     	optional: true
     },
 
+    "appToken": {
+        type: String,
+        optional: true
+    },
+
     "active": {
     	type: Boolean,
     },

@@ -104,7 +104,7 @@ class ReminderIntentService: IntentService("ReminderIntentService") {
         val pendingIntent: PendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)
 
         var notificationBuilder: NotificationCompat.Builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {       //for API level 26 and above.
-            NotificationCompat.Builder(context, PbdExecutivesUtils().CHANNEL_ID);
+            NotificationCompat.Builder(context, PbdExecutivesUtils.CHANNEL_ID);
         } else {
             NotificationCompat.Builder(context);
         }

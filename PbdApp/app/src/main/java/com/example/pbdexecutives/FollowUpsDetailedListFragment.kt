@@ -12,7 +12,6 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.lifecycle.lifecycleScope
 import androidx.room.Room
-import com.example.pbdexecutives.dummy.DummyContent
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*

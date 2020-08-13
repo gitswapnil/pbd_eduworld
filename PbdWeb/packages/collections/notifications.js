@@ -20,7 +20,8 @@ notifications.attachSchema(new SimpleSchema({
 		type: Array
 	},
 	"execIds.$": {
-		type: String
+		type: String,
+		regEx: SimpleSchema.RegEx.Id
 	},
 	"createdAt": { 
 		type: Date

@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "642306576897",
+    "firebase_url": "https://pbd-executives.firebaseio.com",
+    "project_id": "pbd-executives",
+    "storage_bucket": "pbd-executives.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:642306576897:android:e3d4fe36928d0dab896600",
+        "android_client_info": {
+          "package_name": "com.example.pbdexecutives"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "642306576897-ilvgg0kauosdiv9ec4d2fh9kg8mviqr4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfo0eJro-VLTvnBqWxwNXO8QUtTem114Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "642306576897-ilvgg0kauosdiv9ec4d2fh9kg8mviqr4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

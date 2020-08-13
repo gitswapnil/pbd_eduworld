@@ -17,7 +17,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.example.pbdexecutives.dummy.DummyContent
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.android.synthetic.main.fragment_follow_ups_list.*
 import kotlinx.android.synthetic.main.fragment_my_tasks_list.*

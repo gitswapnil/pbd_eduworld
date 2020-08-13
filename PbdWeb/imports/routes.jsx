@@ -300,7 +300,10 @@ if(Meteor.isClient) {
 					createdAt: timeStamp<Long Int>
 				}, ...
 			],
-			lastUserDetails: timestamp<Long Int>,
+			userDetails: {
+				lastUpdatedAt: timestamp<Long Int>,
+				fcmToken: String
+			},
 			lastPartyDetails: timestamp<Long Int>,
 			tasks: [
 				{
@@ -326,7 +329,10 @@ if(Meteor.isClient) {
     				serverId: String?,
     				createdAt: Long,
 				}, ...
-			]
+			],
+			firebaseData: {
+				token: String
+			}
 			notifications: timestamp<Long Int>
 		}
 		return: {
@@ -421,12 +427,12 @@ if(Meteor.isClient) {
 		return;
 	};
 
-	const getUserDetails = async (user, lastUserDetails) => {
-		if(lastUserDetails) {
+	const getUserDetails = async (user, userDetails) => {
+		if(userDetails) {
 			try {
 				const dbUserUpdatedAt = moment(user.updatedAt).unix() * 1000;		//convert the timeStamps to milliseconds
 
-				if(lastUserDetails < dbUserUpdatedAt) {		//if app's updatedAt is less than web's then only send app the updated values
+				if(userDetails.lastUpdatedAt < dbUserUpdatedAt) {		//if app's updatedAt is less than web's then only send app the updated values
 					return {
 						name: user.profile.name || "Unassigned",
 						phoneNo: user.username,
@@ -436,6 +442,10 @@ if(Meteor.isClient) {
 						receiptSeries: user.profile.receiptSeries || "",
 						updatedAt: dbUserUpdatedAt
 					}
+				}
+
+				if(userDetails.fcmToken && (typeof userDetails.fcmToken === "string")) {
+					Meteor.users.update({ _id: user._id }, { $set: { "appToken": userDetails.fcmToken } }, { multi: false });
 				}
 
 				return;
@@ -689,7 +699,6 @@ if(Meteor.isClient) {
 		return;
 	};
 
-
 	Router.route('/api/syncdata', {where: 'server'}).post(function(req, res, next){
 		console.log("API: syncdata invoked.");
 		const reqBody = req.body;
@@ -736,7 +745,7 @@ if(Meteor.isClient) {
 			return;
 		});
 
-		const userDetailsApi = getUserDetails(user, reqBody.lastUserDetails).catch(err => {
+		const userDetailsApi = getUserDetails(user, reqBody.userDetails).catch(err => {
 			res.end(JSON.stringify({error: true, message: err.message, code: 500}));
 			return;
 		});
@@ -751,6 +760,7 @@ if(Meteor.isClient) {
 			return;
 		});
 
+		// !!!!!!!!Do not uncomment this because it is kept as only old reference!!!!!
 		// const followUpsApi = .catch(err => {
 		// 	res.end(JSON.stringify({error: true, message: err.message, code: 400}));
 		// 	return;
@@ -768,7 +778,7 @@ if(Meteor.isClient) {
 				userDetails: values[2],
 				partyDetails: values[3],
 				taskIds: values[4],
-				followUpIds: followUpsRetIds
+				followUpIds: followUpsRetIds,
 			}
 			
 			console.log(`return Message: ${JSON.stringify(message)}`);
@@ -1279,4 +1289,69 @@ if(Meteor.isClient) {
 			})
 		});
 	});
+
+
+	// /*
+	// 	params: {
+	// 		apiKey: String, 
+	// 		token: String,
+	// 	},
+	// 	return: {
+	// 		error: Boolean, 
+	// 		message: "ServerId",
+	// 		code: Integer
+	// 	}	if error is false then message is the apiKey for that user.
+	// */
+
+	// Router.route('/api/updateRegistrationToken', {where: 'server'}).post(function(req, res, next){
+	// 	console.log("API: updateRegistrationToken invoked.");
+	// 	const reqBody = req.body;
+
+	// 	//if request body is not defined, then return error
+	// 	if(!reqBody) {
+	// 		res.end(JSON.stringify({error: true, message: "reqBody must have atleast an apiKey. requset body is null.", code: 400}));
+	// 		return;
+	// 	}
+
+	// 	console.log("updateRegistrationToken reqBody: " + JSON.stringify(reqBody));
+	// 	//first check for the APIkey;
+	// 	console.log("apiKey: " + reqBody.apiKey);
+	// 	if(!reqBody.apiKey || (typeof reqBody.apiKey !== "string") || reqBody.apiKey.length !== 32) {
+	// 		res.end(JSON.stringify({error: true, message: "Invalid API key. Please check and try again.", code: 400}));
+	// 		return;
+	// 	}
+
+	// 	const user = Meteor.users.findOne({"apiKey": reqBody.apiKey});
+	// 	if(!user) {
+	// 		res.end(JSON.stringify({error: true, message: "Unkonwn API key.", code: 401}));
+	// 		return;
+	// 	}
+
+	// 	if(!user.active) {		//the user should be an active user
+	// 		res.end(JSON.stringify({error: true, message: "Inactive User.", code: 401}));
+	// 		return;
+	// 	}
+
+	// 	if(!Roles.userIsInRole(user._id, "executive", Roles.GLOBAL_GROUP)){		//if the user does not have administrative rights.
+	// 		res.end(JSON.stringify({error: true, message: "User does not have the rights to access mobile app.", code: 400}));
+	// 		return;
+	// 	}
+
+	// 	if(!reqBody.token || (typeof reqBody.token !== "string")) {
+	// 		res.end(JSON.stringify({error: true, message: "Invalid token. Please check and try again.", code: 400}));
+	// 		return;
+	// 	}
+
+	// 	const oldToken = Collections.appTokens.findOne({ userId: user._id });
+	// 	let serverId;
+
+	// 	if(oldToken) {
+	// 		serverId = oldToken._id;
+	// 		Collections.appTokens.update({ _id: oldToken._id }, { $set: { token: reqBody.token, userId: user._id, createdAt: new Date() } }, { multi: false });
+	// 	} else {
+	// 		serverId = Collections.appTokens.insert({ token: reqBody.token, userId: user._id, createdAt: new Date() });
+	// 	}
+
+	// 	res.end(JSON.stringify({error: false, message: serverId, code: 200}));
+	// });
 }

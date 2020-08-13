@@ -246,7 +246,7 @@ class ReceiptPreviewActivity : AppCompatActivity() {
                     ))
                 ))
 
-            PbdExecutivesUtils().sendData(this@ReceiptPreviewActivity, "generatereceipt", requestJSONObject,
+            PbdExecutivesUtils.sendData(this@ReceiptPreviewActivity, "generatereceipt", requestJSONObject,
                 { code, response ->
                     Log.i("pbdLog", "response: $response")
                     val responseObject = Gson().fromJson(

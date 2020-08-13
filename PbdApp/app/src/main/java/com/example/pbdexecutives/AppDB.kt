@@ -42,6 +42,7 @@ data class UserDetails (
     @ColumnInfo(typeAffinity = ColumnInfo.BLOB) val img: ByteArray,
     val address: String,
     val receiptSeries: String,
+    val fcmToken: String,
     val updatedAt: Long
 ) {
     override fun equals(other: Any?): Boolean {
@@ -58,6 +59,7 @@ data class UserDetails (
         if (!img.contentEquals(other.img)) return false
         if (address != other.address) return false
         if (receiptSeries != other.receiptSeries) return false
+        if (fcmToken != other.fcmToken) return false
         if (updatedAt != other.updatedAt) return false
 
         return true
@@ -72,6 +74,7 @@ data class UserDetails (
         result = 31 * result + img.contentHashCode()
         result = 31 * result + address.hashCode()
         result = 31 * result + receiptSeries.hashCode()
+        result = 31 * result + fcmToken.hashCode()
         result = 31 * result + updatedAt.hashCode()
         return result
     }
@@ -84,6 +87,9 @@ interface UserDetailsDAO {
 
     @Query("SELECT apiKey FROM UserDetails ORDER BY ID DESC LIMIT 1")
     suspend fun getApiKey(): String
+
+    @Query("UPDATE UserDetails SET fcmToken=:token WHERE id=1")
+    suspend fun updateToken(token: String)
 
     @Query("DELETE FROM UserDetails")
     suspend fun clearUserDetails()
@@ -344,7 +350,6 @@ interface ReceiptsDAO{
     @Query("DELETE FROM Receipts")
     suspend fun clearReceipts()
 }
-
 
 @Database (entities = [ DeletedIds::class,
                         UserDetails::class,

@@ -4,6 +4,8 @@ import SimpleSchema from 'simpl-schema';
 import { ReactiveVar } from 'meteor/reactive-var';
 
 if(Meteor.isServer) {
+	import admin from "firebase-admin";
+
 	Meteor.publish('notifications.getAll', function(){
 		console.log("Publishing the notifications.getAll...");
 		//authorization
@@ -44,6 +46,42 @@ if(Meteor.isServer) {
 			this.ready();
 		}
 	});
+
+	Meteor.methods({
+		'notifications.send'(notificationData) {
+			console.log("Sending the notification...");
+			console.log("notificationData: " + JSON.stringify(notificationData));
+
+			if(Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
+				let tokens = [];
+				notificationData.execIds.forEach(execId => {
+					const user = Meteor.users.findOne({ _id: execId });
+					if(user.appToken && (typeof user.appToken === "string")) {
+						tokens.push(user.appToken);
+					}
+				});
+
+				var message = {
+				  	// data: {
+				   //  	score: '850',
+				   //  	time: '2:45'
+				  	// },
+				  	notification: {
+				  		title: "PBD Execs",
+				  		body: notificationData.text
+				  	},
+				  	tokens: tokens
+				};
+
+				admin.messaging().sendMulticast(message).then((response) => {
+					console.log('Successfully sent message:', response);
+				}).catch((error) => {
+					console.log('Error sending message:', error);
+				});
+			};
+
+		}
+	})
 }
 
 let reactiveError = new ReactiveVar("{}");
@@ -106,15 +144,21 @@ Meteor.methods({
 		if(Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {		//authorization
 			console.log("Inserting notification...");
 
-			Collections.notifications.insert({
+			const notificationContent = {
 				text: cleanedInputs.notificationText,
 				img: cleanedInputs.notificationImg,
 				type: cleanedInputs.notificationType,
 				execIds: cleanedInputs.selectedExIds,
 				createdAt: new Date(),
-			});
+			};
 
-			console.log("Notification inserted...");
+			Collections.notifications.insert(notificationContent);
+
+			console.log("Notification inserted. Now sending the notification...");
+
+			if(!this.isSimulation) {
+				Meteor.call("notifications.send", notificationContent);
+			}
 		}
 
 		console.log("notifications.sendNotification method is completed successfully.");
