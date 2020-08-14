@@ -120,6 +120,7 @@
     <string name="invalid_amount">Invalid Amount, Please enter proper amount</string>
     <string name="getting_location">\u0020Getting Location, Please Wait...</string>
     <string name="follow_up_reminder">Follow Up Reminder</string>
+    <string name="info">Information</string>
 
     <string-array name="task_done_questions">
         <item>Done with Sampling?</item>

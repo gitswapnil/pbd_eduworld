@@ -50,31 +50,49 @@ if(Meteor.isServer) {
 	Meteor.methods({
 		'notifications.send'(notificationData) {
 			console.log("Sending the notification...");
-			console.log("notificationData: " + JSON.stringify(notificationData));
+			// console.log("notificationData: " + JSON.stringify(notificationData));
 
 			if(Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
 				let tokens = [];
-				notificationData.execIds.forEach(execId => {
-					const user = Meteor.users.findOne({ _id: execId });
+
+				notificationData.execs.forEach(exec => {
+					const user = Meteor.users.findOne({ _id: exec.id });
 					if(user.appToken && (typeof user.appToken === "string")) {
 						tokens.push(user.appToken);
 					}
 				});
 
 				var message = {
-				  	// data: {
-				   //  	score: '850',
-				   //  	time: '2:45'
-				  	// },
-				  	notification: {
-				  		title: "PBD Execs",
-				  		body: notificationData.text
+				  	data: {
+				    	type: notificationData.type,
+				    	text: notificationData.text,
 				  	},
+				  	// notification: {
+				  	// 	title: notificationData.type,
+				  	// 	body: notificationData.text
+				  	// },
 				  	tokens: tokens
 				};
 
+				if(notificationData.img) {					
+					message.data.img = Meteor.absoluteUrl(`api/notificationimg/${notificationData._id}`);
+				}
+
+				// console.log('message: ', JSON.stringify(message));
+
 				admin.messaging().sendMulticast(message).then((response) => {
+					let newExecArr = [...notificationData.execs];
 					console.log('Successfully sent message:', response);
+					if (response.successCount > 0) {
+						response.responses.forEach((resp, idx) => {
+					        if (resp.success) {
+					        	newExecArr[idx].status = true
+					        }
+				      	});
+
+				      	Collections.notifications.update({ _id: notificationData._id }, { $set: { execs: newExecArr } }, { multi: false });
+				    }
+
 				}).catch((error) => {
 					console.log('Error sending message:', error);
 				});
@@ -148,16 +166,16 @@ Meteor.methods({
 				text: cleanedInputs.notificationText,
 				img: cleanedInputs.notificationImg,
 				type: cleanedInputs.notificationType,
-				execIds: cleanedInputs.selectedExIds,
+				execs: cleanedInputs.selectedExIds.map(execId => { return { id: execId, status: false } }),
 				createdAt: new Date(),
 			};
 
-			Collections.notifications.insert(notificationContent);
+			const notificationId = Collections.notifications.insert(notificationContent);
 
 			console.log("Notification inserted. Now sending the notification...");
 
 			if(!this.isSimulation) {
-				Meteor.call("notifications.send", notificationContent);
+				Meteor.call("notifications.send", {...notificationContent, _id: notificationId});
 			}
 		}
 
@@ -221,19 +239,22 @@ if(Meteor.isClient) {
 
 		function fillModal(editId) {
 			const notification = Collections.notifications.findOne({ _id: editId });
+			console.log("notification: " + JSON.stringify(notification));
 			// const party = Meteor.users.findOne({"_id": editId});
 			setEditId(editId);
 			setNotificationText(notification.text);
-			console.log("notification.img: " + notification.img);
 			setNotificationImg(notification.img || "");
 			setNotificationType(notification.type);
 			
-			const exs = Meteor.users.find({ isExecutive: true }).map(executive => {
-				let selected = notification.execIds ? notification.execIds.indexOf(executive._id) != -1 : false;
-				return Object.assign(executive, { selected });
-			});
+			if(notification.execs) {
+				const exs = Meteor.users.find({ isExecutive: true }).map(executive => {
+					let executv = notification.execs.find(exec => exec.id === executive._id)
+					return Object.assign(executive, { selected: (typeof executv) !== "undefined", status: (executv && executv.status) });
+				});
 
-			setExecutives(exs);
+				setExecutives(exs);
+			}
+
 			setShowModal(true);
 		}
 
@@ -303,7 +324,7 @@ if(Meteor.isClient) {
 
 			Tracker.autorun(() => {
 				if(handle.ready()) {
-					let arr = Collections.notifications.find().map((doc, index) => {
+					let arr = Collections.notifications.find({}, { sort: { createdAt: -1 } }).map((doc, index) => {
 						return {
 							cells: [
 								{ content: (index + 1)}, 
@@ -484,7 +505,14 @@ if(Meteor.isClient) {
 														    					setExecutives(newExecutives);
 														    				}).bind(index)} 
 														    				id={`${executive._id}-${index}`}/>
-																	<label className="form-check-label" htmlFor={`${executive._id}-${index}`}>{executive.profile.name}</label>
+																	<label className="form-check-label" htmlFor={`${executive._id}-${index}`}>
+																		{executive.profile.name}&nbsp;
+																		{
+																			(typeof executive.status !== "undefined") ? 
+																				(executive.status) ? <small className="text-success">Sent</small> : <small className="text-danger">Failed</small>
+																			: null
+																		}
+																	</label>
 																</div>
 															</li>
 								      					)

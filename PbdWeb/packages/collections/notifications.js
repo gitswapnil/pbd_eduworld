@@ -16,12 +16,18 @@ notifications.attachSchema(new SimpleSchema({
 		type: String,
 		optional: true,
 	},
-	"execIds": {
+	"execs": {
 		type: Array
 	},
-	"execIds.$": {
+	"execs.$": {
+		type: Object,
+	},
+	"execs.$.id": {
 		type: String,
 		regEx: SimpleSchema.RegEx.Id
+	},
+	"execs.$.status": {
+		type: Boolean,
 	},
 	"createdAt": { 
 		type: Date

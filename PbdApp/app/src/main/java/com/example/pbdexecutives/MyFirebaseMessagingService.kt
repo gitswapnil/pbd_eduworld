@@ -3,25 +3,21 @@ package com.example.pbdexecutives
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.media.RingtoneManager
 import android.os.Build
-import android.os.IBinder
 import android.util.Log
-import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.room.Room
-import androidx.work.OneTimeWorkRequest
-import androidx.work.WorkManager
-import com.android.volley.DefaultRetryPolicy
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import org.json.JSONObject
-import java.util.*
+import java.io.IOException
+import java.net.URL
+
 
 class MyFirebaseMessagingService : FirebaseMessagingService() {
     /**
@@ -49,19 +45,19 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         if (remoteMessage.data.isNotEmpty()) {
             Log.d("pbdLog", "Message data payload: ${remoteMessage.data}")
 
-            if (/* Check if data needs to be processed by long running job */ true) {
+            if (false) {
                 // For long-running tasks (10 seconds or more) use WorkManager.
                 scheduleJob()
             } else {
                 // Handle message within 10 seconds
-                handleNow()
+                handleNow(remoteMessage.data)
             }
         }
 
         // Check if message contains a notification payload.
         remoteMessage.notification?.let {
             Log.d("pbdLog", "Message Notification Body: ${it.body}")
-            sendNotification(it.body.toString())
+//            sendNotification(it.body.toString())
         }
 
         // Also if you intend on generating your own notifications as a result of a received FCM
@@ -105,8 +101,12 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     /**
      * Handle time allotted to BroadcastReceivers.
      */
-    private fun handleNow() {
-        Log.d("pbdLog", "Short lived task is done.")
+    private fun handleNow(data: MutableMap<String, String>) {
+        val notificationTitle: String = if (data.get("type") == "info") getString(R.string.info) else getString(R.string.warning)
+        val notificationText: String = data.get("text").toString()
+        val notificationImg: String? = data.get("img")
+
+        sendNotification(notificationTitle, notificationText, notificationImg)
     }
 
     /**
@@ -114,7 +114,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
      *
      * @param messageBody FCM message body received.
      */
-    private fun sendNotification(messageBody: String) {
+    private fun sendNotification(title: String, text: String, imageUri: String?) {
         val intent = Intent(this, MainActivity::class.java)
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
         val pendingIntent = PendingIntent.getActivity(this, 0 /* Request code */, intent,
@@ -124,11 +124,24 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.drawable.pbd_notification_icon)
-            .setContentTitle(getString(R.string.app_name))
-            .setContentText(messageBody)
+            .setContentTitle(title)
+            .setContentText(text)
             .setAutoCancel(true)
             .setSound(defaultSoundUri)
             .setContentIntent(pendingIntent)
+
+        if(imageUri != null) {
+            try {
+                val url = URL(imageUri)
+                val image = BitmapFactory.decodeStream(url.openConnection().getInputStream())
+
+//                Log.i("pbdLog", "Bitmap: $image");
+                notificationBuilder.setStyle(NotificationCompat.BigPictureStyle().bigPicture(image).bigLargeIcon(null))
+
+            } catch (e: IOException) {
+                println(e)
+            }
+        }
 
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 

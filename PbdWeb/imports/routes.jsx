@@ -185,6 +185,32 @@ if(Meteor.isClient) {
 		params: { filename: String }
 		return: File
 	*/
+	Router.route('/api/notificationimg/:notificationId', {where: 'server'}).get(function(req, res, next) {
+		console.log("API: notificationimg invoked.");
+
+		const notificationId = this.params.notificationId;
+		console.log("notificationId: " + notificationId);
+
+		const notification = Collections.notifications.findOne({ _id: notificationId });
+		const base64Complete = notification.img.split(",");
+		const metaData = base64Complete[0].split(":")[1].split(";")[0];
+		const base64Data = base64Complete[1];
+		const buffer = Buffer.from(base64Data, 'base64')
+
+		const headers = {
+			'Content-type': metaData,
+			'Content-Disposition': `attachment; filename=${notificationId}.${metaData.split("/")[1]}`,
+			'Content-Length': buffer.length
+		};
+
+		res.writeHead(200, headers);
+		res.end(buffer);
+	});
+
+	/*	
+		params: { filename: String }
+		return: File
+	*/
 	Router.route('/api/downloadFile/:filename', {where: 'server'}).get(function(req, res, next) {
 		console.log("API: downloadFile invoked.");
 		console.log("filename: " + this.params.filename);
