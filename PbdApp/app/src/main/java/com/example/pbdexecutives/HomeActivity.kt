@@ -54,7 +54,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
     override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
         R.id.option_notifications -> {
-
+            startActivity(Intent(this, NotificationsActivity::class.java))
             true
         }
 

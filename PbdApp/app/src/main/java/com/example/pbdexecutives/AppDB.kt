@@ -351,13 +351,69 @@ interface ReceiptsDAO{
     suspend fun clearReceipts()
 }
 
+//Notifications
+@Entity(indices = [Index(value = ["id"], unique = true)])
+data class Notifications(
+    @SerializedName("id") @PrimaryKey val id: String,
+    @SerializedName("text") val text: String,
+    @SerializedName("type") val type: String,
+    @SerializedName("img") val img: ByteArray?,
+    @SerializedName("seen") val seen: Boolean,
+    @SerializedName("createdAt") val createdAt: Long
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Notifications
+
+        if (id != other.id) return false
+        if (text != other.text) return false
+        if (type != other.type) return false
+        if (img != null) {
+            if (other.img == null) return false
+            if (!img.contentEquals(other.img)) return false
+        } else if (other.img != null) return false
+        if (seen != other.seen) return false
+        if (createdAt != other.createdAt) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = id.hashCode()
+        result = 31 * result + text.hashCode()
+        result = 31 * result + type.hashCode()
+        result = 31 * result + (img?.contentHashCode() ?: 0)
+        result = 31 * result + seen.hashCode()
+        result = 31 * result + createdAt.hashCode()
+        return result
+    }
+}
+
+@Dao
+interface NotificationsDAO{
+    @Insert
+    suspend fun addNotifications(notifications: List<Notifications>)
+
+    @Query("SELECT * FROM Notifications ORDER BY createdAt DESC LIMIT :limit OFFSET :offset")
+    suspend fun getNotifications(limit: Int, offset: Int): List<Notifications>
+
+    @Query("SELECT * FROM Notifications ORDER BY createdAt DESC LIMIT 1")
+    suspend fun getLastUpdatedAt(): Notifications
+
+    @Query("DELETE FROM Notifications")
+    suspend fun clearNotifications()
+}
+
 @Database (entities = [ DeletedIds::class,
                         UserDetails::class,
                         Locations::class,
                         Parties::class,
                         Tasks::class,
                         FollowUps::class,
-                        Receipts::class], version = 1)
+                        Receipts::class,
+                        Notifications::class], version = 1)
 abstract class AppDB: RoomDatabase() {
     abstract fun deletedIdsDao(): DeletedIdsDAO
     abstract fun userDetailsDao(): UserDetailsDAO
@@ -366,5 +422,6 @@ abstract class AppDB: RoomDatabase() {
     abstract fun tasksDao(): TasksDAO
     abstract fun followUpsDao(): FollowUpsDAO
     abstract fun receiptsDao(): ReceiptsDAO
+    abstract fun notificationsDao(): NotificationsDAO
 }
 

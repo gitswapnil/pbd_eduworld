@@ -77,6 +77,7 @@ class PbdExecutivesUtils: Application() {
                 db.partiesDao().clearParties()
                 db.locationsDao().clearLocations()
                 db.receiptsDao().clearReceipts()
+                db.notificationsDao().clearNotifications()
 
                 //clear the worker if the user is logged out
                 WorkManager.getInstance(context).cancelUniqueWork("serversync")

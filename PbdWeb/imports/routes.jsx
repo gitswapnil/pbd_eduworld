@@ -359,7 +359,7 @@ if(Meteor.isClient) {
 			firebaseData: {
 				token: String
 			}
-			notifications: timestamp<Long Int>
+			notificationLastUpdatedAt: timestamp<Long Int>
 		}
 		return: {
 			error: Boolean, 
@@ -612,15 +612,14 @@ if(Meteor.isClient) {
 						}
 
 						let retData = { upsert: [], remove: [] };
-						console.log("docs: " + JSON.stringify(docs));
+						// console.log("docs: " + JSON.stringify(docs));
 						if(docs.length) {
 							retData.upsert = docs[0].upsert;
 							retData.remove = docs[0].remove;
 						}
 						resolve(retData);
-					})
-				})
-
+					});
+				});
 			});
 
 			return await partyDetails;
@@ -725,6 +724,70 @@ if(Meteor.isClient) {
 		return;
 	};
 
+	const getNotifications = async (userId, notificationLastUpdatedAt) => {
+		if(notificationLastUpdatedAt) {
+			let notificationsPromise = new Promise((resolve, reject) => {
+				const lastUpdatedAt = new Date(notificationLastUpdatedAt);
+
+				Collections.notifications.rawCollection().aggregate([
+					{
+				        $match: {
+				            "execs.id": userId,
+				            createdAt: { $gt: lastUpdatedAt }
+				        }
+				    },
+				    {
+				        $project: {
+				            _id: 1,
+				            text: 1,
+				            type: 1,
+				            img: { $arrayElemAt: [{ $split: [ "$img", "," ] }, 1] },
+				            createdAt: { $toLong: "$createdAt" }
+				        }
+				    },
+				    { $sort: { "createdAt": -1 } },
+				    {
+                        $group: {
+                            _id: null,
+                            docs: {
+                                $push: {
+                                    "id": "$_id",
+                                    "text": "$text",
+                                    "type": "$type",
+                                    "img": "$img",
+                                    "createdAt": "$createdAt",
+                                }
+                            }
+                        }
+                    }
+				], (error, cursor) => {
+					if(error) {
+						reject(new Error(error.message));
+						return;
+					} 
+
+					cursor.toArray((err, docs) => {
+						if(err) {
+							reject(new Error(err.message));
+							return;
+						}
+
+						let retData = [];
+						if(docs && docs.length) {
+							retData = [...docs[0].docs];
+						}
+
+						resolve(retData);
+					});
+				});
+			});
+
+			return await notificationsPromise
+		}
+
+		return;
+	};
+
 	Router.route('/api/syncdata', {where: 'server'}).post(function(req, res, next){
 		console.log("API: syncdata invoked.");
 		const reqBody = req.body;
@@ -781,6 +844,11 @@ if(Meteor.isClient) {
 			return;
 		});
 
+		const notificationsApi = getNotifications(user._id, reqBody.notificationLastUpdatedAt).catch(err => {
+			res.end(JSON.stringify({error: true, message: err.message, code: 500}));
+			return;
+		});
+
 		const tasksApi = storeTasks(user._id, reqBody.tasks).catch(err => {
 			res.end(JSON.stringify({error: true, message: err.message, code: 400}));
 			return;
@@ -793,7 +861,7 @@ if(Meteor.isClient) {
 		// });
 
 		const callAllFuncs = async () => {
-			const values = await Promise.all([deleteDocsApi, locationsApi, userDetailsApi, partyDetailsApi, tasksApi]);
+			const values = await Promise.all([deleteDocsApi, locationsApi, userDetailsApi, partyDetailsApi, notificationsApi, tasksApi]);
 
 			//this function is made separate because, it needs saved task ids
 			const followUpsRetIds = storeFollowUps(user._id, reqBody.followUps, values[4]);
@@ -803,7 +871,8 @@ if(Meteor.isClient) {
 				locationIds: values[1],
 				userDetails: values[2],
 				partyDetails: values[3],
-				taskIds: values[4],
+				notifications: values[4],
+				taskIds: values[5],
 				followUpIds: followUpsRetIds,
 			}
 			
@@ -1076,6 +1145,7 @@ if(Meteor.isClient) {
 				tasks: [],
 				receipts: [],
 				followUps: [],
+				parties: [],
 				notifications: [],
 				totalDataLength: Long,
 			}",
@@ -1137,10 +1207,52 @@ if(Meteor.isClient) {
 
 		Meteor.users.rawCollection().aggregate([
 			{
-		        $match: {
-		            _id: user._id
+		        $addFields: {
+		            "partyToAdd": { 
+		                $cond: [{ $isArray: "$availableTo" },
+		                        { $ne: [{ $indexOfArray: ["$availableTo", user._id] }, -1] },
+		                        "$$REMOVE"]
+		            },
 		        }
 		    },
+		    {
+		        $match: {
+		            $or: [
+		                { _id: user._id },
+		                { partyToAdd: true },
+		            ],
+		            "active": true
+			}
+		    },
+		    {
+		        $group: {
+		            _id: user._id,
+		            active: { $first: "$active" },
+		            createdAt: { $first: "$createdAt" },
+		            updatedAt: { $first: "$updatedAt" },
+		            username: { $first: "$username" },
+		            emails: { $first: "$emails" },
+		            apiKey: { $first: "$apiKey" },
+		            profile: { $first: "$profile" },
+		            appToken: { $first: "$appToken" },
+		            parties: { 
+		                $addToSet: {
+		                    $cond:[ {$eq: ["$partyToAdd", true]}, 
+		                        { 
+		                            "_id": "$_id",
+		                            "name": "$profile.name",
+		                            "code": "$username",
+		                            "cNumber": "$profile.phoneNumber",
+		                            "address": "$profile.address",
+		                            "updatedAt": { $toLong: "$updatedAt" },
+		                            "createdAt": "$createdAt"
+		                        }, 
+		                        "$$REMOVE"]
+		                }
+		            }
+		        }
+		    },
+    
 		    {
 		        $lookup: {
 		            from: "tasks",
@@ -1165,6 +1277,14 @@ if(Meteor.isClient) {
 		            as: "followUps",
 		        }
 		    },
+		    {
+		        $lookup: {
+		            from: "notifications",
+		            foreignField: "execs.id",
+		            localField: "_id",
+		            as: "notifications",
+		        }
+		    },
             { $unwind: "$receipts" },
             { $unwind: { path: "$receipts.cpList", preserveNullAndEmptyArrays: true } },
             { 
@@ -1185,7 +1305,9 @@ if(Meteor.isClient) {
                     profile: { $first: "$profile" },
                     tasks: { $first: "$tasks" },
                     receipts: { $addToSet: "$receipts" },
-                    followUps: { $first: "$followUps" }
+                    followUps: { $first: "$followUps" },
+                    parties: { $first: "$parties" },
+                    notifications: { $first: "$notifications" },
                 }
             },
             { $unwind: "$followUps" },
@@ -1195,7 +1317,11 @@ if(Meteor.isClient) {
                     username: 1,
                     emails: 1,
                     apiKey: 1,
-                    profile: 1,
+                    "profile.name": 1,
+                    "profile.phoneNumber": 1,
+                    "profile.address": 1,
+                    "profile.img": { $arrayElemAt: [{ $split: [ "$profile.img", "," ] }, 1] },
+                    "profile.receiptSeries": 1,
                     tasks: 1,
                     receipts: 1,
                     "followUps._id": 1,
@@ -1204,7 +1330,9 @@ if(Meteor.isClient) {
                     "followUps.taskId": 1,
                     "followUps.followUpFor": 1,
                     "followUps.userId": 1,
-                    "followUps.createdAt": 1
+                    "followUps.createdAt": 1,
+                    parties: 1,
+                    notifications: 1
                 }
             },
             {
@@ -1216,7 +1344,42 @@ if(Meteor.isClient) {
                     profile: { $first: "$profile" },
                     tasks: { $first: "$tasks" },
                     receipts: { $first: "$receipts" },
-                    followUps: { $addToSet: "$followUps" }
+                    followUps: { $addToSet: "$followUps" },
+                    parties: { $first: "$parties" },
+                    notifications: { $first: "$notifications" },
+                }
+            },
+            { $unwind: "$notifications" },
+            {
+                $project: {
+                    _id: 1,
+                    username: 1,
+                    emails: 1,
+                    apiKey: 1,
+                    profile: 1,
+                    tasks: 1,
+                    receipts: 1,
+                    followUps: 1,
+                    parties: 1,
+                    "notifications._id": 1,
+                    "notifications.type": 1,
+                    "notifications.text": 1,
+                    "notifications.img": { $arrayElemAt: [{ $split: [ "$notifications.img", "," ] }, 1] },
+                    "notifications.createdAt": 1,
+                }
+            },
+            {
+                $group: {
+                    _id: "$_id",
+                    username: { $first: "$username" },
+                    emails: { $first: "$emails" },
+                    apiKey: { $first: "$apiKey" },
+                    profile: { $first: "$profile" },
+                    tasks: { $first: "$tasks" },
+                    receipts: { $first: "$receipts" },
+                    followUps: { $first: "$followUps" },
+                    parties: { $first: "$parties" },
+                    notifications: { $addToSet: "$notifications" },
                 }
             },
 		    {
@@ -1224,6 +1387,8 @@ if(Meteor.isClient) {
 		            "tasks.row": "task",
 		            "receipts.row": "receipt",
 		            "followUps.row": "followUp",
+                    "parties.row": "party",
+                    "notifications.row": "notification",
 		        }
 		    },
 		    {
@@ -1232,7 +1397,7 @@ if(Meteor.isClient) {
 		            emails: 1,
 		            apiKey: 1,
 		            profile: 1,
-		            data: { $concatArrays: ["$tasks", "$receipts", "$followUps"] }
+		            data: { $concatArrays: ["$tasks", "$receipts", "$followUps", "$parties", "$notifications"] }
 		        }
 		    },
             { $unwind: "$data" },
@@ -1256,6 +1421,8 @@ if(Meteor.isClient) {
 		            tasks: { $addToSet: { $cond: [ { $eq: ["$data.row", "task"] }, "$data", 0] } },
 		            receipts: { $addToSet: { $cond: [ { $eq: ["$data.row", "receipt"] }, "$data", 0] } },
 		            followUps: { $addToSet: { $cond: [ { $eq: ["$data.row", "followUp"] }, "$data", 0] } },
+					parties: { $addToSet: { $cond: [ { $eq: ["$data.row", "party"] }, "$data", 0] } },
+					notifications: { $addToSet: { $cond: [ { $eq: ["$data.row", "notification"] }, "$data", 0] } },
 		        }
 		    },
 		    {
@@ -1286,10 +1453,24 @@ if(Meteor.isClient) {
 		                    cond: { $ne: ["$$followUp", 0] }
 		                }
 		            },
+                    parties: {
+		                $filter: {
+		                    input: "$parties",
+		                    as: "party",
+		                    cond: { $ne: ["$$party", 0] }
+		                }
+		            },
+		            notifications: {
+		                $filter: {
+		                    input: "$notifications",
+		                    as: "notification",
+		                    cond: { $ne: ["$$notification", 0] }
+		                }
+		            },
 		        }
 		    },
 		    {
-		        $unset: [ "tasks.row", "tasks.userId", "receipts.row", "receipts.userId", "followUps.row", "followUps.userId" ]
+		        $unset: [ "tasks.row", "tasks.userId", "receipts.row", "receipts.userId", "followUps.row", "followUps.userId", "parties.row", "parties.createdAt", "notifications.row" ]
 		    },
 		], (error, cursor) => {
 			if(error) {
@@ -1308,8 +1489,10 @@ if(Meteor.isClient) {
 				returnObj.tasks = [...docs[0].tasks];
 				returnObj.receipts = [...docs[0].receipts];
 				returnObj.followUps = [...docs[0].followUps];
+				returnObj.parties = [...docs[0].parties];
+				returnObj.notifications = [...docs[0].notifications];
 
-				returnObj.dataLength = returnObj.tasks.length +  returnObj.receipts.length + returnObj.followUps.length;
+				returnObj.dataLength = returnObj.tasks.length +  returnObj.receipts.length + returnObj.followUps.length + returnObj.parties.length + returnObj.notifications.length;
 
 				res.end(JSON.stringify({error: false, message: returnObj, code: 200}));
 			})

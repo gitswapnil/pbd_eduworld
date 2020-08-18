@@ -77,7 +77,8 @@ data class RequestObject(
     @SerializedName("userDetails") val userDetails: UserDetailsObject,
     @SerializedName("lastPartyDetails") val lastPartyDetails: Long,
     @SerializedName("tasks") val tasks: List<TasksObject>,
-    @SerializedName("followUps") val followUps: List<FollowUpsObject>
+    @SerializedName("followUps") val followUps: List<FollowUpsObject>,
+    @SerializedName("notificationLastUpdatedAt") val notificationLastUpdatedAt: Long
 )
 
 data class UserDetailsResponseObject(
@@ -105,13 +106,22 @@ data class FollowUpIdsResponseObject(
     @SerializedName("serverId") val serverId: String
 )
 
+data class NotificationsResponseObject(
+    @SerializedName("id") val id: String,
+    @SerializedName("type") val type: String,
+    @SerializedName("text") val text: String,
+    @SerializedName("img") val img: String?,
+    @SerializedName("createdAt") val createdAt: Long
+)
+
 data class MessageObject(
     @SerializedName("deletedIds") val deletedIds: List<Long>?,
     @SerializedName("locationIds") val locationIds: List<Long>?,
     @SerializedName("userDetails") val userDetails: UserDetailsResponseObject?,
     @SerializedName("partyDetails") val partyDetails: PartyDetailsResponseObject?,
     @SerializedName("taskIds") val taskIds: List<TaskIdsResponseObject>?,
-    @SerializedName("followUpIds") val followUpIds: List<FollowUpIdsResponseObject>?
+    @SerializedName("followUpIds") val followUpIds: List<FollowUpIdsResponseObject>?,
+    @SerializedName("notifications") val notifications: List<NotificationsResponseObject>?
 )
 
 class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): ListenableWorker(appContext, workerParams){
@@ -196,6 +206,14 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                     )
                 }
 
+                //get notifications last updatedAt
+                val lastNotification = db.notificationsDao().getLastUpdatedAt()
+                var lastNotificationUpdatedAt:Long = 1
+
+                if(lastNotification != null) {      //if the user is initially loading the data then Notifications table wont ne there hence check for the null rule
+                    lastNotificationUpdatedAt = lastNotification.createdAt
+                }
+
                 val requestJSONObject: JSONObject = JSONObject(Gson().toJson(RequestObject(
                     apiKey = apiKey.toString(),
                     deletedIds = deletedIds,
@@ -203,7 +221,8 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                     userDetails = userDetailsObject,
                     lastPartyDetails = lastPartyUpdatedAt,
                     tasks = tasks,
-                    followUps = followUps
+                    followUps = followUps,
+                    notificationLastUpdatedAt = lastNotificationUpdatedAt
                 )))
 
                 PbdExecutivesUtils.sendData(
@@ -279,6 +298,20 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                                 responseObject.followUpIds.forEach {
                                     db.followUpsDao().markFollowUpsSynced(id = it.id, serverId = it.serverId)
                                 }
+                            }
+
+                            if(responseObject.notifications != null && responseObject.notifications.isNotEmpty()) {
+                                val notifications: List<Notifications> = responseObject.notifications.map {
+                                    Notifications(
+                                        id = it.id,
+                                        type = it.type,
+                                        text = it.text,
+                                        img = if (it.img !== null) Base64.decode(it.img, Base64.DEFAULT) else ByteArray(0x0),
+                                        seen = false,
+                                        createdAt = it.createdAt
+                                    )
+                                }
+                                db.notificationsDao().addNotifications(notifications)
                             }
 
                             val dIds = db.deletedIdsDao().getUnsyncedDeletedIds()

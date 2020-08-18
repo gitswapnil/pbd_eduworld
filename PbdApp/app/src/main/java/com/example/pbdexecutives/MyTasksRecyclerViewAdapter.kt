@@ -21,7 +21,6 @@ data class MyTaskListItemModel(
 )
 
 class MyTasksRecyclerViewAdapter(
-    private val parentFragment: Fragment,
     private val values: List<MyTaskListItemModel?>
 ) : RecyclerView.Adapter<MyTasksRecyclerViewAdapter.ViewHolder>() {
 

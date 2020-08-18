@@ -52,7 +52,7 @@ class MyTasksFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_my_tasks_list, container, false)
         //change the action button's onclick
         listItems = ArrayList()
-        recyclerViewAdapter = MyTasksRecyclerViewAdapter(this, listItems)
+        recyclerViewAdapter = MyTasksRecyclerViewAdapter(listItems)
         // Set the adapter
         if (view is RecyclerView) {
             with(view) {
@@ -180,11 +180,7 @@ class MyTasksFragment : Fragment() {
         isLoading = true
         val db = Room.databaseBuilder(this@MyTasksFragment.context as Context, AppDB::class.java, "PbdDB").build()
         lifecycleScope.launch {
-            //remove the loading from the list
-            if(listItems[listItems.size - 1] == null) {
-                listItems.removeAt(listItems.size - 1)
-                recyclerViewAdapter.notifyItemRemoved(listItems.size)
-            }
+            var loadingIndex: Int? = if(listItems[listItems.size - 1] == null) (listItems.size - 1) else null
 
             val tasks = db.tasksDao().getTasks(limit, offset, searchQuery)
             if(tasks.isEmpty()) {
@@ -214,6 +210,12 @@ class MyTasksFragment : Fragment() {
 
             if(tasks.isNotEmpty()) {
                 offset += tasks.size
+            }
+
+            //Remove the loading sign if present
+            if(loadingIndex != null) {
+                listItems.removeAt(loadingIndex)
+                recyclerViewAdapter.notifyItemRemoved(loadingIndex)
             }
 
             if(tasks.size == limit) {

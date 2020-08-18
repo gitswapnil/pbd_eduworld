@@ -8,6 +8,7 @@ import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Handler
+import android.util.Base64
 import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.LifecycleOwner
@@ -88,14 +89,28 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
         @SerializedName("createdAt") val createdAt: Long
     )
 
+    data class PartyResponseObject (
+        @SerializedName("_id") val _id: String,
+        @SerializedName("code") val code: String,
+        @SerializedName("name") val name: String,
+        @SerializedName("cNumber") val cNumber: String,
+        @SerializedName("address") val address: String,
+        @SerializedName("updatedAt") val updatedAt: Long
+    )
+
     data class NotificationsResponseObject (
-        @SerializedName("_id") val _id: String
+        @SerializedName("_id") val _id: String,
+        @SerializedName("type") val type: String,
+        @SerializedName("text") val text: String,
+        @SerializedName("img") val img: String?,
+        @SerializedName("createdAt") val createdAt: Long
     )
 
     data class ResponseObject(
         @SerializedName("tasks") val tasks: List<TasksResponseObject>,
         @SerializedName("receipts") val receipts: List<ReceiptsResponseObject>,
         @SerializedName("followUps") val followUps: List<FollowUpsResponseObject>,
+        @SerializedName("parties") val parties: List<PartyResponseObject>,
         @SerializedName("notifications") val notifications: List<NotificationsResponseObject>,
         @SerializedName("dataLength") val dataLength: Int
     )
@@ -159,7 +174,7 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
 
                     if(responseObject.followUps != null && responseObject.followUps.isNotEmpty()) {
                         responseObject.followUps.forEach { followUp ->
-                            Log.i("pbdLog", "followUp: $followUp")
+//                            Log.i("pbdLog", "followUp: $followUp")
                             val task = db.tasksDao().getTaskFromServerId(followUp.taskId)
                             db.followUpsDao().addFollowUp(FollowUps(
                                 reminderDate = followUp.reminderDate,
@@ -171,6 +186,32 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
                                 createdAt = followUp.createdAt
                             ))
                         }
+                    }
+
+                    if(responseObject.parties != null && responseObject.parties.isNotEmpty()) {
+                        var partiesToBeAdded: List<Parties> = responseObject.parties.map { party -> Parties(
+                                id = party._id,
+                                code = party.code,
+                                name = party.name,
+                                cNumber = party.cNumber,
+                                address = party.address,
+                                updatedAt = party.updatedAt
+                            )
+                        }
+                        db.partiesDao().addParties(partiesToBeAdded)
+                    }
+
+                    if(responseObject.notifications != null && responseObject.notifications.isNotEmpty()) {
+                        val notificationsToBeAdded: List<Notifications> = responseObject.notifications.map { notification -> Notifications(
+                                id = notification._id,
+                                type = notification.type,
+                                text = notification.text,
+                                img = if(notification.img != null) Base64.decode(notification.img, Base64.DEFAULT) else ByteArray(0x0),
+                                seen = true,
+                                createdAt = notification.createdAt
+                            )
+                        }
+                        db.notificationsDao().addNotifications(notificationsToBeAdded)
                     }
 
                     Log.i("pbdLog", "responseObject.dataLength: ${responseObject.dataLength}, limit: $limit")
@@ -254,7 +295,7 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
                     .addOnCompleteListener(OnCompleteListener { task ->
                         if (!task.isSuccessful) {
                             Log.w("pbdLog", "FCM token fetch failed", task.exception)
-                            Toast.makeText(this@MainActivity, "FCM token fetch failed ${task.exception}", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@MainActivity, "FCM token fetch failed ${task.exception?.message}", Toast.LENGTH_LONG).show()
                         }
 
                         val token = task.result?.token

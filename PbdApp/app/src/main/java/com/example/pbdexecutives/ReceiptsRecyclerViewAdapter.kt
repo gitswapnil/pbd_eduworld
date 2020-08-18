@@ -23,7 +23,6 @@ data class ReceiptsListItemModel(
 )
 
 class ReceiptsRecyclerViewAdapter(
-    private val parentFragment: Fragment,
     private val values: List<ReceiptsListItemModel?>
 ) : RecyclerView.Adapter<ReceiptsRecyclerViewAdapter.ViewHolder>() {
 

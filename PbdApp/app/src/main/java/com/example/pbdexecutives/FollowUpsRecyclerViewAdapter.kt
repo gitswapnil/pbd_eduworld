@@ -26,7 +26,6 @@ data class FollowUpsListItemModel(
 )
 
 class FollowUpsRecyclerViewAdapter(
-    private val parentFragment: Fragment,
     private val values: List<FollowUpsListItemModel?>
 ) : RecyclerView.Adapter<FollowUpsRecyclerViewAdapter.ViewHolder>() {
 
