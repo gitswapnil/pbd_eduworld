@@ -102,6 +102,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
      * Handle time allotted to BroadcastReceivers.
      */
     private fun handleNow(data: MutableMap<String, String>) {
+        PbdExecutivesUtils.syncData(applicationContext)
+
         val notificationTitle: String = if (data.get("type") == "info") getString(R.string.info) else getString(R.string.warning)
         val notificationText: String = data.get("text").toString()
         val notificationImg: String? = data.get("img")

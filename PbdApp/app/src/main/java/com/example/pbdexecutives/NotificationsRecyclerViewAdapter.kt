@@ -84,11 +84,11 @@ class NotificationsRecyclerViewAdapter(
         if(item != null) {
             holder.notificationText.text = item.text
             if(item.type == "info") {
-                holder.notificationType.text = "Information"
+                holder.notificationType.text = parentContext.getString(R.string.info)
                 holder.notificationType.setTextColor(ContextCompat.getColor(parentContext, R.color.information))
                 holder.notificationTypeIcon.setImageDrawable(ContextCompat.getDrawable(parentContext, R.drawable.ic_baseline_info_12))
             } else {
-                holder.notificationType.text = "Warning"
+                holder.notificationType.text = parentContext.getString(R.string.warning)
                 holder.notificationType.setTextColor(ContextCompat.getColor(parentContext, R.color.warning))
                 holder.notificationTypeIcon.setImageDrawable(ContextCompat.getDrawable(parentContext, R.drawable.ic_outline_warning_12))
             }

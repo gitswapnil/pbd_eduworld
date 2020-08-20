@@ -2,10 +2,10 @@ package com.example.pbdexecutives
 
 import android.Manifest
 import android.app.Activity
-import android.app.Dialog
-import android.app.SearchManager
 import android.content.*
 import android.content.pm.PackageManager
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.LayerDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
@@ -14,7 +14,6 @@ import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
-import android.widget.SearchView
 import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -22,7 +21,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -33,6 +31,7 @@ import com.google.android.gms.tasks.Task
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.android.synthetic.main.activity_home.*
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -43,6 +42,38 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     private lateinit var gpsSwitchStateReceiver: BroadcastReceiver
     private lateinit var dutyTimeUpdateReceiver: BroadcastReceiver
     private lateinit var userLoginStateReceiver: BroadcastReceiver
+
+    override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
+        val db = Room.databaseBuilder(this, AppDB::class.java, "PbdDB").build()
+        GlobalScope.launch {
+            val count: Int = db.notificationsDao().getUnseenNotifications().count()
+
+            if(count != 0) {
+                setCount(this@HomeActivity, menu, count.toString())
+            }
+        }
+
+        return true
+    }
+
+    private fun setCount(context: Context, menu: Menu?, count: String?) {
+        val menuItem: MenuItem? = menu?.findItem(R.id.option_notifications)
+        val icon: LayerDrawable = menuItem?.icon as LayerDrawable
+        val badge: CountDrawable
+
+        // Reuse drawable if possible
+        val reuse: Drawable = icon.findDrawableByLayerId(R.id.ic_group_count)
+        badge = if (reuse != null && reuse is CountDrawable) {
+            reuse
+        } else {
+            val textSize: Float = context.resources.getDimension(R.dimen.badge_count_textsize)
+            val badgeColor: Int = R.color.colorAccent
+            CountDrawable(context, textSize, badgeColor)
+        }
+        badge.setCount(count!!)
+        icon.mutate()
+        icon.setDrawableByLayerId(R.id.ic_group_count, badge)
+    }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
 //        Log.i("pbdLog", "onCreateOptionsMenu called.")
@@ -61,11 +92,11 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         R.id.option_search -> {
             val intent = Intent(this, SearchActivity::class.java)
 
-            if(MyTasksFragment.selected) {
+            if (MyTasksFragment.selected) {
                 intent.putExtra("selectedTab", 0)
-            } else if(ReceiptsFragment.selected) {
+            } else if (ReceiptsFragment.selected) {
                 intent.putExtra("selectedTab", 1)
-            } else if(FollowUpsFragment.selected) {
+            } else if (FollowUpsFragment.selected) {
                 intent.putExtra("selectedTab", 2)
             }
 
@@ -99,7 +130,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         super.onActivityResult(requestCode, resultCode, data)
         when (requestCode) {
             PbdExecutivesUtils.REQUEST_CHECK_LOCATION_SETTINGS ->
-                when(resultCode) {
+                when (resultCode) {
                     Activity.RESULT_OK -> {
                         Log.i("pbdLog", "Settings are changed successfully.")
 //                        findViewById<TextView>(R.id.textView2).text = ""
@@ -107,9 +138,11 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                     }
                     Activity.RESULT_CANCELED -> {
                         Log.i("pbdLog", "Settings are not changed. Hence cannot assign on duty.")
-                        Snackbar.make(  findViewById<CoordinatorLayout>(R.id.home_layout),
-                                        R.string.location_not_enabled,
-                                        Snackbar.LENGTH_SHORT).show()
+                        Snackbar.make(
+                            findViewById<CoordinatorLayout>(R.id.home_layout),
+                            R.string.location_not_enabled,
+                            Snackbar.LENGTH_SHORT
+                        ).show()
                     }
                     else -> "Nothing"
                 }
@@ -141,7 +174,10 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 try {
                     // Show the dialog by calling startResolutionForResult(),
                     // and check the result in onActivityResult().
-                    exception.startResolutionForResult(this, PbdExecutivesUtils.REQUEST_CHECK_LOCATION_SETTINGS)
+                    exception.startResolutionForResult(
+                        this,
+                        PbdExecutivesUtils.REQUEST_CHECK_LOCATION_SETTINGS
+                    )
                 } catch (sendEx: IntentSender.SendIntentException) {
                     // Ignore the error.
                 }
@@ -163,10 +199,15 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 checkSettings();
             } else {
                 // Permission request was denied.
-                Log.i("pbdLog", "Location Permission is denied. To reactivate go to settings and change the location permission.");
-                val snackBar = Snackbar.make( findViewById<CoordinatorLayout>(R.id.home_layout),
+                Log.i(
+                    "pbdLog",
+                    "Location Permission is denied. To reactivate go to settings and change the location permission."
+                );
+                val snackBar = Snackbar.make(
+                    findViewById<CoordinatorLayout>(R.id.home_layout),
                     R.string.location_permission_denied,
-                    Snackbar.LENGTH_INDEFINITE)
+                    Snackbar.LENGTH_INDEFINITE
+                )
                 snackBar.setAction(R.string.settings){
                     startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                         data = Uri.fromParts("package", packageName, null)
@@ -184,7 +225,10 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             checkSettings();
         } else {
             //if location access is not yet granted.
-            if(ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
+            if(ActivityCompat.shouldShowRequestPermissionRationale(
+                    this,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                )) {
                 //if location access is not yet granted and you need to show the reason as to why it is important.
                 val alertDialog: AlertDialog? = this.let {
                     val builder = AlertDialog.Builder(it)
@@ -192,16 +236,25 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         setPositiveButton(R.string.ok,
                             DialogInterface.OnClickListener { dialog, id ->
                                 // User clicked OK button
-                                ActivityCompat.requestPermissions(it, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PbdExecutivesUtils.PERMISSION_REQUEST_FINE_ACCESS);
+                                ActivityCompat.requestPermissions(
+                                    it,
+                                    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                                    PbdExecutivesUtils.PERMISSION_REQUEST_FINE_ACCESS
+                                );
                             })
                         setNegativeButton(R.string.cancel,
                             DialogInterface.OnClickListener { dialog, id ->
                                 // User cancelled the dialog
-                                Log.i("pbdLog", "Location Permission is denied. To reactivate go to settings and change the location permission.");
-                                val snackBar = Snackbar.make( findViewById<CoordinatorLayout>(R.id.home_layout),
+                                Log.i(
+                                    "pbdLog",
+                                    "Location Permission is denied. To reactivate go to settings and change the location permission."
+                                );
+                                val snackBar = Snackbar.make(
+                                    findViewById<CoordinatorLayout>(R.id.home_layout),
                                     R.string.location_permission_denied,
-                                    Snackbar.LENGTH_INDEFINITE)
-                                snackBar.setAction(R.string.settings){
+                                    Snackbar.LENGTH_INDEFINITE
+                                )
+                                snackBar.setAction(R.string.settings) {
                                     startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                                         data = Uri.fromParts("package", packageName, null)
                                     })
@@ -219,13 +272,17 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                 alertDialog?.show();        //show user the reason for the need of location access.
             } else {
                 //if requesting for the very first time.
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), PbdExecutivesUtils.PERMISSION_REQUEST_FINE_ACCESS)
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                    PbdExecutivesUtils.PERMISSION_REQUEST_FINE_ACCESS
+                )
             }
         }
         return true;
     }
 
-    fun changeDuty (view: View) {
+    fun changeDuty(view: View) {
         val duty: Boolean = findViewById<Switch>(R.id.duty_switch).isChecked;
         dutySwitch(false);      //reset the duty switch first;
         if(duty) {          //if the duty is ON
@@ -257,7 +314,10 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
         this.lifecycleScope.launch {
             val db = Room.databaseBuilder(this@HomeActivity, AppDB::class.java, "PbdDB").build()
-            val result = db.locationsDao().getTodaysTimestamps(start = startOfToday, end = endOfToday)     //result contains timestamp strings.
+            val result = db.locationsDao().getTodaysTimestamps(
+                start = startOfToday,
+                end = endOfToday
+            )     //result contains timestamp strings.
             var todaysMilliseconds: Long = 0
             result.forEach { tsString ->        //split those strings into arrays.
                 val timestamps = tsString.split(",")
@@ -277,7 +337,9 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     }
 
     private fun changeDutyTime(hrs: Long, min: Long) {
-        findViewById<TextView>(R.id.duty_period).text = "${hrs.toString()} ${getString(R.string.hrs)} ${min.toString()} ${getString(R.string.mins)}"
+        findViewById<TextView>(R.id.duty_period).text = "${hrs.toString()} ${getString(R.string.hrs)} ${min.toString()} ${getString(
+            R.string.mins
+        )}"
     }
 
     private fun setTabConfigurations(selectedTab: Int) {
@@ -342,7 +404,10 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             }
         }
 
-        LocalBroadcastManager.getInstance(this).registerReceiver(locationObtainedStateReceiver, filter)
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+            locationObtainedStateReceiver,
+            filter
+        )
     }
 
     //This function monitors the state of the switch. It listens to the broadcast from the service
@@ -403,8 +468,13 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
     override fun onResume() {
         super.onResume()
-
-        dutySwitch(PbdExecutivesUtils.isMyServiceRunning(applicationContext, TrackingService::class.java)); //check if the service is running or not.
+        this.invalidateOptionsMenu()        //invalidate the menu so that it validate the notifications count again
+        dutySwitch(
+            PbdExecutivesUtils.isMyServiceRunning(
+                applicationContext,
+                TrackingService::class.java
+            )
+        ); //check if the service is running or not.
         locationObjectMonitor()
         gpsSwitchMonitor()         //Keep monitoring the switch state.
         calculateDutyTime()

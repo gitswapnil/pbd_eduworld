@@ -399,6 +399,15 @@ interface NotificationsDAO{
     @Query("SELECT * FROM Notifications ORDER BY createdAt DESC LIMIT :limit OFFSET :offset")
     suspend fun getNotifications(limit: Int, offset: Int): List<Notifications>
 
+    @Query("SELECT * FROM Notifications WHERE id=:notificationId")
+    suspend fun getNotification(notificationId: String): Notifications
+
+    @Query("SELECT * FROM Notifications WHERE seen=0")
+    suspend fun getUnseenNotifications(): List<Notifications>
+
+    @Query("UPDATE Notifications SET seen=1")
+    suspend fun markAllSeen()
+
     @Query("SELECT * FROM Notifications ORDER BY createdAt DESC LIMIT 1")
     suspend fun getLastUpdatedAt(): Notifications
 

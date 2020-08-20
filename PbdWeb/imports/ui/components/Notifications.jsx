@@ -404,7 +404,7 @@ if(Meteor.isClient) {
 										    	</div>
 											</div>
 											<div className="form-group row">
-												<label htmlFor="inNotificationImage" className="col-4 col-form-label-sm text-right">Notification Image:</label>
+												<label htmlFor="inNotificationImage" className="col-4 col-form-label-sm text-right">Notification Image (optional):</label>
 										    	<div className="col-8 text-center">
 													{
 														(notificationImg == "") ? 
