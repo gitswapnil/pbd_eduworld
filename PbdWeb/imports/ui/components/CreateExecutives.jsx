@@ -234,6 +234,8 @@ if(Meteor.isClient) {
 		const [generalError, setGeneralError] = useState("");
 
 		const [executives, setExecutives] = useState(null);
+		const [selectedPage, setSelectedPage] = useState(1);
+		const [totalPages, setTotalPages] = useState(23);
 
 		const [editId, setEditId] = useState("");
 
@@ -332,6 +334,11 @@ if(Meteor.isClient) {
 						clearModal();
 					}
 				});
+		}
+
+		function onPageSelected(pageNo) {
+			console.log("pageNo: " + pageNo);
+			setSelectedPage(pageNo);
 		}
 
 		//subscribe for the list here.
@@ -597,7 +604,7 @@ if(Meteor.isClient) {
 				<br/>
 				<div className="row">
 					<div className="col-12">
-						<Table>
+						<Table selectedPage={selectedPage} totalPages={totalPages} onPageSelect={(pageNo => onPageSelected(pageNo)).bind(this)}>
 							<Table.Header dataArray={[
 								{ "content": "SI. No." },
 								{ "content": "Name" },

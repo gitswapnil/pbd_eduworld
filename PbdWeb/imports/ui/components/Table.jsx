@@ -1,4 +1,5 @@
 import React from 'react';
+import memoize from "memoize-one";
 import PropTypes from 'prop-types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCircleNotch } from '@fortawesome/free-solid-svg-icons';
@@ -11,13 +12,21 @@ const Body = () => null;
 Body.displayName = "Body";
 
 class Table extends React.Component {
-	constructor(props) {
-		super(props);
 
-		this.state = {
-			columns: 0
-		}
+	state = {
+		columns: 0,
 	}
+
+	tableInfo = memoize((totalPages, selectedPage, onPageSelect) => [totalPages, selectedPage, onPageSelect]);
+	// constructor(props) {
+	// 	super(props);
+
+	// 	this.state = {
+	// 		totalPages: props.totalPages,
+	// 		selectedPage: props.selectedPage,
+	// 		onPageSelect: props.onPageSelect,
+	// 	}
+	// }
 
 	renderHeader() {
 		const { children } = this.props;
@@ -85,12 +94,65 @@ class Table extends React.Component {
 	}
 
 	render() {
+		const newTableInfo = this.tableInfo(this.props.totalPages, this.props.selectedPage, this.props.onPageSelect);
+		const totalPages = newTableInfo[0];
+		const selectedPage = newTableInfo[1];
+		const onPageSelect = newTableInfo[2];
+
+		const sectionWidth = 5;
+		let buttons = [];
+
+		const sections = Math.ceil(totalPages/sectionWidth);
+		const selectedPageSectionNo = Math.ceil(selectedPage/sectionWidth);
+
+		let sectionMaxNum = totalPages; 
+		if(totalPages > sectionWidth) {
+			sectionMaxNum = selectedPageSectionNo * sectionWidth;
+
+			if(sectionMaxNum > totalPages) {
+				sectionMaxNum = totalPages;
+			}
+		}
+
+		let sectionMinNum = sectionMaxNum - sectionWidth;
+		if(sectionMinNum < 0) {
+			sectionMinNum = 0;
+		}
+
+		if(sectionMinNum === 0) {
+			for(let i=1; i<=sectionMaxNum; i++) 
+				buttons.push(<button type="button" className="btn btn-light" disabled={selectedPage === i} onClick={() => onPageSelect(i)}>{i}</button>);
+		} else {
+			buttons.push(<button type="button" className="btn btn-light" onClick={() => onPageSelect(1)}>1</button>);
+			buttons.push(<button type="button" className="btn btn-light" disabled={true}>...</button>);
+			for(let i=sectionMinNum; i<=sectionMaxNum; i++) 
+				buttons.push(<button type="button" className="btn btn-light" disabled={selectedPage === i} onClick={() => onPageSelect(i)}>{i}</button>);
+		}
+
+		if(totalPages === (sectionMaxNum + 1)) {
+			buttons.push(<button type="button" className="btn btn-light" onClick={() => onPageSelect(sectionMaxNum + 1)}>{sectionMaxNum + 1}</button>);
+		} else if(totalPages === (sectionMaxNum + 2)) {
+			buttons.push(<button type="button" className="btn btn-light" onClick={() => onPageSelect(sectionMaxNum + 1)}>{sectionMaxNum + 1}</button>);
+			buttons.push(<button type="button" className="btn btn-light" onClick={() => onPageSelect(sectionMaxNum + 2)}>{sectionMaxNum + 2}</button>);
+		} else if(totalPages > (sectionMaxNum + 2)) {
+			buttons.push(<button type="button" className="btn btn-light" onClick={() => onPageSelect(sectionMaxNum + 1)}>{sectionMaxNum + 1}</button>);
+			buttons.push(<button type="button" className="btn btn-light" disabled={true}>...</button>);
+			buttons.push(<button type="button" className="btn btn-light" onClick={() => onPageSelect(totalPages)}>{totalPages}</button>);
+		}
+
 		return (
 			<div>
 				<table className="tbl">
 					{this.renderHeader()}
 					{this.renderBody()}
 				</table>
+				<br/>
+				<div className="text-right">
+					<div className="btn-group" role="group" aria-label="Paginantion-group">
+					    {buttons}
+					</div>
+				</div>
+				<br/>
 			</div>
 		)
 
@@ -99,5 +161,11 @@ class Table extends React.Component {
 
 Table.Header = Header;
 Table.Body = Body;
+
+Table.propTypes = {
+	selectedPage: PropTypes.number,
+	totalPages: PropTypes.number,
+	onPageSelect: PropTypes.func,
+}
 
 export default Table;
