@@ -986,6 +986,18 @@ if(Meteor.isClient) {
 			}
 		}
 
+		if(receiptDetails.paidBy !== 0) {
+			if(!receiptDetails.bankName || receiptDetails.bankName == "") {
+				throw new Error("The Bank Name is required");
+				return;
+			}
+
+			if(!receiptDetails.bankBranch || receiptDetails.bankBranch == "") {
+				throw new Error("The Bank Branch is required");
+				return;
+			}
+		}
+
 		if((typeof receiptDetails.payment !== "number") || (receiptDetails.payment > 1 && receiptDetails.payment < 0)) {
 			throw new Error("Please enter whether the payment is full or part.");
 			return;
@@ -1044,12 +1056,21 @@ if(Meteor.isClient) {
 			        	cpList: [ cpObj ],
 			        	amount: parseFloat(String(parseFloat(receiptDetails.amount * 1.0000000001)).match(/[0-9]+\.[0-9][0-9]/)[0]),
 			        	paidBy: receiptDetails.paidBy,
-			        	chequeNo: receiptDetails.chequeNo,
-			        	ddNo: receiptDetails.ddNo,
 			        	payment: receiptDetails.payment,
 			        	userId,
 			        	createdAt: new Date()
 			        };
+
+			        if(receiptDetails.paidBy === 1) {
+			        	insertObj.chequeNo = receiptDetails.chequeNo;
+			        } else if(receiptDetails.paidBy === 2) {
+			        	insertObj.ddNo = receiptDetails.ddNo;
+			        }
+
+			        if(receiptDetails.paidBy !== 0) {
+			        	insertObj.bankName = receiptDetails.bankName;
+			        	insertObj.bankBranch = receiptDetails.bankBranch;
+			        }
 
 					const serverId = Collections.receipts.insert(insertObj);
 
@@ -1064,6 +1085,8 @@ if(Meteor.isClient) {
 			        	paidBy: receiptDetails.paidBy,
 			        	chequeNo: receiptDetails.chequeNo,
 			        	ddNo: receiptDetails.ddNo,
+			        	bankName: receiptDetails.bankName,
+			        	bankBranch: receiptDetails.bankBranch,
 			        	payment: receiptDetails.payment,
 			        	createdAt: moment(cpObj.createdAt).valueOf()
 			        }

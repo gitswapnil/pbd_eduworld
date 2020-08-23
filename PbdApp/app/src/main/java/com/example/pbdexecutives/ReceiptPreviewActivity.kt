@@ -19,7 +19,10 @@ import com.android.volley.DefaultRetryPolicy
 import com.google.android.material.snackbar.Snackbar
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
+import kotlinx.android.synthetic.main.activity_add_new_receipt.*
 import kotlinx.android.synthetic.main.activity_receipt_preview.*
+import kotlinx.android.synthetic.main.activity_receipt_preview.cheque_no
+import kotlinx.android.synthetic.main.activity_receipt_preview.dd_no
 import kotlinx.android.synthetic.main.receipt_receiver_details.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -38,8 +41,10 @@ class ReceiptPreviewActivity : AppCompatActivity() {
     private lateinit var cpEmail: String
     private lateinit var amount: String
     private var paidBy by Delegates.notNull<Byte>()
-    private lateinit var chequeNo: String
-    private lateinit var ddNo: String
+    private var chequeNo: String? = null
+    private var ddNo: String? = null
+    private var bankName: String? = null
+    private var bankBranch: String? = null
     private var payment by Delegates.notNull<Byte>()
     private lateinit var alertDialog: AlertDialog
 
@@ -74,8 +79,10 @@ class ReceiptPreviewActivity : AppCompatActivity() {
                 partyId = intent.getStringExtra("partyId")
                 amount = intent.getStringExtra("amount")
                 paidBy = intent.getByteExtra("paidBy", 0)
-                chequeNo = intent.getStringExtra("chequeNo")
-                ddNo = intent.getStringExtra("ddNo")
+                chequeNo = if(paidBy == 0.toByte()) null else intent.getStringExtra("chequeNo")
+                ddNo = if(paidBy == 0.toByte()) null else intent.getStringExtra("ddNo")
+                bankName = if(paidBy == 0.toByte()) null else intent.getStringExtra("bankName")
+                bankBranch = if(paidBy == 0.toByte()) null else intent.getStringExtra("bankBranch")
                 payment = intent.getByteExtra("payment", 0)
 
                 val partyDetails = db.partiesDao().getPartyDetails(id = partyId)
@@ -96,8 +103,10 @@ class ReceiptPreviewActivity : AppCompatActivity() {
                 partyId = receiptDetails.partyId
                 amount = receiptDetails.amount
                 paidBy = receiptDetails.paidBy
-                chequeNo = receiptDetails.chequeNo.toString()
-                ddNo = receiptDetails.ddNo.toString()
+                chequeNo = if(receiptDetails.paidBy == 0.toByte()) null else receiptDetails.chequeNo.toString()
+                ddNo = if(receiptDetails.paidBy == 0.toByte()) null else receiptDetails.ddNo.toString()
+                bankName = if(receiptDetails.paidBy == 0.toByte()) null else receiptDetails.bankName.toString()
+                bankBranch = if(receiptDetails.paidBy == 0.toByte()) null else receiptDetails.bankBranch.toString()
                 payment = receiptDetails.payment
 
                 receipt_date.text = SimpleDateFormat("dd/MM/yy").format(Date(receiptDetails.createdAt))
@@ -127,10 +136,32 @@ class ReceiptPreviewActivity : AppCompatActivity() {
 //
             }
 
-            paid_by.text = if(paidBy == 1.toByte()) getString(R.string.cheque)
-            else if(paidBy == 2.toByte()) getString(R.string.demand_draft) else getString(R.string.cash)
-            cheque_no.text = if(chequeNo != null && chequeNo != "") chequeNo else ""
-            dd_no.text = if(ddNo != null && ddNo != "") ddNo else ""
+            cheque_no_row.visibility = View.GONE
+            dd_no_row.visibility = View.GONE
+            bank_name_row.visibility = View.GONE
+            bank_branch_row.visibility = View.GONE
+            paid_by.text = getString(R.string.cash)
+
+            if(paidBy == 1.toByte()) {
+                paid_by.text = getString(R.string.cheque)
+                cheque_no_row.visibility = View.VISIBLE
+                cheque_no.text = if(chequeNo != null && chequeNo != "") chequeNo else ""
+            } else if(paidBy == 2.toByte()) {
+                paid_by.text = getString(R.string.demand_draft)
+                dd_no_row.visibility = View.VISIBLE
+                dd_no.text = if(ddNo != null && ddNo != "") ddNo else ""
+            }
+
+            if(bankName != null) {
+                bank_name_row.visibility = View.VISIBLE
+                receipt_bank_name.text = bankName
+            }
+
+            if(bankBranch != null) {
+                bank_branch_row.visibility = View.VISIBLE
+                receipt_bank_branch.text = bankBranch
+            }
+
             receipt_payment.text = if(payment == 1.toByte()) getString(R.string.full) else getString(R.string.part)
             paid_amount.text = "${getString(R.string.rupee)} $amount"
         }
@@ -197,8 +228,10 @@ class ReceiptPreviewActivity : AppCompatActivity() {
         @SerializedName("cpEmail") val cpEmail: String,
         @SerializedName("amount") val amount: BigDecimal,
         @SerializedName("paidBy") val paidBy: Byte,
-        @SerializedName("chequeNo") val chequeNo: String,
-        @SerializedName("ddNo") val ddNo: String,
+        @SerializedName("chequeNo") val chequeNo: String?,
+        @SerializedName("ddNo") val ddNo: String?,
+        @SerializedName("bankName") val bankName: String?,
+        @SerializedName("bankBranch") val bankBranch: String?,
         @SerializedName("payment") val payment: Byte
     )
 
@@ -242,6 +275,8 @@ class ReceiptPreviewActivity : AppCompatActivity() {
                         paidBy = paidBy,
                         chequeNo = chequeNo,
                         ddNo = ddNo,
+                        bankName = bankName,
+                        bankBranch = bankBranch,
                         payment = payment
                     ))
                 ))

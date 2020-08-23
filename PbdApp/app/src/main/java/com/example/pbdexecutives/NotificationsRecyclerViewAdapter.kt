@@ -14,7 +14,6 @@ import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 
-import com.example.pbdexecutives.dummy.DummyContent.DummyItem
 import kotlin.reflect.KFunction1
 
 data class NotificationsListItemModel(

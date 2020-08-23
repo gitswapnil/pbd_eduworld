@@ -327,6 +327,7 @@
                 </TableRow>
 
                 <TableRow
+                    android:id="@+id/cheque_no_row"
                     android:layout_width="fill_parent"
                     android:layout_height="match_parent"
                     android:background="@drawable/my_task_list_item_border"
@@ -350,6 +351,7 @@
                 </TableRow>
 
                 <TableRow
+                    android:id="@+id/dd_no_row"
                     android:layout_width="fill_parent"
                     android:layout_height="match_parent"
                     android:background="@drawable/my_task_list_item_border"
@@ -373,6 +375,7 @@
                 </TableRow>
 
                 <TableRow
+                    android:id="@+id/bank_name_row"
                     android:layout_width="fill_parent"
                     android:layout_height="match_parent"
                     android:background="@drawable/my_task_list_item_border"
@@ -380,6 +383,51 @@
 
                     <TextView
                         android:id="@+id/textView70"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/bank_name" />
+
+                    <TextView
+                        android:id="@+id/receipt_bank_name"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="right"
+                        android:text="TextView"
+                        android:textColor="@color/design_default_color_on_secondary" />
+                </TableRow>
+
+                <TableRow
+                    android:id="@+id/bank_branch_row"
+                    android:layout_width="fill_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/my_task_list_item_border"
+                    android:padding="4dp">
+
+                    <TextView
+                        android:id="@+id/textView73"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/bank_branch" />
+
+                    <TextView
+                        android:id="@+id/receipt_bank_branch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="right"
+                        android:text="TextView"
+                        android:textColor="@color/design_default_color_on_secondary" />
+                </TableRow>
+
+                <TableRow
+                    android:layout_width="fill_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/my_task_list_item_border"
+                    android:padding="4dp">
+
+                    <TextView
+                        android:id="@+id/textView71"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/receipt_payment" />

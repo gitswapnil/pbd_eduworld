@@ -310,6 +310,8 @@ data class Receipts(
     @SerializedName("paidBy") val paidBy: Byte,
     @SerializedName("chequeNo") val chequeNo: String?,
     @SerializedName("ddNo") val ddNo: String?,
+    @SerializedName("bankName") val bankName: String?,
+    @SerializedName("bankBranch") val bankBranch: String?,
     @SerializedName("payment") val payment: Byte,
     @SerializedName("serverId") val serverId: String?,
     @SerializedName("createdAt") val createdAt: Long
@@ -330,6 +332,8 @@ data class ReceiptsWithJoins(
     @SerializedName("paidBy") val paidBy: Byte,
     @SerializedName("chequeNo") val chequeNo: String?,
     @SerializedName("ddNo") val ddNo: String?,
+    @SerializedName("bankName") val bankName: String?,
+    @SerializedName("bankBranch") val bankBranch: String?,
     @SerializedName("payment") val payment: Byte,
     @SerializedName("serverId") val serverId: String?,
     @SerializedName("createdAt") val createdAt: Long,
@@ -341,10 +345,10 @@ interface ReceiptsDAO{
     @Insert
     suspend fun addReceipt(receipts: Receipts)
 
-    @Query("SELECT id, receiptNo, partyId, partyCode, partyName, partyAddress, partyPhNumber, cpName, cpNumber, cpEmail, amount, paidBy, chequeNo, ddNo, payment, createdAt, serverId FROM (SELECT r.id, r.receiptNo, ('#' || ud.receiptSeries || r.receiptNo) AS formattedReceiptNo, r.partyId, p.code as partyCode, p.name as partyName, p.address as partyAddress, p.cNumber as partyPhNumber, r.cpName, r.cpNumber, r.cpEmail, r.amount, r.paidBy, r.chequeNo, r.ddNo, r.payment, (strftime('%d/%m/', datetime(r.createdAt/1000, 'unixepoch')) || substr(strftime('%Y', datetime(r.createdAt/1000, 'unixepoch')), 3)) AS formattedCreatedAt, r.createdAt, r.serverId FROM Receipts AS r LEFT JOIN Parties AS p ON r.partyId=p.id LEFT JOIN UserDetails AS ud ON ud.id=1 WHERE formattedReceiptNo LIKE :searchQuery OR partyName LIKE :searchQuery OR partyAddress LIKE :searchQuery OR cpName LIKE :searchQuery OR cpNumber LIKE :searchQuery OR amount LIKE :searchQuery OR chequeNo LIKE :searchQuery OR ddNo LIKE :searchQuery OR formattedCreatedAt LIKE :searchQuery GROUP BY r.serverId) ORDER BY createdAt DESC LIMIT :limit OFFSET :offset")
+    @Query("SELECT id, receiptNo, partyId, partyCode, partyName, partyAddress, partyPhNumber, cpName, cpNumber, cpEmail, amount, paidBy, chequeNo, ddNo, bankName, bankBranch, payment, createdAt, serverId FROM (SELECT r.id, r.receiptNo, ('#' || ud.receiptSeries || r.receiptNo) AS formattedReceiptNo, r.partyId, p.code as partyCode, p.name as partyName, p.address as partyAddress, p.cNumber as partyPhNumber, r.cpName, r.cpNumber, r.cpEmail, r.amount, r.paidBy, r.chequeNo, r.ddNo, r.bankName, r.bankBranch, r.payment, (strftime('%d/%m/', datetime(r.createdAt/1000, 'unixepoch')) || substr(strftime('%Y', datetime(r.createdAt/1000, 'unixepoch')), 3)) AS formattedCreatedAt, r.createdAt, r.serverId FROM Receipts AS r LEFT JOIN Parties AS p ON r.partyId=p.id LEFT JOIN UserDetails AS ud ON ud.id=1 WHERE formattedReceiptNo LIKE :searchQuery OR partyName LIKE :searchQuery OR partyAddress LIKE :searchQuery OR cpName LIKE :searchQuery OR cpNumber LIKE :searchQuery OR amount LIKE :searchQuery OR chequeNo LIKE :searchQuery OR ddNo LIKE :searchQuery OR bankName LIKE :searchQuery OR formattedCreatedAt LIKE :searchQuery GROUP BY r.serverId) ORDER BY createdAt DESC LIMIT :limit OFFSET :offset")
     suspend fun getReceipts(limit: Int, offset: Int, searchQuery: String): List<ReceiptsWithJoins>
 
-    @Query("SELECT rr.id, rr.receiptNo, rr.partyId, rr.partyCode, rr.partyName, rr.partyAddress, rr.partyPhNumber, group_concat(cpName) as cpName, group_concat(cpNumber) as cpNumber, group_concat(cpEmail) as cpEmail, rr.amount, rr.paidBy, rr.chequeNo, rr.ddNo, rr.payment, rr.serverId, rr.createdAt, group_concat(createdAt) as concatCreatedAt FROM (SELECT r.*, p.code as partyCode, p.name as partyName, p.address as partyAddress, p.cNumber as partyPhNumber FROM Receipts AS r LEFT JOIN Parties AS p ON r.partyId=p.id ORDER BY r.createdAt DESC) AS rr LEFT JOIN (SELECT rt.serverId FROM Receipts AS rt WHERE rt.id=:id) AS rs ON rr.serverId=rs.serverId WHERE rr.serverId=rs.serverId GROUP BY rr.serverId")
+    @Query("SELECT rr.id, rr.receiptNo, rr.partyId, rr.partyCode, rr.partyName, rr.partyAddress, rr.partyPhNumber, group_concat(cpName) as cpName, group_concat(cpNumber) as cpNumber, group_concat(cpEmail) as cpEmail, rr.amount, rr.paidBy, rr.chequeNo, rr.ddNo, rr.bankName, rr.bankBranch, rr.payment, rr.serverId, rr.createdAt, group_concat(createdAt) as concatCreatedAt FROM (SELECT r.*, p.code as partyCode, p.name as partyName, p.address as partyAddress, p.cNumber as partyPhNumber FROM Receipts AS r LEFT JOIN Parties AS p ON r.partyId=p.id ORDER BY r.createdAt DESC) AS rr LEFT JOIN (SELECT rt.serverId FROM Receipts AS rt WHERE rt.id=:id) AS rs ON rr.serverId=rs.serverId WHERE rr.serverId=rs.serverId GROUP BY rr.serverId")
     suspend fun getReceiptDetails(id: Long): ReceiptsWithJoins
 
     @Query("DELETE FROM Receipts")

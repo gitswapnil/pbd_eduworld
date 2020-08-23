@@ -45,6 +45,14 @@ receipts.attachSchema(new SimpleSchema({
 		type: String,
 		optional: true
 	},
+	"bankName": {
+		type: String,
+		optional: true
+	},
+	"bankBranch": {
+		type: String,
+		optional: true
+	},
 	"payment": {
 		type: Number
 	},

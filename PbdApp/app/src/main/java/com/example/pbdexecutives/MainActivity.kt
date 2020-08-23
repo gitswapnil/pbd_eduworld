@@ -74,8 +74,10 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
         @SerializedName("cpEmail") val cpEmail: String,
         @SerializedName("amount") val amount: String,
         @SerializedName("paidBy") val paidBy: Byte,
-        @SerializedName("ddNo") val ddNo: String,
-        @SerializedName("chequeNo") val chequeNo: String,
+        @SerializedName("chequeNo") val chequeNo: String?,
+        @SerializedName("ddNo") val ddNo: String?,
+        @SerializedName("bankName") val bankName: String?,
+        @SerializedName("bankBranch") val bankBranch: String?,
         @SerializedName("payment") val payment: Byte,
         @SerializedName("createdAt") val createdAt: Long
     )
@@ -165,6 +167,8 @@ class MainActivity : AppCompatActivity(), LifecycleOwner {
                                 paidBy = receipt.paidBy,
                                 chequeNo = receipt.chequeNo,
                                 ddNo = receipt.ddNo,
+                                bankName = receipt.bankName,
+                                bankBranch = receipt.bankBranch,
                                 payment = receipt.payment,
                                 serverId = receipt._id,
                                 createdAt = receipt.createdAt

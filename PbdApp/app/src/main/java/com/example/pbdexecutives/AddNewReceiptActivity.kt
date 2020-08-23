@@ -64,22 +64,37 @@ class AddNewReceiptActivity : AppCompatActivity() {
             cheque_no.visibility = View.GONE
             dd_no_label.visibility = View.GONE
             dd_no.visibility = View.GONE
+            bank_name_label.visibility = View.GONE
+            bank_name.visibility = View.GONE
+            bank_branch_label.visibility = View.GONE
+            bank_branch.visibility = View.GONE
 
             val constraintSet: ConstraintSet = ConstraintSet()
             val checkedId = paid_by_radio_group.checkedRadioButtonId
             constraintSet.clone(add_new_receipt_layout)
+
             when(checkedId) {
                 R.id.paid_by_radio_cheque -> {
-                    constraintSet.connect(R.id.payment_label, ConstraintSet.TOP, R.id.cheque_no, ConstraintSet.BOTTOM, 8)
+                    constraintSet.connect(R.id.bank_name_label, ConstraintSet.TOP, R.id.cheque_no, ConstraintSet.BOTTOM, 8)
+                    constraintSet.connect(R.id.payment_label, ConstraintSet.TOP, R.id.bank_branch, ConstraintSet.BOTTOM, 8)
                     constraintSet.applyTo(add_new_receipt_layout)
                     cheque_no_label.visibility = View.VISIBLE
                     cheque_no.visibility = View.VISIBLE
+                    bank_name_label.visibility = View.VISIBLE
+                    bank_name.visibility = View.VISIBLE
+                    bank_branch_label.visibility = View.VISIBLE
+                    bank_branch.visibility = View.VISIBLE
                 }
                 R.id.paid_by_radio_dd -> {
-                    constraintSet.connect(R.id.payment_label, ConstraintSet.TOP, R.id.dd_no, ConstraintSet.BOTTOM, 8)
+                    constraintSet.connect(R.id.bank_name_label, ConstraintSet.TOP, R.id.dd_no, ConstraintSet.BOTTOM, 8)
+                    constraintSet.connect(R.id.payment_label, ConstraintSet.TOP, R.id.bank_branch, ConstraintSet.BOTTOM, 8)
                     constraintSet.applyTo(add_new_receipt_layout)
                     dd_no_label.visibility = View.VISIBLE
                     dd_no.visibility = View.VISIBLE
+                    bank_name_label.visibility = View.VISIBLE
+                    bank_name.visibility = View.VISIBLE
+                    bank_branch_label.visibility = View.VISIBLE
+                    bank_branch.visibility = View.VISIBLE
                 }
                 else -> {
                     constraintSet.connect(R.id.payment_label, ConstraintSet.TOP, R.id.paid_by_radio_group, ConstraintSet.BOTTOM, 8)
@@ -143,6 +158,18 @@ class AddNewReceiptActivity : AppCompatActivity() {
             }
         }
 
+        if(paid_by_radio_group.checkedRadioButtonId != R.id.paid_by_radio_cash) {
+            if(bank_name.text == null || bank_name.text.toString() == "") {
+                bank_name.error = getString(R.string.this_field_is_required)
+                retValue = false
+            }
+
+            if(bank_branch.text == null || bank_branch.text.toString() == "") {
+                bank_branch.error = getString(R.string.this_field_is_required)
+                retValue = false
+            }
+        }
+
         return retValue
     }
 
@@ -168,6 +195,8 @@ class AddNewReceiptActivity : AppCompatActivity() {
                             else if(paid_by_radio_group.checkedRadioButtonId == R.id.paid_by_radio_dd) 2 else 0
         val chequeNo = if(paidBy == 1) cheque_no.text.toString() else ""
         val ddNo = if(paidBy == 2) dd_no.text.toString() else ""
+        val bankName = if(paidBy != 0) bank_name.text.toString() else ""
+        val bankBranch = if(paidBy != 0) bank_branch.text.toString() else ""
         val payment = if(payment_radio_group.checkedRadioButtonId == R.id.payment_full) 1 else 0
 
         if(!PbdExecutivesUtils.isInternetExists(this)) {
@@ -181,6 +210,8 @@ class AddNewReceiptActivity : AppCompatActivity() {
         intent.putExtra("paidBy", paidBy.toByte())
         intent.putExtra("chequeNo", chequeNo)
         intent.putExtra("ddNo", ddNo)
+        intent.putExtra("bankName", bankName)
+        intent.putExtra("bankBranch", bankBranch)
         intent.putExtra("payment", payment.toByte())
         startActivityForResult(intent, 34)
     }

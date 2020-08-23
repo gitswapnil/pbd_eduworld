@@ -122,6 +122,8 @@
     <string name="follow_up_reminder">Follow Up Reminder</string>
     <string name="info">Information</string>
     <string name="notification_details">Notification Details</string>
+    <string name="bank_name">Bank Name</string>
+    <string name="bank_branch">Bank Branch</string>
 
     <string-array name="task_done_questions">
         <item>Done with Sampling?</item>
