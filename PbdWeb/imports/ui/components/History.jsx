@@ -233,6 +233,8 @@ if(Meteor.isServer) {
 					            amount: "$history.amount",
 					            paidBy: "$history.paidBy",
 					            ddNo: "$history.ddNo",
+					            bankName: "$history.bankName",
+					            bankBranch: "$history.bankBranch",
 					            payment: "$history.payment",
 					            chequeNo: "$history.chequeNo",
 					            userId: "$history.userId",
@@ -287,6 +289,8 @@ if(Meteor.isServer) {
 					            ddNo: 1,
 					            payment: 1,
 					            chequeNo: 1,
+					            bankName: 1,
+					            bankBranch: 1,
 					            "party._id": 1,
 					            "party.username": 1,
 					            "party.emails": 1,
@@ -961,14 +965,36 @@ if(Meteor.isClient) {
 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Paid By:</td>
 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{(details.paidBy === 0) ? <span>Cash</span> : (details.paidBy === 1) ? <span>Cheque</span> : <span>Demand Draft</span>}</td>
 								</tr>
-								<tr>
-									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Cheque No.:</td>
-									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{(details.paidBy === 1) ? details.chequeNo : <span>---</span>}</td>
-								</tr>
-								<tr>
-									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Demand Draft No.:</td>
-									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{(details.paidBy === 2) ? details.ddNo : <span>---</span>}</td>
-								</tr>
+								{
+									(details.paidBy === 1) ?
+									<tr>
+										<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Cheque No.:</td>
+										<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.chequeNo}</td>
+									</tr>
+									: null
+								}
+								{
+									(details.paidBy === 2) ?
+									<tr>
+										<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Demand Draft No.:</td>
+										<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.ddNo}</td>
+									</tr>
+									: null
+								}
+								{
+									(details.paidBy !== 0) ? 
+									<React.Fragment>
+										<tr>
+											<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Bank Name:</td>
+											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.bankName}</td>
+										</tr>
+										<tr>
+											<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Bank Branch:</td>
+											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.bankBranch}</td>
+										</tr>
+									</React.Fragment>
+									: null
+								}
 								<tr>
 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Payment:</td>
 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{(details.payment === 0) ? <span>Part</span> : <span>Full</span>}</td>
