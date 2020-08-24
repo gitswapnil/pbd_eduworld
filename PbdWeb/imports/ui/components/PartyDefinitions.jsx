@@ -6,13 +6,10 @@ import { Accounts } from 'meteor/accounts-base';
 import { Random } from 'meteor/random';
 
 if(Meteor.isServer) {
-	Meteor.publish('party.getAll', function({ skip, limit }){
-		console.log("Publishing the party.getAll... got inputs as, skip: " + skip + ", limit: " + limit);
+	Meteor.publish('party.getAll', function({ skip, limit, searchQuery }){
+		console.log("Publishing the party.getAll... got inputs as, skip: " + skip + ", limit: " + limit + ", searchQuery: " + searchQuery);
 		//authorization
 		if(this.userId && Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
-			const totalPages = Math.ceil(Meteor.roleAssignment.find({"role._id": "party"}).count() / limit);
-			this.added("temp", "partiesInfo", { totalPages });
-
 			// console.log("userId: " +JSON.stringify(userIds));
 			let publishedIds = {};
 			let initializing = true;
@@ -32,7 +29,7 @@ if(Meteor.isServer) {
 
 			const handle2 = Meteor.users.find().observeChanges({
 				changed: (_id, doc) => {
-					if(_id && Meteor.roleAssignment.findOne({"user._id": _id, "role._id": "party"})) {
+					if(_id && publishedIds[_id]) {
 						let tempDoc = Meteor.users.findOne({ _id }, {fields: {services: 0, apiKey: 0}});
 						tempDoc.isParty = true;
 
@@ -41,7 +38,12 @@ if(Meteor.isServer) {
 				}
 			});
 
-			Meteor.users.find({ _id: { $in: Object.keys(publishedIds) } }, {fields: {"services": 0}, sort: { updatedAt: -1 }, skip, limit}).forEach(doc => {
+			const totalPages = Math.ceil(Meteor.users.find({ _id: { $in: Object.keys(publishedIds) }, $or: [ { username: { $regex: searchQuery, $options: 'i' }}, {"profile.name": { $regex: searchQuery, $options: 'i' }}, {"profile.address": { $regex: searchQuery, $options: 'i' }}, {"profile.phoneNumber": { $regex: searchQuery, $options: 'i' }} ] }).count() / limit)
+			this.added("temp", "partiesInfo", { totalPages });
+
+			Meteor.users.find({ _id: { $in: Object.keys(publishedIds) }, 
+								$or: [ { username: { $regex: searchQuery, $options: 'i' }}, {"profile.name": { $regex: searchQuery, $options: 'i' }}, {"profile.address": { $regex: searchQuery, $options: 'i' }}, {"profile.phoneNumber": { $regex: searchQuery, $options: 'i' }} ] }, 
+								{fields: {"services": 0}, sort: { updatedAt: -1 }, skip, limit}).forEach(doc => {
 				doc.isParty = true;
 				this.added('users', doc._id, doc);
 			});
@@ -237,6 +239,9 @@ if(Meteor.isClient) {
 
 		const viewLimit = 2;
 
+		const [searchQuery, setSearchQuery] = useState("");
+		const [searchText, setSearchText] = useState("");
+
 		const [executives, setExecutives] = useState([]);
 
 		const [generalError, setGeneralError] = useState("");
@@ -349,7 +354,7 @@ if(Meteor.isClient) {
 		//subscribe for the list here.
 		useEffect(() => {
 			const skip = (selectedPage - 1) * viewLimit;
-			const handle = Meteor.subscribe('party.getAll', { skip, limit: viewLimit }, {
+			const handle = Meteor.subscribe('party.getAll', { skip, limit: viewLimit, searchQuery }, {
 				onStop(error) {
 					console.log("party.getAll is stopped.");
 					if(error) {
@@ -396,13 +401,23 @@ if(Meteor.isClient) {
 			return function() {
 				handle.stop();
 			}
-		}, [selectedPage]);		//empty array means it will run only at mounting and unmounting.
+		}, [selectedPage, searchQuery]);		//empty array means it will run only at mounting and unmounting.
 
 		return (
 			<div className="container">
 				<br/>
 				<div className="row">
-					<div className="col-12 text-right">
+					<div className="col-10">
+						<form onSubmit={e => { e.preventDefault(); setSelectedPage(1); setSearchQuery(searchText) }}>
+							<div className="input-group">
+							  	<input type="text" className="form-control" aria-label="Search Query" value={searchText} onChange={e => setSearchText(e.target.value)}/>
+							  	<div className="input-group-append">
+							    	<button className="btn btn-outline-secondary" type="submit">Button</button>
+							  	</div>
+							</div>
+						</form>
+					</div>
+					<div className="col-2 text-right">
 					{/*----------- Modal Data goes here --------------*/}
 						<button type="button" className="btn btn-primary" style={{"boxShadow": "1px 2px 3px #999"}} onClick={() => setShowModal(true)}>
 							<FontAwesomeIcon icon={faSchool} size="sm"/>&nbsp;&nbsp;Add Party&nbsp;&nbsp;

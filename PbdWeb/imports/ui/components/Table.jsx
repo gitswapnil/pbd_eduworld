@@ -121,23 +121,23 @@ class Table extends React.Component {
 
 		if(sectionMinNum === 0) {
 			for(let i=1; i<=sectionMaxNum; i++) 
-				buttons.push(<button type="button" className="btn btn-light" disabled={selectedPage === i} onClick={() => onPageSelect(i)}>{i}</button>);
+				buttons.push(<button key={i} type="button" className="btn btn-light" disabled={selectedPage === i} onClick={() => onPageSelect(i)}>{i}</button>);
 		} else {
-			buttons.push(<button type="button" className="btn btn-light" onClick={() => onPageSelect(1)}>1</button>);
-			buttons.push(<button type="button" className="btn btn-light" disabled={true}>...</button>);
+			buttons.push(<button key={1} type="button" className="btn btn-light" onClick={() => onPageSelect(1)}>1</button>);
+			buttons.push(<button key={"...1"} type="button" className="btn btn-light" disabled={true}>...</button>);
 			for(let i=sectionMinNum; i<=sectionMaxNum; i++) 
-				buttons.push(<button type="button" className="btn btn-light" disabled={selectedPage === i} onClick={() => onPageSelect(i)}>{i}</button>);
+				buttons.push(<button key={i} type="button" className="btn btn-light" disabled={selectedPage === i} onClick={() => onPageSelect(i)}>{i}</button>);
 		}
 
 		if(totalPages === (sectionMaxNum + 1)) {
-			buttons.push(<button type="button" className="btn btn-light" onClick={() => onPageSelect(sectionMaxNum + 1)}>{sectionMaxNum + 1}</button>);
+			buttons.push(<button key={sectionMaxNum + 1} type="button" className="btn btn-light" onClick={() => onPageSelect(sectionMaxNum + 1)}>{sectionMaxNum + 1}</button>);
 		} else if(totalPages === (sectionMaxNum + 2)) {
-			buttons.push(<button type="button" className="btn btn-light" onClick={() => onPageSelect(sectionMaxNum + 1)}>{sectionMaxNum + 1}</button>);
-			buttons.push(<button type="button" className="btn btn-light" onClick={() => onPageSelect(sectionMaxNum + 2)}>{sectionMaxNum + 2}</button>);
+			buttons.push(<button key={sectionMaxNum + 1} type="button" className="btn btn-light" onClick={() => onPageSelect(sectionMaxNum + 1)}>{sectionMaxNum + 1}</button>);
+			buttons.push(<button key={sectionMaxNum + 2} type="button" className="btn btn-light" onClick={() => onPageSelect(sectionMaxNum + 2)}>{sectionMaxNum + 2}</button>);
 		} else if(totalPages > (sectionMaxNum + 2)) {
-			buttons.push(<button type="button" className="btn btn-light" onClick={() => onPageSelect(sectionMaxNum + 1)}>{sectionMaxNum + 1}</button>);
-			buttons.push(<button type="button" className="btn btn-light" disabled={true}>...</button>);
-			buttons.push(<button type="button" className="btn btn-light" onClick={() => onPageSelect(totalPages)}>{totalPages}</button>);
+			buttons.push(<button key={sectionMaxNum + 1} type="button" className="btn btn-light" onClick={() => onPageSelect(sectionMaxNum + 1)}>{sectionMaxNum + 1}</button>);
+			buttons.push(<button key={"...2"} type="button" className="btn btn-light" disabled={true}>...</button>);
+			buttons.push(<button key={totalPages} type="button" className="btn btn-light" onClick={() => onPageSelect(totalPages)}>{totalPages}</button>);
 		}
 
 		return (
