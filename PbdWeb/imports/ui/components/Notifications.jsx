@@ -6,12 +6,14 @@ import { ReactiveVar } from 'meteor/reactive-var';
 if(Meteor.isServer) {
 	import admin from "firebase-admin";
 
-	Meteor.publish('notifications.getAll', function(){
-		console.log("Publishing the notifications.getAll...");
+	Meteor.publish('notifications.getAll', function({ skip, limit }){
+		console.log("Publishing the notifications.getAll... got inputs as, skip: " + skip + ", limit: " + limit);
 		//authorization
 		if(this.userId && Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
+			const totalPages = Math.ceil(Collections.notifications.find({}).count() / limit);
+			this.added("temp", "notificInfo", { totalPages });
 
-			const handle1 = Collections.notifications.find({}).observeChanges({
+			const handle1 = Collections.notifications.find({}, { sort: { createdAt: -1 }, skip, limit }).observeChanges({
 				added: (_id, doc) => {
 					// console.log("Fields added: " + JSON.stringify(fields));
 					this.added('notifications', _id, doc);
@@ -195,6 +197,8 @@ if(Meteor.isClient) {
 	const Notifications = (props) => {
 		const [showModal, setShowModal] = useState(false);
 		const [notifications, setNotifications] = useState(null);
+		const [selectedPage, setSelectedPage] = useState(1);
+		const [totalPages, setTotalPages] = useState(1);
 
 		const [notificationText, setNotificationText] = useState("");
 		const [notificationTextError, setNotificationTextError] = useState("");
@@ -213,6 +217,8 @@ if(Meteor.isClient) {
 		const [generalError, setGeneralError] = useState("");
 
 		const [sendingNotification, setSendingNotification] = useState(false);
+
+		const viewLimit = 10;
 
 		function clearModal() {
 			setShowModal(false);
@@ -258,6 +264,11 @@ if(Meteor.isClient) {
 			setShowModal(true);
 		}
 
+		function onPageSelected(pageNo) {
+			// console.log("pageNo: " + pageNo);
+			setSelectedPage(pageNo);
+		}
+
 		function sendNotification() {
 			setSendingNotification(true);
 
@@ -298,6 +309,7 @@ if(Meteor.isClient) {
 					} else {		//when success, 
 						// console.log("res: " + res);
 						// clearModal();
+						setSelectedPage(1);
 					}
 
 					clearModal();
@@ -309,7 +321,8 @@ if(Meteor.isClient) {
 		}
 
 		useEffect(() => {
-			const handle = Meteor.subscribe('notifications.getAll', {
+			const skip = (selectedPage - 1) * viewLimit;
+			const handle = Meteor.subscribe('notifications.getAll', { skip, limit: viewLimit }, {
 				onStop(error) {
 					console.log("notifications.getAll is stopped.");
 					if(error) {
@@ -327,7 +340,7 @@ if(Meteor.isClient) {
 					let arr = Collections.notifications.find({}, { sort: { createdAt: -1 } }).map((doc, index) => {
 						return {
 							cells: [
-								{ content: (index + 1)}, 
+								{ content: skip + (index + 1)}, 
 								{ content: doc.text}, 
 								{ content: (doc.img || (doc.img !== "")) ? <img width="100px" src={doc.img}/> : "" }, 
 								{ content: doc.type}, 
@@ -341,6 +354,11 @@ if(Meteor.isClient) {
 						}
 					});
 
+					const notificInfo = Collections.temp.findOne({ _id: "notificInfo" });
+					if(notificInfo && notificInfo.totalPages) {
+						setTotalPages(notificInfo.totalPages);
+					}
+
 					setNotifications(arr);
 
 					const exs = Meteor.users.find({ isExecutive: true }).map(executive => Object.assign(executive, { selected: false }));
@@ -351,7 +369,7 @@ if(Meteor.isClient) {
 			return function() {
 				handle.stop();
 			}
-		}, [])
+		}, [selectedPage])
 
 		return (
 			<div className="container">
@@ -535,7 +553,7 @@ if(Meteor.isClient) {
 				<br/>
 				<div className="row">
 					<div className="col-12">
-						<Table>
+						<Table selectedPage={selectedPage} totalPages={totalPages} onPageSelect={(pageNo => onPageSelected(pageNo)).bind(this)}>
 							<Table.Header dataArray={[
 								{ "content": "SI. No." },
 								{ "content": "Text" },

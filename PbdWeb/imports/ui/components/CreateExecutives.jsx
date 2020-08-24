@@ -6,25 +6,33 @@ import { Accounts } from 'meteor/accounts-base';
 import { Random } from 'meteor/random';
 
 if(Meteor.isServer) {
-	Meteor.publish('executives.getAll', function(){
-		console.log("Publishing the executives.getAll...");
+	Meteor.publish('executives.getAll', function({ skip, limit }){
+		console.log("Publishing the executives.getAll... got inputs as, skip: " + skip + ", limit: " + limit);
 		//authorization
 		if(this.userId && Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
 			// console.log("userId: " +JSON.stringify(userIds));
+			const totalPages = Math.ceil(Meteor.roleAssignment.find({"role._id": "executive"}).count() / limit);
+			this.added("temp", "execsInfo", { totalPages });
+
+			let publishedIds = {};
+			let initializing = true;
 			const handle1 = Meteor.roleAssignment.find({"role._id": "executive"}).observeChanges({
 				added: (_id, doc) => {
 					// console.log("Fields added: " + JSON.stringify(doc));
 					if(doc.user && doc.user._id) {
-						const userDoc = Meteor.users.findOne({"_id": doc.user._id}, {fields: {"services": 0}});
-						userDoc.isExecutive = true;
-						this.added('users', userDoc._id, userDoc);
+						if(!initializing) {
+							const userDoc = Meteor.users.findOne({"_id": doc.user._id}, {fields: {"services": 0}});
+							userDoc.isExecutive = true;
+							this.added('users', userDoc._id, userDoc);
+						}
+						publishedIds[doc.user._id] = true;
 					}
 				}
 			});
 
 			const handle2 = Meteor.users.find().observeChanges({
 				changed: (_id, doc) => {
-					if(_id && Meteor.roleAssignment.findOne({"user._id": _id, "role._id": "executive"})) {
+					if(_id && publishedIds[_id]) {
 						let tempDoc = Meteor.users.findOne({ _id }, {fields: {services: 0, apiKey: 0}});
 						tempDoc.isExecutive = true;
 
@@ -32,6 +40,13 @@ if(Meteor.isServer) {
 					}
 				},
 			});
+
+			Meteor.users.find({ _id: { $in: Object.keys(publishedIds) } }, {fields: {"services": 0}, sort: { updatedAt: -1 }, skip, limit}).forEach(doc => {
+				doc.isExecutive = true;
+				this.added('users', doc._id, doc);
+			});
+
+			initializing = false;
 
 			console.log("data publication for \"executives.getAll is complete.\"");
 			this.ready();
@@ -235,11 +250,12 @@ if(Meteor.isClient) {
 
 		const [executives, setExecutives] = useState(null);
 		const [selectedPage, setSelectedPage] = useState(1);
-		const [totalPages, setTotalPages] = useState(23);
+		const [totalPages, setTotalPages] = useState(1);
 
 		const [editId, setEditId] = useState("");
 
 		const modalRef = React.createRef();			//this is to attach modal when needed to close the modal
+		const viewLimit = 10;
 
 		function resetAllInputs() {
 			setUserImg("");
@@ -331,19 +347,21 @@ if(Meteor.isClient) {
 						}
 					} else {		//when success, 
 						// console.log("res: " + res);
+						setSelectedPage(1);
 						clearModal();
 					}
 				});
 		}
 
 		function onPageSelected(pageNo) {
-			console.log("pageNo: " + pageNo);
+			// console.log("pageNo: " + pageNo);
 			setSelectedPage(pageNo);
 		}
 
 		//subscribe for the list here.
 		useEffect(() => {
-			const handle = Meteor.subscribe('executives.getAll', {
+			const skip = (selectedPage - 1) * viewLimit;
+			const handle = Meteor.subscribe('executives.getAll', { skip, limit: viewLimit }, {
 				onStop(error) {
 					console.log("executives.getAll is stopped.");
 					if(error) {
@@ -358,10 +376,10 @@ if(Meteor.isClient) {
 
 			Tracker.autorun(() => {
 				if(handle.ready()) {
-					let arr = Meteor.users.find({"isExecutive": true}).map((doc, index) => {
+					let arr = Meteor.users.find({"isExecutive": true}, { sort: { updatedAt: -1 } }).map((doc, index) => {
 						return {
 							cells: [
-								{ style: {"textAlign": "right", "color": !doc.active ? "#AAA" : null}, content: (index + 1)}, 
+								{ style: {"textAlign": "right", "color": !doc.active ? "#AAA" : null}, content: skip + (index + 1)}, 
 								{ style: {"color": !doc.active ? "#AAA" : null}, content: (doc.profile && doc.profile.name)}, 
 								{ style: {"color": !doc.active ? "#AAA" : null}, content: doc.username}, 
 								{ style: {"color": !doc.active ? "#AAA" : null}, content: moment(doc.updatedAt).format("Do MMM YYYY h:mm:ss a")},
@@ -373,6 +391,10 @@ if(Meteor.isClient) {
 							}
 						}
 					});
+
+					const totalPages = Collections.temp.findOne({ _id: "execsInfo" }).totalPages;
+
+					setTotalPages(totalPages);
 					setExecutives(arr);	
 				}
 			})
@@ -380,7 +402,7 @@ if(Meteor.isClient) {
 			return function() {
 				handle.stop();
 			}
-		}, []);		//empty array means it will run only at mounting and unmounting.
+		}, [selectedPage]);		//empty array means it will run only at mounting and unmounting.
 
 		return(
 			<div className="container">

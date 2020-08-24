@@ -6,19 +6,26 @@ import { Accounts } from 'meteor/accounts-base';
 import { Random } from 'meteor/random';
 
 if(Meteor.isServer) {
-	Meteor.publish('party.getAll', function(){
-		console.log("Publishing the party.getAll...");
+	Meteor.publish('party.getAll', function({ skip, limit }){
+		console.log("Publishing the party.getAll... got inputs as, skip: " + skip + ", limit: " + limit);
 		//authorization
 		if(this.userId && Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {
+			const totalPages = Math.ceil(Meteor.roleAssignment.find({"role._id": "party"}).count() / limit);
+			this.added("temp", "partiesInfo", { totalPages });
 
 			// console.log("userId: " +JSON.stringify(userIds));
+			let publishedIds = {};
+			let initializing = true;
 			const handle1 = Meteor.roleAssignment.find({"role._id": "party"}).observeChanges({
 				added: (_id, doc) => {
 					// console.log("Fields added: " + JSON.stringify(fields));
 					if(doc.user && doc.user._id) {
-						const userDoc = Meteor.users.findOne({"_id": doc.user._id}, {fields: {"services": 0, apiKey: 0}});
-						userDoc.isParty = true;
-						this.added('users', userDoc._id, userDoc);
+						if(!initializing) {
+							const userDoc = Meteor.users.findOne({"_id": doc.user._id}, {fields: {"services": 0, apiKey: 0}});
+							userDoc.isParty = true;
+							this.added('users', userDoc._id, userDoc);
+						}
+						publishedIds[doc.user._id] = true;
 					}
 				}
 			});
@@ -33,6 +40,13 @@ if(Meteor.isServer) {
 					}
 				}
 			});
+
+			Meteor.users.find({ _id: { $in: Object.keys(publishedIds) } }, {fields: {"services": 0}, sort: { updatedAt: -1 }, skip, limit}).forEach(doc => {
+				doc.isParty = true;
+				this.added('users', doc._id, doc);
+			});
+
+			initializing = false;
 
 			Meteor.roleAssignment.find({"role._id": "executive"}).fetch().forEach(role => {
 				const userObj = Meteor.users.findOne({ _id: role.user._id }, {fields: {"profile.name": 1}});
@@ -218,6 +232,10 @@ if(Meteor.isClient) {
 
 		const [showModal, setShowModal] = useState(false);
 		const [parties, setParties] = useState(null);
+		const [selectedPage, setSelectedPage] = useState(1);
+		const [totalPages, setTotalPages] = useState(1);
+
+		const viewLimit = 2;
 
 		const [executives, setExecutives] = useState([]);
 
@@ -272,6 +290,11 @@ if(Meteor.isClient) {
 			setShowModal(true);
 		}
 
+		function onPageSelected(pageNo) {
+			// console.log("pageNo: " + pageNo);
+			setSelectedPage(pageNo);
+		}
+
 		function savePartyInfo() {
 			Tracker.autorun(() => {
 				removeAllErrors();			//remove all the errors before setting the new messages.
@@ -317,6 +340,7 @@ if(Meteor.isClient) {
 						}
 					} else {		//when success, 
 						// console.log("res: " + res);
+						setSelectedPage(1);
 						clearModal();
 					}
 				});
@@ -324,7 +348,8 @@ if(Meteor.isClient) {
 
 		//subscribe for the list here.
 		useEffect(() => {
-			const handle = Meteor.subscribe('party.getAll', {
+			const skip = (selectedPage - 1) * viewLimit;
+			const handle = Meteor.subscribe('party.getAll', { skip, limit: viewLimit }, {
 				onStop(error) {
 					console.log("party.getAll is stopped.");
 					if(error) {
@@ -355,6 +380,12 @@ if(Meteor.isClient) {
 							}
 						}
 					});
+
+					const partiesInfo = Collections.temp.findOne({ _id: "partiesInfo" });
+					if(partiesInfo && partiesInfo.totalPages) {
+						setTotalPages(partiesInfo.totalPages);
+					}
+
 					setParties(arr);
 
 					const exs = Meteor.users.find({ isExecutive: true }).map(executive => Object.assign(executive, { selected: false }));
@@ -365,7 +396,7 @@ if(Meteor.isClient) {
 			return function() {
 				handle.stop();
 			}
-		}, []);		//empty array means it will run only at mounting and unmounting.
+		}, [selectedPage]);		//empty array means it will run only at mounting and unmounting.
 
 		return (
 			<div className="container">
@@ -533,7 +564,7 @@ if(Meteor.isClient) {
 				<br/>
 				<div className="row">
 					<div className="col-12">
-						<Table>
+						<Table selectedPage={selectedPage} totalPages={totalPages} onPageSelect={(pageNo => onPageSelected(pageNo)).bind(this)}>
 							<Table.Header dataArray={[
 								{ "content": "SI. No." },
 								{ "content": "Party Code" },
