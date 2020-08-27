@@ -55,7 +55,13 @@ const initializeFirebaseServices = () => {
 	});
 }
 
+const initializeEnvironmentVariables = () => {
+	process.env.MAIL_URL = "smtps://no-reply@mypbd.com:mypbd1247@@mail.mypbd.com:465";
+	process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
+}
+
 const startupScripts = () => {
+	initializeEnvironmentVariables();
 	createRoles();
 	seedData();
 	initializeFirebaseServices();

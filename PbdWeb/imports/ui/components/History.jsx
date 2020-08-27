@@ -920,6 +920,7 @@ if(Meteor.isClient) {
 				virtualBlock.style.marginBottom = "20px";
 
 				virtualBlock.removeChild(virtualBlock.querySelector("#btnPrint"));
+				virtualBlock.removeChild(virtualBlock.querySelector("#cpList"));
 				oHiddFrame.srcdoc = virtualBlock.outerHTML;
 
 				document.body.appendChild(oHiddFrame);
@@ -1013,13 +1014,13 @@ if(Meteor.isClient) {
 							</tbody>
 						</table>
 						<div style={{ fontSize: "small" }}>Receipt is valid subject to realization of Cheque</div>
-						<div style={{ fontSize: "small" }}>This receipt is sent to:</div>
-						<div style={{ fontSize: "small" }}>
-						{
-							details.cpList.map(cp => {
-								return <div key={cp.cpNumber}>{cp.cpNumber}, ({cp.cpName}) at {moment(cp.createdAt).format("DD/MM/YY HH:mm")}</div>
-							})
-						}
+						<div id="cpList" style={{ fontSize: "small" }}>
+							<div>This receipt is sent to:</div>
+							{
+								details.cpList.map(cp => {
+									return <div key={cp.cpNumber}>{cp.cpNumber}, ({cp.cpName}) at {moment(cp.createdAt).format("DD/MM/YY HH:mm")}</div>
+								})
+							}
 						</div>
 						<br/>
 						<div id="btnPrint">

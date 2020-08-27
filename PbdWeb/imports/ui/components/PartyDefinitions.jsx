@@ -237,7 +237,7 @@ if(Meteor.isClient) {
 		const [selectedPage, setSelectedPage] = useState(1);
 		const [totalPages, setTotalPages] = useState(1);
 
-		const viewLimit = 2;
+		const viewLimit = 10;
 
 		const [searchQuery, setSearchQuery] = useState("");
 		const [searchText, setSearchText] = useState("");
@@ -412,7 +412,7 @@ if(Meteor.isClient) {
 							<div className="input-group">
 							  	<input type="text" className="form-control" aria-label="Search Query" value={searchText} onChange={e => setSearchText(e.target.value)}/>
 							  	<div className="input-group-append">
-							    	<button className="btn btn-outline-secondary" type="submit">Button</button>
+							    	<button className="btn btn-outline-secondary" type="submit">Search</button>
 							  	</div>
 							</div>
 						</form>
