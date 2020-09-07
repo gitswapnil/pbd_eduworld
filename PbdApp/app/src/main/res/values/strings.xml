@@ -124,6 +124,8 @@
     <string name="notification_details">Notification Details</string>
     <string name="bank_name">Bank Name</string>
     <string name="bank_branch">Bank Branch</string>
+    <string name="proper_mobile_number">Enter a proper 10 digit mobile number</string>
+    <string name="about_us">About Us</string>
 
     <string-array name="task_done_questions">
         <item>Done with Sampling?</item>

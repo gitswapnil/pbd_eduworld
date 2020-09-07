@@ -109,13 +109,24 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             true
         }
 
-        R.id.option_systemLog -> {
-
-            true
-        }
-
         R.id.option_about -> {
+            val alertDialog: AlertDialog? = this.let {
+                val builder = AlertDialog.Builder(it)
+                builder.apply {
+                    setNegativeButton(R.string.cancel,
+                        DialogInterface.OnClickListener { dialog, id ->
+                            // User cancelled the dialog
 
+                        })
+                }
+                // Set other dialog properties
+                builder?.setMessage("PBD Eduworld PVT LTD. \nCTS 5448, Mahatma Phule Road, Shahapur Belgaum, 590003.\nThis app is developed by,\n Swapnil Bandiwadekar(9686059262)")
+                    .setTitle(R.string.about_us)
+
+                // Create the AlertDialog
+                builder.create()
+            }
+            alertDialog?.show();        //show user the reason for the need of location access.
             true
         }
 

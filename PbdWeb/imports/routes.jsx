@@ -173,6 +173,8 @@ if(Meteor.isClient) {
 	import { Accounts } from 'meteor/accounts-base';
 	import { Random } from 'meteor/random';
 	import fs from 'fs';
+	import http from 'http';
+	import querystring from 'querystring';
 	import { finished } from 'stream';
 	import { promisify } from 'util';
 	import { Email } from 'meteor/email';
@@ -185,137 +187,13 @@ if(Meteor.isClient) {
 				PBD_PHONE1,
 				PBD_PHONE2,
 				PBD_MOBILE1,
-				PBD_MOBILE2 } from 'meteor/pbd-apis';
+				PBD_MOBILE2,
+				_2FACTORSENDERID,
+				_2FATCORAPIKEY } from 'meteor/pbd-apis';
 
 	Router.route('/api/testroute', {where: 'server'}).get(function(req, res, next) {
 		console.log("This is testroute.");
 
-		// try {
-		// 	const details = Collections.receipts.findOne({ _id: "dZF4uHsfjyjf5KTd5" });
-		// 	details.execProfile = Meteor.users.findOne({ _id: details.userId }).profile;
-		// 	details.party = Meteor.users.findOne({ _id: details.partyId });
-
-		// 	Email.send({
-		// 		to: "ssbandiwadekar@gmail.com", 
-		// 		from: "no-reply@mypbd.com", 
-		// 		subject: `PBD Eduworld Receipt #${details.execProfile.receiptSeries}${details.receiptNo}`, 
-		// 		html: ReactDomServer.renderToStaticMarkup(
-		// 			<div>
-		// 				<div>
-		// 					<b style={{ "fontSize": "18px" }}>Hi {details.party.profile.name}</b>
-		// 					<div>Thanks for ordering from <b>{PBD_NAME}</b>. This email serves as a receipt for your purchase. Please retain this email receipt for your records.</div>
-		// 				</div>
-		// 				<div style={{ textAlign: "center" }}>
-		// 					<div style={{ maxWidth: "500px", display: "inline-block", boxShadow: "1px 1px 5px #aaa", padding: "20px", textAlign: "center", color: "#555", marginBottom: "20px" }}>
-		// 						<div style={{ fontSize: "large" }}><b>{PBD_NAME}</b></div>
-		// 						<div style={{ fontSize: "small" }}>{PBD_ADDRESS}</div>
-		// 						<div style={{ fontSize: "small" }}><b>Email: </b>{PBD_EMAIL}</div>
-		// 						<div style={{ fontSize: "small" }}><b>Phone: </b>{PBD_PHONE1}, {PBD_PHONE2}</div>
-		// 						<div style={{ fontSize: "small" }}><b>Mobile: </b>{PBD_MOBILE1}, {PBD_MOBILE2}</div>
-		// 						<table style={{ width: "100%", marginTop: "10px" }}>
-		// 							<tbody>
-		// 								<tr>
-		// 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Representative:</td>
-		// 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.execProfile.name}</td>
-		// 								</tr>
-		// 								<tr>
-		// 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Receipt No.:</td>
-		// 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.execProfile.receiptSeries}{details.receiptNo}</td>
-		// 								</tr>
-		// 								<tr>
-		// 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Date:</td>
-		// 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{moment(details.createdAt).format("DD-MMM-YYYY")}</td>
-		// 								</tr>
-		// 								<tr>
-		// 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Customer Code:</td>
-		// 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.party.username}</td>
-		// 								</tr>
-		// 								<tr>
-		// 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Name:</td>
-		// 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.party.profile.name}</td>
-		// 								</tr>
-		// 								<tr>
-		// 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Address:</td>
-		// 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.party.profile.address}</td>
-		// 								</tr>
-		// 								<tr>
-		// 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Customer Contact:</td>
-		// 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.party.profile.phoneNumber}</td>
-		// 								</tr>
-		// 								<tr>
-		// 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Paid By:</td>
-		// 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{(details.paidBy === 0) ? <span>Cash</span> : (details.paidBy === 1) ? <span>Cheque</span> : <span>Demand Draft</span>}</td>
-		// 								</tr>
-		// 								{
-		// 									(details.paidBy === 1) ?
-		// 									<tr>
-		// 										<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Cheque No.:</td>
-		// 										<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.chequeNo}</td>
-		// 									</tr>
-		// 									: null
-		// 								}
-		// 								{
-		// 									(details.paidBy === 2) ?
-		// 									<tr>
-		// 										<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Demand Draft No.:</td>
-		// 										<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.ddNo}</td>
-		// 									</tr>
-		// 									: null
-		// 								}
-		// 								{
-		// 									(details.paidBy !== 0) ? 
-		// 									<React.Fragment>
-		// 										<tr>
-		// 											<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Bank Name:</td>
-		// 											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.bankName}</td>
-		// 										</tr>
-		// 										<tr>
-		// 											<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Bank Branch:</td>
-		// 											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.bankBranch}</td>
-		// 										</tr>
-		// 									</React.Fragment>
-		// 									: null
-		// 								}
-		// 								<tr>
-		// 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Payment:</td>
-		// 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{(details.payment === 0) ? <span>Part</span> : <span>Full</span>}</td>
-		// 								</tr>
-		// 								<tr>
-		// 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Paid:</td>
-		// 									<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>
-		// 										<div style={{ fontSize: "large", fontWeight: "bold" }}>₹
-		// 											{(() => {
-		// 												let numStr = (parseFloat(details.amount) + 0.00001).toString().split(".");
-		// 												return `${numStr[0]}.${numStr[1].slice(0, 2)}`
-		// 											})()}
-		// 										</div>
-		// 									</td>
-		// 								</tr>
-		// 							</tbody>
-		// 						</table>
-		// 						<div style={{ fontSize: "small" }}>Receipt is valid subject to realization of Cheque</div>
-		// 					</div>
-		// 				</div>
-		// 				<div>
-		// 					<div>Thank you for your payment.</div>
-		// 					<br/>
-		// 					<div style={{ color: "#AAA", fontWeight: "bold" }}>
-		// 						<i>
-		// 							Regards,<br/>
-		// 							{PBD_NAME}<br/>
-		// 							{PBD_ADDRESS}<br/>
-		// 							Mobile: {PBD_MOBILE1}, {PBD_MOBILE2}<br/>
-		// 							Phone: {PBD_PHONE1}, {PBD_PHONE2}<br/>
-		// 							https://mypbd.com
-		// 						</i>
-		// 					</div>
-		// 				</div>
-		// 			</div>
-		// 		)
-		// 	});
-		// } catch(e) {
-		// 	console.log("Error while sending the email: " + e.message);
-		// }
 		res.end("response from testroute. It is a get method.");
 	});
 
@@ -1059,7 +937,7 @@ if(Meteor.isClient) {
 		}	if error is false then message is the apiKey for that user.
 	*/
 
-	const emailReceipt = (receiptId) => {
+	const emailReceipt = async (receiptId) => {
 		const receipt = Collections.receipts.findOne({ _id: receiptId });
 
 		if(!receipt) {
@@ -1069,7 +947,7 @@ if(Meteor.isClient) {
 
 		const cps = receipt.cpList;
 		if(!cps.length) {
-			console.log("no contact person information is present, hence exiting from the function.");
+			console.log("no contact person information is present, hence exiting from the function \"emailReceipt\".");
 			return; 
 		}
 
@@ -1077,12 +955,12 @@ if(Meteor.isClient) {
 		const to = cps.sort((a, b) => (b.createdAt - a.createdAt))[0].cpEmail;
 		console.log("to: " + to);
 		if(!to) {
-			console.log("contact person email not found, hence exiting from the function.");
+			console.log("contact person email not found, hence exiting from the function \"emailReceipt\".");
 			return;
 		}
 
 		try {
-			const details = Collections.receipts.findOne({ _id: receiptId });
+			const details = receipt;
 			details.execProfile = Meteor.users.findOne({ _id: details.userId }).profile;
 			details.party = Meteor.users.findOne({ _id: details.partyId });
 
@@ -1093,8 +971,8 @@ if(Meteor.isClient) {
 				html: ReactDomServer.renderToStaticMarkup(
 					<div>
 						<div>
-							<b style={{ "fontSize": "18px" }}>Hi {details.party.profile.name}</b>
-							<div>Thanks for ordering from <b>{PBD_NAME}</b>. This email serves as a receipt for your purchase. Please retain this email receipt for your records.</div>
+							Hi, <b style={{ "fontSize": "18px" }}>{details.party.profile.name}</b>
+							<div>Thanks for ordering from <b>{PBD_NAME}</b> This email serves as a receipt for your purchase. Please retain this email receipt for your records.</div>
 						</div>
 						<div style={{ textAlign: "center" }}>
 							<div style={{ maxWidth: "500px", display: "inline-block", border: "1px solid #ccc", padding: "20px", textAlign: "center", color: "#555", marginBottom: "20px" }}>
@@ -1204,8 +1082,97 @@ if(Meteor.isClient) {
 					</div>
 				), 
 			});
+
+			return;
 		} catch(e) {
 			console.log("Error in emailing the receipt: " + e.message);
+			throw new Error("Error in emailing the receipt: " + e.message);
+		}
+	};
+
+	const sendSMS = async (receiptId) => {
+		const receipt = Collections.receipts.findOne({ _id: receiptId });
+
+		if(!receipt) {
+			console.log("Receipt not found. Hence not sending the sms.");
+			return;
+		}
+
+		const cps = receipt.cpList;
+		if(!cps.length) {
+			console.log("no contact person information is present, hence exiting from the function \"sendSMS\".");
+			return; 
+		}
+
+		// console.log("cps: " + JSON.stringify(cps));
+		const to = cps.sort((a, b) => (b.createdAt - a.createdAt))[0].cpNumber;
+		console.log("to: " + to);
+		if(!to) {
+			console.log("contact person number not found, hence exiting from the function \"sendSMS\".");
+			return;
+		}
+
+		try {
+			const exec = Meteor.users.findOne({ _id: receipt.userId });
+			const party = Meteor.users.findOne({ _id: receipt.partyId });
+
+			let numStr = (parseFloat(receipt.amount) + 0.00001).toString().split(".");
+
+			let post_data = {
+				From : _2FACTORSENDERID,
+				To: to,
+				VAR1: `${numStr[0]}.${numStr[1].slice(0, 2)}`,
+				VAR2: `${party.profile.name}, ${party.profile.address}`,
+				VAR3: `${exec.profile.receiptSeries}${receipt.receiptNo}`
+			};
+
+			if(receipt.paidBy == 0) {
+				post_data.TemplateName = "ACK_paid_in_cash";
+			} else if(receipt.paidBy == 1) {
+				post_data.TemplateName = "ACK_paid_by_dd";
+				post_data.VAR4 = receipt.ddNo;
+				post_data.VAR5 = `${receipt.bankName}, ${receipt.bankBranch}`;
+			} else if(receipt.paidBy == 2) {
+				post_data.TemplateName = "ACK_paid_by_cheque";
+				post_data.VAR4 = receipt.chequeNo;
+				post_data.VAR5 = `${receipt.bankName}, ${receipt.bankBranch}`;
+			}
+
+			let sendResponse = new Promise((resolve, reject) => {
+				var options = {
+					host: 'www.2factor.in',
+					path: `/API/V1/${_2FATCORAPIKEY}/ADDON_SERVICES/SEND/TSMS`,
+					//This is what changes the request to a POST request
+					method: 'POST',
+					headers: {
+					  	'Content-Type': 'multipart/form-data'
+					}
+
+				};
+
+				const callback = function(response) {
+					var str = ''
+						response.on('data', function (chunk) {
+						str += chunk;
+					});
+
+					response.on('end', function () {
+						console.log(str);
+						resolve(str);
+					});
+				};
+
+				console.log("post_data: " + querystring.stringify(post_data));
+
+				const httpRequest = http.request(options, callback);
+				httpRequest.write(querystring.stringify(post_data));
+				httpRequest.end();
+			});
+
+			return await sendResponse;
+		} catch(e) {
+			console.log("Error in sending the SMS: " + e.message);
+			throw new Error("Error in sending the SMS: " + e.message);
 		}
 	};
 
@@ -1320,7 +1287,6 @@ if(Meteor.isClient) {
 				try {
 					console.log("cpObj: " + JSON.stringify(cpObj))
 					Collections.receipts.update({ _id: serverId }, { $push: { cpList: cpObj } });
-					emailReceipt(serverId);
 
 					const retObj = Collections.receipts.findOne({ _id: serverId })
 					retObj.serverId = retObj._id;
@@ -1362,7 +1328,6 @@ if(Meteor.isClient) {
 			        }
 
 					const serverId = Collections.receipts.insert(insertObj);
-					emailReceipt(serverId);
 
 			        const retObj = {
 			        	serverId,
@@ -1432,11 +1397,25 @@ if(Meteor.isClient) {
 			return;
 		});
 
+
 		const callAllFuncs = async () => {
 			const values = await Promise.all([generateReceiptApi]);
 
 			console.log(`values: ${JSON.stringify(values)}`);
-			const message = { ...values[0] }
+			const message = { ...values[0] };
+
+			const emailReceiptApi = emailReceipt(message.serverId).catch(err => {
+				res.end(JSON.stringify({error: true, message: err.message, code: 400}));
+				return;
+			});
+
+			const sendSMSApi = sendSMS(message.serverId).catch(err => {
+				res.end(JSON.stringify({error: true, message: err.message, code: 400}));
+				return;
+			});
+
+			const sendArrRetValues = await Promise.all([emailReceiptApi, sendSMSApi]);
+
 			res.end(JSON.stringify({ error: false, message, code: 200 }));
 		};
 

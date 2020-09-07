@@ -48,7 +48,7 @@ export const getCodeFromReason = (reason) => {
   return retValue;
 };
 
-export const MAP_API_KEY = "2D16m-0MldWtZBO8ymMUMxz-qRlneZkQUx_s-VhRmBo";
+export const MAP_API_KEY = "MntpsK4JG3UixJi3kDfHOGm0RjRziQ3xNor_b4icpok";
 export const DUTY_START_TIME = "10:00";    //format should always be in HH:mm
 export const DUTY_END_TIME = "18:00";
 
@@ -59,6 +59,9 @@ export const PBD_PHONE1 = "0831-4208621";
 export const PBD_PHONE2 = "0831-4208622";
 export const PBD_MOBILE1 = "9341108584";
 export const PBD_MOBILE2 = "9845646605";
+
+export const _2FACTORSENDERID = "PBDEWB";
+export const _2FATCORAPIKEY = "59129664-e9c0-11ea-9fa5-0200cd936042";
 
 export const firebaseServiceAccountKey = {
   "type": "service_account",

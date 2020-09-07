@@ -437,6 +437,16 @@ class AddNewTaskActivity : AppCompatActivity() {
                 contact_person_name.error = getString(R.string.this_field_is_required)
                 retValue = false
             }
+
+            if(contact_person_number.text == null || contact_person_number.text.toString() == "") {
+                contact_person_number.error = getString(R.string.this_field_is_required)
+                retValue = false
+            }
+
+            if(contact_person_number.text.length != 10) {
+                contact_person_number.error = getString(R.string.proper_mobile_number)
+                retValue = false
+            }
         } else if(task_type.selectedItem.toString() == "Other") {
             if(subject.text == null || subject.text.toString() == "") {
                 subject.error = getString(R.string.this_field_is_required)

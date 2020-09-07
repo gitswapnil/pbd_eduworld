@@ -176,14 +176,25 @@ class ReceiptPreviewActivity : AppCompatActivity() {
 
         val receipt_send_to_dialog_ph_number = view.findViewById<EditText>(R.id.receipt_send_to_dialog_ph_number)
         val receipt_send_to_dialog_cp_name = view.findViewById<EditText>(R.id.receipt_send_to_dialog_cp_name)
+        val receipt_send_to_dialog_cpEmail = view.findViewById<EditText>(R.id.receipt_send_to_dialog_cp_email)
 
         if(receipt_send_to_dialog_ph_number.text == null || receipt_send_to_dialog_ph_number.text.toString() == "") {
             receipt_send_to_dialog_ph_number.error = getString(R.string.this_field_is_required)
             retValue = false
         }
 
+        if(receipt_send_to_dialog_ph_number.text.length != 10) {
+            receipt_send_to_dialog_ph_number.error = getString(R.string.proper_mobile_number)
+            retValue = false
+        }
+
         if(receipt_send_to_dialog_cp_name.text == null || receipt_send_to_dialog_cp_name.text.toString() == "") {
             receipt_send_to_dialog_cp_name.error = getString(R.string.this_field_is_required)
+            retValue = false
+        }
+
+        if(receipt_send_to_dialog_cpEmail.text == null || receipt_send_to_dialog_cpEmail.text.toString() == "") {
+            receipt_send_to_dialog_cpEmail.error = getString(R.string.this_field_is_required)
             retValue = false
         }
 
