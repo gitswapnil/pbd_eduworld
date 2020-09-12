@@ -179,6 +179,7 @@ if(Meteor.isClient) {
 	import { promisify } from 'util';
 	import { Email } from 'meteor/email';
 	import ReactDomServer from 'react-dom/server';
+	import PdfMake from 'pdfmake';
 	import { 	getReasonFromCode, 
 				getCodeFromReason,
 				PBD_NAME,
@@ -963,11 +964,138 @@ if(Meteor.isClient) {
 			const details = receipt;
 			details.execProfile = Meteor.users.findOne({ _id: details.userId }).profile;
 			details.party = Meteor.users.findOne({ _id: details.partyId });
+			const fName = `${details.execProfile.receiptSeries}${details.receiptNo}`;
+
+			const fonts = {
+			  	Helvetica: {
+				    normal: 'Helvetica',
+				    bold: 'Helvetica-Bold',
+				    italics: 'Helvetica-Oblique',
+				    bolditalics: 'Helvetica-BoldOblique'
+			  	},
+			};
+
+			let body = [
+				[{text: 'Representative:', color: '#444'}, { text: `${details.execProfile.name}`, alignment: 'right'}],
+				[{text: 'Receipt No.:', color: '#444'}, { text: `${details.execProfile.receiptSeries}${details.receiptNo}`, alignment: 'right'}],
+				[{text: 'Date:', color: '#444'}, { text: `${moment(details.createdAt).format("DD-MMM-YYYY")}`, alignment: 'right'}],
+				[{text: 'Customer Code:', color: '#444'}, { text: `${details.party.username}`, alignment: 'right'}],
+				[{text: 'Name:', color: '#444'}, { text: `${details.party.profile.name}`, alignment: 'right'}],
+				[{text: 'Address:', color: '#444'}, { text: `${details.party.profile.address}`, alignment: 'right'}],
+				[{text: 'Customer Contact:', color: '#444'}, { text: `${details.party.profile.phoneNumber}`, alignment: 'right'}],
+				[{text: 'Paid By:', color: '#444'}, { text: `${(details.paidBy === 0) ? "Cash" : (details.paidBy === 1) ? "Cheque" : "Demand Draft"}`, alignment: 'right'}],
+			];
+
+			if(details.paidBy === 1) {
+				body.push([{text: 'Cheque No.:', color: '#444'}, { text: `${details.chequeNo}`, alignment: 'right'}]);
+			} 
+
+			if(details.paidBy === 2) {
+				body.push([{text: 'Demand Draft No.:', color: '#444'}, { text: `${details.ddNo}`, alignment: 'right'}]);
+			}
+
+			if(details.paidBy !== 0) {
+				body.push([{text: 'Bank Branch:', color: '#444'}, { text: `${details.bankBranch}`, alignment: 'right'}]);
+				body.push([{text: 'Bank Name:', color: '#444'}, { text: `${details.bankName}`, alignment: 'right'}]);
+			}
+
+			body.push([{text: 'Payment:', color: '#444'}, { text: `${(details.payment === 0) ? "Part" : "Full"}`, alignment: 'right'}]);
+			body.push([{text: 'Paid:', color: '#444'}, { text: `Rs.${(() => {
+														let numStr = (parseFloat(details.amount) + 0.00001).toString().split(".");
+														return `${numStr[0]}.${numStr[1].slice(0, 2)}`
+													})()}`, alignment: 'right', fontSize: 18, bold: true}]);
+
+			const pdfMake = new PdfMake(fonts);
+
+			const docDefinition = {
+				pageSize: 'A4',
+				pageOrientation: 'portrait',
+				// content,
+				defaultStyle: {
+				    font: 'Helvetica'
+				},
+				content: [
+					{
+						text: PBD_NAME,
+						style: {
+						    fontSize: 25
+						},
+					    alignment: 'center',
+					    bold: true,
+					},
+					{
+						text: PBD_ADDRESS,
+						style: {
+						    fontSize: 13,
+						    color: "#555",
+						},
+					    alignment: 'center',
+					},
+					{
+						text: [{ text: 'Email: ', bold: true }, PBD_EMAIL],
+						style: {
+						    fontSize: 13,
+						    color: "#555",
+						},
+					    alignment: 'center',
+					    margin: 2,
+					},
+					{
+						text: [{ text: 'Phone: ', bold: true }, `${PBD_PHONE1}, ${PBD_PHONE2}`],
+						style: {
+						    fontSize: 13,
+						    color: "#555",
+						},
+					    alignment: 'center',
+					    margin: 2,
+					},
+					{
+						text: [{ text: 'Mobile: ', bold: true }, `${PBD_MOBILE1}, ${PBD_MOBILE2}`],
+						style: {
+						    fontSize: 13,
+						    color: "#555",
+						},
+					    alignment: 'center',
+					    margin: 2,
+					},
+					'\n\n',
+					{
+						table: {
+						    widths: ['*', '*'],
+							body
+						},
+						layout: {
+							hLineWidth: function (i, node) {
+								return (i === 0) ? 0 : 1;
+							},
+							vLineWidth: function (i, node) {
+								return 1;
+							},
+							hLineColor: function (i, node) {
+								return 'gray';
+							},
+							vLineColor: function (i, node) {
+								return 'white';
+							},
+						}
+					},
+					{
+					    text: 'Receipt is valid subject to realization of Cheque',
+					    alignment: 'center'
+					},
+				]
+			};
+
+			// console.log("docDefinition: " + JSON.stringify(docDefinition));
+
+			let pdfDoc = pdfMake.createPdfKitDocument(docDefinition);
+			pdfDoc.pipe(fs.createWriteStream(`/tmp/${fName}.pdf`));
+			pdfDoc.end();
 
 			Email.send({ 
 				to, 
 				from: "no-reply@mypbd.com", 
-				subject: `PBD Eduworld Receipt #${details.execProfile.receiptSeries}${details.receiptNo}`, 
+				subject: `PBD Eduworld Receipt #${fName}`, 
 				html: ReactDomServer.renderToStaticMarkup(
 					<div>
 						<div>
@@ -1081,6 +1209,12 @@ if(Meteor.isClient) {
 						</div>
 					</div>
 				), 
+				attachments: [{ path: `/tmp/${fName}.pdf` }],
+			});
+
+			fs.unlink(`/tmp/${fName}.pdf`, (err) => {
+				if(err) throw err;
+				console.log("successfully deleted the temperary file.");
 			});
 
 			return;
@@ -1409,12 +1543,12 @@ if(Meteor.isClient) {
 				return;
 			});
 
-			const sendSMSApi = sendSMS(message.serverId).catch(err => {
-				res.end(JSON.stringify({error: true, message: err.message, code: 400}));
-				return;
-			});
+			// const sendSMSApi = sendSMS(message.serverId).catch(err => {
+			// 	res.end(JSON.stringify({error: true, message: err.message, code: 400}));
+			// 	return;
+			// });
 
-			const sendArrRetValues = await Promise.all([emailReceiptApi, sendSMSApi]);
+			const sendArrRetValues = await Promise.all([emailReceiptApi]);
 
 			res.end(JSON.stringify({ error: false, message, code: 200 }));
 		};
