@@ -33,14 +33,14 @@ const Login = () => {
 		<div className="container-fluid">
 			<div className="row">
 				<div className="col-12">
-					<img src={`${Meteor.absoluteUrl('login_background.jpg')}`} className="img-fluid" style={{"width": "100%", "height": "auto", "top": 0, "left": 0, "position": "fixed", "opacity": 0.3}}/>
+					<img src="/login_background.jpg" className="img-fluid" style={{"width": "100%", "height": "auto", "top": 0, "left": 0, "position": "fixed", "opacity": 0.3}}/>
 				</div>
 			</div>
 			<div className="row">
 				<div className="offset-1 col-5">
 					<br/>
 					<br/>
-					<img src={`${Meteor.absoluteUrl('pbd_logo.png')}`} width="300px"/>
+					<img src="/pbd_logo.png" width="300px"/>
 				</div>
 				<div className="col-6">
 					<div className="row">

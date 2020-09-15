@@ -1168,7 +1168,7 @@ if(Meteor.isClient) {
 			Tracker.autorun(() => {
 				if(handle.ready()) {
 					const fileName = Collections.receipts.findOne({ _id: (format === "excel") ? "workReportsExcel" : "workReportsPdf" }).fileName;
-					fetch(`${Meteor.absoluteUrl()}api/downloadFile/${fileName}`)
+					fetch(`/api/downloadFile/${fileName}`)
 						.then(resp => resp.blob())
 						.then(blob => {
 					   		const url = window.URL.createObjectURL(blob);
@@ -1217,7 +1217,7 @@ if(Meteor.isClient) {
 			Tracker.autorun(() => {
 				if(handle.ready()) {
 					const fileName = Collections.receipts.findOne({ _id: (format === "excel") ? "attendanceReportsExcel" : "attendanceReportsPdf" }).fileName;
-					fetch(`${Meteor.absoluteUrl()}/api/downloadFile/${fileName}`)
+					fetch(`/api/downloadFile/${fileName}`)
 						.then(resp => resp.blob())
 						.then(blob => {
 					   		const url = window.URL.createObjectURL(blob);

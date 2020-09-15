@@ -123,10 +123,44 @@ if(Meteor.isServer) {
 					            as: "followUps"
 					        }
 					    },
-					    { $unwind: "$followUps" },
+					    { $unwind: { path: "$followUps", preserveNullAndEmptyArrays: true } },
                         {
-                            $match: {
-                                "followUps.followUpFor": { $exists: true }
+                            $group: {
+                                _id: "$_id",
+                                userId: { $first: "$_id" },
+                                active: { $first: "$active" },
+                                createdAt: { $first: "$createdAt" },
+                                services: { $first: "$services" },
+                                username: { $first: "$username" },
+                                emails: { $first: "$emails" },
+                                apiKey: { $first: "$apiKey" },
+                                profile: { $first: "$profile" },
+                                updatedAt: { $first: "$updatedAt" },
+                                tasks: { $first: "$tasks" },
+                                receipts: { $first: "$receipts" },
+                                followUps: { $addToSet: { $cond: [ { $not: "$followUps.followUpFor" }, null, "$followUps" ] } },
+                                locations: { $first: "$locations" },
+                            }
+                        },
+                        {
+                            $unwind: { path: "$followUps", preserveNullAndEmptyArrays: true },
+                        },
+                        {
+                            $project: {
+                                _id: 1,
+                                userId: 1,
+                                active: 1,
+                                createdAt: 1,
+                                services: 1,
+                                username: 1,
+                                emails: 1,
+                                apiKey: 1,
+                                profile: 1,
+                                updatedAt: 1,
+                                tasks: 1,
+                                receipts: 1,
+                                followUps: { $cond: [{ $eq: ["$followUps", null] }, "$$REMOVE", "$followUps"]},
+                                locations: 1,
                             }
                         },
                         {
@@ -145,11 +179,6 @@ if(Meteor.isServer) {
                                 receipts: { $first: "$receipts" },
                                 followUps: { $addToSet: "$followUps" },
                                 locations: { $first: "$locations" },
-                            }
-                        },
-                        {
-                            $match: {
-                                "followUps.followUpFor": { $exists: true }
                             }
                         },
                         { $unwind: "$locations" },
@@ -481,9 +510,16 @@ if(Meteor.isClient) {
 					const execs = Meteor.users.find({"isExecutive": true}).fetch();
 
 					setExecutives(execs);
-					setSelectedExec(execs[0]._id);
-					props.onExecutiveSelection(execs[0]._id);
+
+					if(execs[0]) {
+						setSelectedExec(execs[0]._id);
+						props.onExecutiveSelection(execs[0]._id);
+					} else {
+						props.onExecutiveSelection("1");		//send 1 when no executives are present
+					}
+
 					setLoading(false);
+
 
 					this.stop();
 				}
@@ -578,11 +614,15 @@ if(Meteor.isClient) {
 
 		useEffect(() => {
 			if(props.selectedExecutiveId !== selectedExecutiveId) {
-				setSkip(0);
-				setListItems([{ _id: "ABCD", category: "loading" }]);
-				Collections.null.remove({});
-				setSelectedItemId("0");
-				setSelectedExecutiveId(props.selectedExecutiveId);
+				if(props.setSelectedExecutiveId === "1") {
+					setListItems([]);
+				} else {
+					setSkip(0);
+					setListItems([{ _id: "ABCD", category: "loading" }]);
+					Collections.null.remove({});
+					setSelectedItemId("0");
+					setSelectedExecutiveId(props.selectedExecutiveId);
+				}
 			}
 		}, [props.selectedExecutiveId]);
 

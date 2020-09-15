@@ -11,7 +11,7 @@ const SectionTab = (props) => {
 		return (
 			<div style={{"width": "112%"}}>
 				<div className="img-container-with-text">
-					<img src={`${Meteor.absoluteUrl('section_tab.png')}`} width="100%" height="65px"/>
+					<img src="/section_tab.png" width="100%" height="65px"/>
 					<div className="centered-img-text section-tab-selected">
 						{props.tabName}
 					</div>
@@ -46,7 +46,7 @@ const Layout = (props) => {
 				{/*This is left side section*/}
 				<div className="col-2 sections-column" style={{"padding": 0}}>
 					<div className="text-center">
-						<img src={`${Meteor.absoluteUrl('pbd_logo.png')}`} width="150px" style={{"margin": "8px 0"}}/>
+						<img src="/pbd_logo.png" width="150px" style={{"margin": "8px 0"}}/>
 					</div>
 					<div style={{"marginTop": "30px"}}>
 						<SectionTab tabName="Dashboard" selected={(props.selectedSection === "dashboard")} onClick={() => Router.go('/dashboard/currentstatus')}/>
@@ -67,12 +67,12 @@ const Layout = (props) => {
 						    	{username || <i className="text-muted">No Name Found</i>}&nbsp;
 							</button>
 							<div className="dropdown-menu dropdown-menu-right">
-								<a className="dropdown-item" href={`${Meteor.absoluteUrl('profile/settings')}`}>
+								<a className="dropdown-item" href="/profile/settings">
 									<FontAwesomeIcon icon={faCog}/>&nbsp;
 									Settings
 								</a>
 								<div className="dropdown-divider"></div>
-								<a className="dropdown-item" href={`${Meteor.absoluteUrl('logout')}`}>
+								<a className="dropdown-item" href="/logout">
 									<FontAwesomeIcon icon={faSignOutAlt}/>&nbsp;
 									Logout
 								</a>

@@ -129,6 +129,11 @@ class FollowUpsFragment : Fragment() {
             val followUps = db.followUpsDao().getFollowUps(limit = limit, offset = offset, searchQuery = searchQuery)
             if(followUps.isEmpty()) {
                 isLoading = false
+                //Remove the loading sign if present
+                if(loadingIndex != null) {
+                    listItems.removeAt(loadingIndex)
+                    recyclerViewAdapter.notifyItemRemoved(loadingIndex)
+                }
                 return@launch
             }
 

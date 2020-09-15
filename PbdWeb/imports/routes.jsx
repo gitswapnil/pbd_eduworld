@@ -1912,12 +1912,11 @@ if(Meteor.isClient) {
 
 				// console.log("docs: " + JSON.stringify(docs));
 				
-				returnObj.tasks = [...docs[0].tasks];
-				returnObj.receipts = [...docs[0].receipts];
-				returnObj.followUps = [...docs[0].followUps];
-				returnObj.parties = [...docs[0].parties];
-				returnObj.notifications = [...docs[0].notifications];
-
+				returnObj.tasks = (docs[0] && docs[0].tasks) ? [...docs[0].tasks] : [];
+				returnObj.receipts = (docs[0] && docs[0].receipts) ? [...docs[0].receipts] : [];
+				returnObj.followUps = (docs[0] && docs[0].followUps) ? [...docs[0].followUps] : [];
+				returnObj.parties = (docs[0] && docs[0].parties) ? [...docs[0].parties] : [];
+				returnObj.notifications = (docs[0] && docs[0].notifications) ? [...docs[0].notifications] : [];
 				returnObj.dataLength = returnObj.tasks.length +  returnObj.receipts.length + returnObj.followUps.length + returnObj.parties.length + returnObj.notifications.length;
 
 				res.end(JSON.stringify({error: false, message: returnObj, code: 200}));

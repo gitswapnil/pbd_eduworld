@@ -131,6 +131,11 @@ class ReceiptsFragment : Fragment() {
             val receipts = db.receiptsDao().getReceipts(limit = limit, offset = offset, searchQuery = searchQuery)
             if(receipts.isEmpty()) {
                 isLoading = false
+                //Remove the loading sign if present
+                if(loadingIndex != null) {
+                    listItems.removeAt(loadingIndex)
+                    recyclerViewAdapter.notifyItemRemoved(loadingIndex)
+                }
                 return@launch
             }
 

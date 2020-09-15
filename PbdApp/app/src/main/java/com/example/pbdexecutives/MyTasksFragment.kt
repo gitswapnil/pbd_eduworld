@@ -151,9 +151,9 @@ class MyTasksFragment : Fragment() {
         super.onResume()
         selected = true
 
-        if(activity!!.findViewById<FloatingActionButton>(R.id.floating_btn) != null) {
-            activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).visibility = View.VISIBLE
-            activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).setOnClickListener { view ->
+        if(requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn) != null) {
+            requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn).visibility = View.VISIBLE
+            requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn).setOnClickListener { view ->
                 createNewTask(view)
             }
         } else {
@@ -165,8 +165,8 @@ class MyTasksFragment : Fragment() {
         super.onPause()
         selected = false
 
-        if(activity!!.findViewById<FloatingActionButton>(R.id.floating_btn) != null) {
-            activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).setOnClickListener(null)
+        if(requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn) != null) {
+            requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn).setOnClickListener(null)
         } else {
             searchReceiverUnmonitor()
         }
@@ -185,6 +185,10 @@ class MyTasksFragment : Fragment() {
             val tasks = db.tasksDao().getTasks(limit, offset, searchQuery)
             if(tasks.isEmpty()) {
                 isLoading = false
+                if (loadingIndex != null) {
+                    listItems.removeAt(loadingIndex)
+                    recyclerViewAdapter.notifyItemRemoved(loadingIndex)
+                }
                 return@launch
             }
 
