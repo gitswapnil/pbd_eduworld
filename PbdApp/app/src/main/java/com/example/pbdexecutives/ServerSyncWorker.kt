@@ -225,6 +225,8 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                     notificationLastUpdatedAt = lastNotificationUpdatedAt
                 )))
 
+//                Log.i("pbdLog", "requestJSONObject: ${requestJSONObject}")
+
                 PbdExecutivesUtils.sendData(
                     applicationContext,
                     "syncdata",
@@ -235,7 +237,8 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                             response.toString(),
                             MessageObject::class.java
                         );      //convert the response back into JSON Object from the response string
-//                            Log.i("pbdLog", "responseObject: $responseObject")
+
+//                        Log.i("pbdLog", "responseObject: $responseObject")
 
                         GlobalScope.launch {
                             if(responseObject.deletedIds != null && responseObject.deletedIds.isNotEmpty()) {
@@ -289,6 +292,7 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                             }
 
                             if(responseObject.taskIds != null && responseObject.taskIds.isNotEmpty()) {
+                                Log.i("pbdLog", "responseObject.taskIds: ${responseObject.taskIds}")
                                 responseObject.taskIds.forEach {
                                     db.tasksDao().markTaskSynced(id = it.id, serverId = it.serverId)
                                 }
@@ -326,7 +330,7 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                                 syncFunc(completer)
                             }
 
-                            Log.i("pbdLog", "requestJSONObject: $requestJSONObject")
+//                            Log.i("pbdLog", "requestJSONObject: $requestJSONObject")
                         }
                     },
                     { code, error ->

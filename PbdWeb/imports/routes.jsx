@@ -881,7 +881,7 @@ if(Meteor.isClient) {
 			const values = await Promise.all([deleteDocsApi, locationsApi, userDetailsApi, partyDetailsApi, notificationsApi, tasksApi]);
 
 			//this function is made separate because, it needs saved task ids
-			const followUpsRetIds = storeFollowUps(user._id, reqBody.followUps, values[4]);
+			const followUpsRetIds = storeFollowUps(user._id, reqBody.followUps, values[5]);
 
 			const message = {
 				deletedIds: values[0],
