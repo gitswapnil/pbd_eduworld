@@ -662,7 +662,9 @@ if(Meteor.isClient) {
 
 						if((selectedItemId === "0") && data.length) {
 							const nonNullCategoryItem = data.find(elem => (elem.category != null));
-							setSelectedItemId(nonNullCategoryItem._id);
+							if(nonNullCategoryItem) {
+								setSelectedItemId(nonNullCategoryItem._id);
+							}
 						}
 					}
 				});
@@ -707,7 +709,7 @@ if(Meteor.isClient) {
 								let prevDate;
 
 								return listItems.map(item => {
-									// console.log("item: " + JSON.stringify(item));
+									console.log("item: " + JSON.stringify(item));
 									let dateRow = "";
 									if(item.createdAt) {
 										const date = moment(item.createdAt).format("DD-MMM-YYYY");
