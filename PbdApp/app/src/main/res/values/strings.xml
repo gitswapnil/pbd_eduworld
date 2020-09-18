@@ -42,7 +42,7 @@
     <string name="mins">Mins</string>
     <string name="calculating">Calculating...</string>
     <string name="name">Name:\u0020</string>
-    <string name="email_optional">Email (optional)</string>
+    <string name="email_optional">Email</string>
     <string name="email">Email:\u0020</string>
     <string name="companyNo">Phone No.:\u0020</string>
     <string name="personalNo">Personal Ph No.:\u0020</string>

@@ -709,7 +709,7 @@ if(Meteor.isClient) {
 								let prevDate;
 
 								return listItems.map(item => {
-									console.log("item: " + JSON.stringify(item));
+									// console.log("item: " + JSON.stringify(item));
 									let dateRow = "";
 									if(item.createdAt) {
 										const date = moment(item.createdAt).format("DD-MMM-YYYY");
@@ -736,8 +736,8 @@ if(Meteor.isClient) {
 														{
 															(item.category === "task") ? 
 															<div>
-																<div className="text-primary">Task</div>
-																<div style={{ fontSize: "smaller" }}>{ item.party ? getReasonFromCode(item.reason) : null}</div>
+																<div className="text-primary">{ (item.type === 0) ? "Task" : "Other Task" }</div>
+																<div style={{ fontSize: "smaller" }}>{ (item.type === 0) ? getReasonFromCode(item.reason) : item.subject}</div>
 																<div style={{ fontSize: "large" }}>{(item.party) ? (item.party.profile.name).substring(0, 30) : (item.subject).substring(0, 30)}</div>
 															</div>
 															: 
