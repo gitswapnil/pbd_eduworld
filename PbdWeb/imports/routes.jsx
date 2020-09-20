@@ -1535,20 +1535,15 @@ if(Meteor.isClient) {
 		const callAllFuncs = async () => {
 			const values = await Promise.all([generateReceiptApi]);
 
-			console.log(`values: ${JSON.stringify(values)}`);
+			// console.log(`values: ${JSON.stringify(values)}`);
 			const message = { ...values[0] };
-
-			const emailReceiptApi = emailReceipt(message.serverId).catch(err => {
-				res.end(JSON.stringify({error: true, message: err.message, code: 400}));
-				return;
-			});
 
 			// const sendSMSApi = sendSMS(message.serverId).catch(err => {
 			// 	res.end(JSON.stringify({error: true, message: err.message, code: 400}));
 			// 	return;
 			// });
 
-			const sendArrRetValues = await Promise.all([emailReceiptApi]);
+			// const sendArrRetValues = await Promise.all([emailReceiptApi]);
 
 			res.end(JSON.stringify({ error: false, message, code: 200 }));
 		};
@@ -1635,9 +1630,11 @@ if(Meteor.isClient) {
 			{
 		        $addFields: {
 		            "partyToAdd": { 
-		                $cond: [{ $isArray: "$availableTo" },
-		                        { $ne: [{ $indexOfArray: ["$availableTo", user._id] }, -1] },
-		                        "$$REMOVE"]
+		                $cond: [
+		                	{ $isArray: "$availableTo" },
+		                    { $ne: [{ $indexOfArray: ["$availableTo", user._id] }, -1] },
+		                    "$$REMOVE"
+		                ]
 		            },
 		        }
 		    },
@@ -1663,7 +1660,8 @@ if(Meteor.isClient) {
 		            appToken: { $first: "$appToken" },
 		            parties: { 
 		                $addToSet: {
-		                    $cond:[ {$eq: ["$partyToAdd", true]}, 
+		                    $cond:[ 
+		                    	{$eq: ["$partyToAdd", true]}, 
 		                        { 
 		                            "_id": "$_id",
 		                            "name": "$profile.name",
@@ -1673,12 +1671,12 @@ if(Meteor.isClient) {
 		                            "updatedAt": { $toLong: "$updatedAt" },
 		                            "createdAt": "$createdAt"
 		                        }, 
-		                        "$$REMOVE"]
+		                        "$$REMOVE"
+		                    ]
 		                }
 		            }
 		        }
 		    },
-    
 		    {
 		        $lookup: {
 		            from: "tasks",
@@ -1711,7 +1709,7 @@ if(Meteor.isClient) {
 		            as: "notifications",
 		        }
 		    },
-            { $unwind: "$receipts" },
+            { $unwind: { path: "$receipts", preserveNullAndEmptyArrays: true } },
             { $unwind: { path: "$receipts.cpList", preserveNullAndEmptyArrays: true } },
             { 
                 $addFields: {
@@ -1722,6 +1720,21 @@ if(Meteor.isClient) {
                 }
             },
             { $unset: ["receipts.cpList"] },
+            {
+                $project: {
+                    _id: 1,
+                    createdAt: 1,
+                    username: 1,
+                    emails: 1,
+                    apiKey: 1,
+                    profile: 1,
+                    parties: 1,
+                    tasks: 1,
+                    receipts: { $cond: [ {$eq: [{ $type: "$receipts._id" }, "missing"]}, "$$REMOVE", "$receipts"]},
+                    followUps: 1,
+                    notifications: 1
+                }
+            },
             {
                 $group: {
                     _id: "$_id",
@@ -1736,7 +1749,7 @@ if(Meteor.isClient) {
                     notifications: { $first: "$notifications" },
                 }
             },
-            { $unwind: "$followUps" },
+            { $unwind: { path: "$followUps", preserveNullAndEmptyArrays: true } },
             {
                 $project: {
                      _id: 1,
@@ -1750,13 +1763,21 @@ if(Meteor.isClient) {
                     "profile.receiptSeries": 1,
                     tasks: 1,
                     receipts: 1,
-                    "followUps._id": 1,
-                    "followUps.partyId": 1,
-                    "followUps.reminderDate": { $ifNull: [{ $toLong: "$followUps.reminderDate"}, "$followUps.reminderDate"] },
-                    "followUps.taskId": 1,
-                    "followUps.followUpFor": 1,
-                    "followUps.userId": 1,
-                    "followUps.createdAt": 1,
+                    followUps: {
+                        $cond: [
+                            { $eq: [{ $type: "$followUps._id" }, "missing"] }, 
+                            "$$REMOVE",
+                            {
+                                "_id": "$followUps._id",
+                                "partyId": "$followUps.partyId",
+                                "reminderDate": { $ifNull: [{ $toLong: "$followUps.reminderDate"}, "$followUps.reminderDate"] },
+                                "taskId": "$followUps.taskId",
+                                "followUpFor": "$followUps.followUpFor",
+                                "userId": "$followUps.userId",
+                                "createdAt": "$followUps.createdAt",
+                            }
+                        ]
+                    },
                     parties: 1,
                     notifications: 1
                 }
@@ -1775,7 +1796,7 @@ if(Meteor.isClient) {
                     notifications: { $first: "$notifications" },
                 }
             },
-            { $unwind: "$notifications" },
+            { $unwind: { path: "$notifications", preserveNullAndEmptyArrays: true } },
             {
                 $project: {
                     _id: 1,
@@ -1787,11 +1808,19 @@ if(Meteor.isClient) {
                     receipts: 1,
                     followUps: 1,
                     parties: 1,
-                    "notifications._id": 1,
-                    "notifications.type": 1,
-                    "notifications.text": 1,
-                    "notifications.img": { $arrayElemAt: [{ $split: [ "$notifications.img", "," ] }, 1] },
-                    "notifications.createdAt": 1,
+                    notifications: {
+                        $cond: [
+                            { $eq: [{ $type: "$notifications._id" }, "missing"] }, 
+                            "$$REMOVE",
+                            {
+                                "_id": "$notifications._id",
+                                "type": "$notifications.type",
+                                "text": "$notifications.text",
+                                "img": { $arrayElemAt: [{ $split: [ "$notifications.img", "," ] }, 1] },
+                                "createdAt": "$notifications.createdAt",
+                            }
+                        ]
+                    }
                 }
             },
             {
@@ -1831,12 +1860,12 @@ if(Meteor.isClient) {
             { $skip: reqBody.offset },
             { $limit: reqBody.limit },
 		    { $unwind: "$data" },
-                    { $unwind: { path: "$data.cpList", preserveNullAndEmptyArrays: true } },
-                    {
-                        $addFields: {
-                            "data.createdAt": { $toLong: "$data.createdAt" }
-                        }
-                    },
+            { $unwind: { path: "$data.cpList", preserveNullAndEmptyArrays: true } },
+            {
+                $addFields: {
+                    "data.createdAt": { $toLong: "$data.createdAt" }
+                }
+            },
 		    {
 		        $group: {
 		            _id: "$_id",
@@ -1897,7 +1926,7 @@ if(Meteor.isClient) {
 		    },
 		    {
 		        $unset: [ "tasks.row", "tasks.userId", "receipts.row", "receipts.userId", "followUps.row", "followUps.userId", "parties.row", "parties.createdAt", "notifications.row" ]
-		    },
+		    }
 		], (error, cursor) => {
 			if(error) {
 				res.end(JSON.stringify({error: true, message: error.message, code: 500}));
@@ -1910,7 +1939,7 @@ if(Meteor.isClient) {
 					return;
 				}
 
-				// console.log("docs: " + JSON.stringify(docs));
+				console.log("docs: " + JSON.stringify(docs));
 				
 				returnObj.tasks = (docs[0] && docs[0].tasks) ? [...docs[0].tasks] : [];
 				returnObj.receipts = (docs[0] && docs[0].receipts) ? [...docs[0].receipts] : [];
@@ -1918,6 +1947,8 @@ if(Meteor.isClient) {
 				returnObj.parties = (docs[0] && docs[0].parties) ? [...docs[0].parties] : [];
 				returnObj.notifications = (docs[0] && docs[0].notifications) ? [...docs[0].notifications] : [];
 				returnObj.dataLength = returnObj.tasks.length +  returnObj.receipts.length + returnObj.followUps.length + returnObj.parties.length + returnObj.notifications.length;
+
+				console.log("restoredata returnObj: " + JSON.stringify(returnObj));
 
 				res.end(JSON.stringify({error: false, message: returnObj, code: 200}));
 			})
