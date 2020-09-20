@@ -938,22 +938,13 @@ if(Meteor.isClient) {
 		}	if error is false then message is the apiKey for that user.
 	*/
 
-	const emailReceipt = async (receiptId) => {
-		const receipt = Collections.receipts.findOne({ _id: receiptId });
-
-		if(!receipt) {
+	const emailReceipt = async (userId, receiptDetails) => {
+		if(!receiptDetails) {
 			console.log("Receipt not found. Hence not sending the email.");
 			return;
 		}
 
-		const cps = receipt.cpList;
-		if(!cps.length) {
-			console.log("no contact person information is present, hence exiting from the function \"emailReceipt\".");
-			return; 
-		}
-
-		// console.log("cps: " + JSON.stringify(cps));
-		const to = cps.sort((a, b) => (b.createdAt - a.createdAt))[0].cpEmail;
+		const to = receiptDetails.cpEmail;
 		console.log("to: " + to);
 		if(!to) {
 			console.log("contact person email not found, hence exiting from the function \"emailReceipt\".");
@@ -961,10 +952,18 @@ if(Meteor.isClient) {
 		}
 
 		try {
-			const details = receipt;
-			details.execProfile = Meteor.users.findOne({ _id: details.userId }).profile;
+			const details = receiptDetails;
+			details.execProfile = Meteor.users.findOne({ _id: userId }).profile;
 			details.party = Meteor.users.findOne({ _id: details.partyId });
 			const fName = `${details.execProfile.receiptSeries}${details.receiptNo}`;
+
+			const prevReceipt = Collections.receipts.findOne({ userId }, {sort: { createdAt: -1 }});
+			const prevReceiptNo = (prevReceipt && prevReceipt.receiptNo || 0);
+			const receiptNo = parseInt(prevReceiptNo) + 1;
+
+			if(typeof receiptNo !== "number") {
+				throw new Error("last receipt Number not found. Hence exiting from the function \"emailReceipt\".");
+			}
 
 			const fonts = {
 			  	Helvetica: {
@@ -977,7 +976,7 @@ if(Meteor.isClient) {
 
 			let body = [
 				[{text: 'Representative:', color: '#444'}, { text: `${details.execProfile.name}`, alignment: 'right'}],
-				[{text: 'Receipt No.:', color: '#444'}, { text: `${details.execProfile.receiptSeries}${details.receiptNo}`, alignment: 'right'}],
+				[{text: 'Receipt No.:', color: '#444'}, { text: `${details.execProfile.receiptSeries}${receiptNo}`, alignment: 'right'}],
 				[{text: 'Date:', color: '#444'}, { text: `${moment(details.createdAt).format("DD-MMM-YYYY")}`, alignment: 'right'}],
 				[{text: 'Customer Code:', color: '#444'}, { text: `${details.party.username}`, alignment: 'right'}],
 				[{text: 'Name:', color: '#444'}, { text: `${details.party.profile.name}`, alignment: 'right'}],
@@ -1117,7 +1116,7 @@ if(Meteor.isClient) {
 										</tr>
 										<tr>
 											<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Receipt No.:</td>
-											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.execProfile.receiptSeries}{details.receiptNo}</td>
+											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.execProfile.receiptSeries}{receiptNo}</td>
 										</tr>
 										<tr>
 											<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Date:</td>
@@ -1311,6 +1310,7 @@ if(Meteor.isClient) {
 	};
 
 	const generateReceipt = async (userId, receiptDetails) => {
+		console.log("receiptDetails: " + JSON.stringify(receiptDetails));
 		if(!receiptDetails.partyId || (receiptDetails.partyId.length == 32)) {
 			throw new Error("Invalid partyId.");
 			return;
@@ -1408,6 +1408,14 @@ if(Meteor.isClient) {
 				return;
 			}
 		}
+
+		const emailReceiptApi = emailReceipt(userId, receiptDetails).catch(err => {
+			// res.end(JSON.stringify({error: true, message: err.message, code: 400}));
+			throw new Error("Unable to mail the receipt to the customer, Error: " + err);
+			return;
+		});
+
+		const sendArrRetValues = await Promise.all([emailReceiptApi]);
 
 		let details = new Promise((resolve, reject) => {
 			const cpObj = {

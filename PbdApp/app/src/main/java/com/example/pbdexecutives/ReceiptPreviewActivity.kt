@@ -311,7 +311,7 @@ class ReceiptPreviewActivity : AppCompatActivity() {
                     sendingReceiptDialog.dismiss()
                     Snackbar.make(receipt_preview_layout, "${getString(R.string.cannot_generate_the_receipt)} $error", Snackbar.LENGTH_LONG).show()
                 },
-                DefaultRetryPolicy(200000, 0, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT)
+                DefaultRetryPolicy(500000, 0, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT)
             )
         }
     }
