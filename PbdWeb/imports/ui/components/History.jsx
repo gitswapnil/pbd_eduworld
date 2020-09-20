@@ -181,7 +181,142 @@ if(Meteor.isServer) {
                                 locations: { $first: "$locations" },
                             }
                         },
-                        { $unwind: "$locations" },
+                        
+                        
+                        { $unwind: { path: "$tasks", preserveNullAndEmptyArrays: true } },
+                        {
+                            $group: {
+                                _id: "$_id",
+                                userId: { $first: "$_id" },
+                                active: { $first: "$active" },
+                                createdAt: { $first: "$createdAt" },
+                                services: { $first: "$services" },
+                                username: { $first: "$username" },
+                                emails: { $first: "$emails" },
+                                apiKey: { $first: "$apiKey" },
+                                profile: { $first: "$profile" },
+                                updatedAt: { $first: "$updatedAt" },
+                                tasks: { $addToSet: "$tasks" },
+                                receipts: { $first: "$receipts" },
+                                followUps: { $first: "$followUps" },
+                                taskLocations: { 
+                                    $addToSet: {
+                                        "_id": null,
+                                        "createdAt": "$tasks.createdAt"
+                                    }
+                                },
+                                locations: { $first: "$locations" }
+                            }
+                        },
+                        {
+                            $project: {
+                                _id: 1,
+                                userId: 1,
+                                active: 1,
+                                createdAt: 1,
+                                services: 1,
+                                username: 1,
+                                emails: 1,
+                                apiKey: 1,
+                                profile: 1,
+                                updatedAt: 1,
+                                tasks: 1,
+                                receipts: 1,
+                                followUps: 1,
+                                locations: { $concatArrays: ["$taskLocations", "$locations"] },
+                            }
+                        },
+                        
+                        { $unwind: { path: "$receipts", preserveNullAndEmptyArrays: true } },
+                        {
+                            $group: {
+                                _id: "$_id",
+                                userId: { $first: "$_id" },
+                                active: { $first: "$active" },
+                                createdAt: { $first: "$createdAt" },
+                                services: { $first: "$services" },
+                                username: { $first: "$username" },
+                                emails: { $first: "$emails" },
+                                apiKey: { $first: "$apiKey" },
+                                profile: { $first: "$profile" },
+                                updatedAt: { $first: "$updatedAt" },
+                                tasks: { $first: "$tasks" },
+                                receipts: { $addToSet: "$receipts" },
+                                followUps: { $first: "$followUps" },
+                                receiptsLocations: { 
+                                    $addToSet: {
+                                        "_id": null,
+                                        "createdAt": "$receipts.createdAt"
+                                    }
+                                },
+                                locations: { $first: "$locations" }
+                            }
+                        },
+                        {
+                            $project: {
+                                _id: 1,
+                                userId: 1,
+                                active: 1,
+                                createdAt: 1,
+                                services: 1,
+                                username: 1,
+                                emails: 1,
+                                apiKey: 1,
+                                profile: 1,
+                                updatedAt: 1,
+                                tasks: 1,
+                                receipts: 1,
+                                followUps: 1,
+                                locations: { $concatArrays: ["$receiptsLocations", "$locations"] },
+                            }
+                        },
+                        
+                        { $unwind: { path: "$followUps", preserveNullAndEmptyArrays: true } },
+                        {
+                            $group: {
+                                _id: "$_id",
+                                userId: { $first: "$_id" },
+                                active: { $first: "$active" },
+                                createdAt: { $first: "$createdAt" },
+                                services: { $first: "$services" },
+                                username: { $first: "$username" },
+                                emails: { $first: "$emails" },
+                                apiKey: { $first: "$apiKey" },
+                                profile: { $first: "$profile" },
+                                updatedAt: { $first: "$updatedAt" },
+                                tasks: { $first: "$tasks" },
+                                receipts: { $first: "$receipts" },
+                                followUps: { $addToSet: "$followUps" },
+                                followUpsLocations: { 
+                                    $addToSet: {
+                                        "_id": null,
+                                        "createdAt": "$followUps.createdAt"
+                                    }
+                                },
+                                locations: { $first: "$locations" }
+                            }
+                        },
+                        {
+                            $project: {
+                                _id: 1,
+                                userId: 1,
+                                active: 1,
+                                createdAt: 1,
+                                services: 1,
+                                username: 1,
+                                emails: 1,
+                                apiKey: 1,
+                                profile: 1,
+                                updatedAt: 1,
+                                tasks: 1,
+                                receipts: 1,
+                                followUps: 1,
+                                locations: { $concatArrays: ["$followUpsLocations", "$locations"] },
+                            }
+                        },
+                        
+                        
+                        { $unwind: { path: "$locations", preserveNullAndEmptyArrays: true } },
                         {
                             $project: {
                                 _id: 1,
@@ -196,10 +331,23 @@ if(Meteor.isServer) {
                                 tasks: 1,
                                 receipts: 1,
                                 followUps: 1,
-                                locationsCreatedAt: { $dateToString: { date: "$locations.createdAt", format: "%Y-%m-%d", timezone: "Asia/Kolkata" } },
+                                locationsCreatedAt: {
+                                    $cond: [
+                                        { $not: "$locations" },
+                                        "$$REMOVE",
+                                        { $dateToString: { date: "$locations.createdAt", format: "%Y-%m-%d", timezone: "Asia/Kolkata" } }
+                                    ]
+                                },
                                 locations: 1,
                             }
                         },
+                        {
+                            $match: {
+                                "locationsCreatedAt": { $ne: null }
+                            }
+                        },
+                        
+                        
                         {
                             $group: {
                                 _id: "$locationsCreatedAt",
@@ -241,6 +389,11 @@ if(Meteor.isServer) {
 					        }
 					    },
 					    { $unwind: "$history" },
+                        {
+                            $match: {
+                                "history._id": { $ne: null }
+                            }
+                        },
 					    {
 					        $project: {
 					            _id: "$history._id",
