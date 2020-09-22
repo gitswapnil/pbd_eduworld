@@ -3,6 +3,7 @@ package com.example.pbdexecutives
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -23,6 +24,7 @@ import java.util.*
 class NotificationsFragment : Fragment() {
     private lateinit var recyclerViewAdapter: NotificationsRecyclerViewAdapter
     private lateinit var listItems: MutableList<NotificationsListItemModel?>
+    private var listForComparing: MutableList<Notifications> = ArrayList()
     private var limit = 20
     private var offset: Int = 0
     private var isLoading = false
@@ -96,11 +98,18 @@ class NotificationsFragment : Fragment() {
             val notifications = db.notificationsDao().getNotifications(limit, offset)
             if(notifications.isEmpty()) {
                 isLoading = false
+                //Remove the loading sign if present
+                if(loadingIndex != null) {
+                    listItems.removeAt(loadingIndex)
+                    recyclerViewAdapter.notifyItemRemoved(loadingIndex)
+                }
                 return@launch
             }
 
+            listForComparing.addAll(notifications)
+
             //insert it into the list
-            notifications.forEach {
+            listForComparing.forEach {
                 listItems.add(
                     NotificationsListItemModel(
                         id = it.id,
@@ -114,8 +123,9 @@ class NotificationsFragment : Fragment() {
                 recyclerViewAdapter.notifyItemInserted(listItems.size - 1)
             }
 
-            if(notifications.isNotEmpty()) {
-                offset += notifications.size
+            Log.i("pbdLog", "listForComparison.isNotEmpty(): ${listForComparing.isNotEmpty()}")
+            if(listForComparing.isNotEmpty()) {
+                offset += listForComparing.size
             }
 
             //Remove the loading sign if present
@@ -124,7 +134,7 @@ class NotificationsFragment : Fragment() {
                 recyclerViewAdapter.notifyItemRemoved(loadingIndex)
             }
 
-            if(notifications.size == limit) {
+            if(listForComparing.size == limit) {
                 listItems.add(null)
                 recyclerViewAdapter.notifyItemInserted(listItems.size - 1)
             }

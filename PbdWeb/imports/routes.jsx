@@ -955,7 +955,6 @@ if(Meteor.isClient) {
 			const details = receiptDetails;
 			details.execProfile = Meteor.users.findOne({ _id: userId }).profile;
 			details.party = Meteor.users.findOne({ _id: details.partyId });
-			const fName = `${details.execProfile.receiptSeries}${details.receiptNo}`;
 
 			const prevReceipt = Collections.receipts.findOne({ userId }, {sort: { createdAt: -1 }});
 			const prevReceiptNo = (prevReceipt && prevReceipt.receiptNo || 0);
@@ -964,6 +963,7 @@ if(Meteor.isClient) {
 			if(typeof receiptNo !== "number") {
 				throw new Error("last receipt Number not found. Hence exiting from the function \"emailReceipt\".");
 			}
+			const fName = `${details.execProfile.receiptSeries}${receiptNo}`;
 
 			const fonts = {
 			  	Helvetica: {
