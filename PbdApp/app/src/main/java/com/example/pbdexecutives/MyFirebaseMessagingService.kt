@@ -1,5 +1,6 @@
 package com.example.pbdexecutives
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -10,6 +11,7 @@ import android.media.RingtoneManager
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.room.Room
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -104,11 +106,16 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     private fun handleNow(data: MutableMap<String, String>) {
         PbdExecutivesUtils.syncData(applicationContext)
 
-        val notificationTitle: String = if (data.get("type") == "info") getString(R.string.info) else getString(R.string.warning)
-        val notificationText: String = data.get("text").toString()
-        val notificationImg: String? = data.get("img")
+        val checkForReminder: String? = data.get("checkForReminder")
 
-        sendNotification(notificationTitle, notificationText, notificationImg)
+        if(checkForReminder == null) {
+            val notificationTitle: String = if (data.get("type") == "info") getString(R.string.info) else getString(R.string.warning)
+            val notificationText: String = data.get("text").toString()
+            val notificationImg: String? = data.get("img")
+            sendNotification(notificationTitle, notificationText, notificationImg)
+        } else {
+            sendReminder()
+        }
     }
 
     /**
@@ -156,5 +163,60 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         }
 
         notificationManager.notify(0 /* ID of notification */, notificationBuilder.build())
+    }
+
+    private fun sendReminder() {
+        GlobalScope.launch {
+            val db = Room.databaseBuilder(applicationContext, AppDB::class.java, "PbdDB").build()
+            val todaysFollowUps: List<String> = db.followUpsDao().getTodaysFollowUps().map { item ->
+//                            Log.i("pbdLog", "item: $item")
+                val followUpFor: String = if(item.followUpFor != null) {
+                    when(item.followUpFor.toInt()) {
+                        0 -> "(Sampling)"
+                        1 -> "(To receive order)"
+                        else -> "(To get payment)"
+                    }
+                } else {
+                    "(Contact with the organization)"
+                }
+                "${item.partyName} $followUpFor"
+            }
+
+            if(todaysFollowUps.isEmpty()) {
+                return@launch
+            }
+            var textToDisplay = ""
+            todaysFollowUps.forEach {
+                textToDisplay += "$it\n"
+            }
+            textToDisplay = textToDisplay.trimEnd()
+
+            val intent = Intent(applicationContext, HomeActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                putExtra("selectedTab", 2)
+            }
+
+            val pendingIntent: PendingIntent = PendingIntent.getActivity(applicationContext, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)
+
+            var notificationBuilder: NotificationCompat.Builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {       //for API level 26 and above.
+                NotificationCompat.Builder(applicationContext, PbdExecutivesUtils.CHANNEL_ID);
+            } else {
+                NotificationCompat.Builder(applicationContext);
+            }
+
+            val notification: Notification = notificationBuilder
+                    .setSmallIcon(R.drawable.pbd_notification_icon)
+                    .setContentTitle(getText(R.string.follow_up_reminder))
+                    .setStyle(NotificationCompat.BigTextStyle().bigText(textToDisplay))
+                    .setContentIntent(pendingIntent)
+                    .setAutoCancel(true)
+                    .build()
+            notification.defaults = Notification.DEFAULT_ALL
+
+            with(NotificationManagerCompat.from(applicationContext)) {
+                // notificationId is a unique int for each notification that you must define
+                notify(345, notification)
+            }
+        }
     }
 }

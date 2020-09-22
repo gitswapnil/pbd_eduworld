@@ -94,7 +94,6 @@ if(Meteor.isServer) {
 
 				      	Collections.notifications.update({ _id: notificationData._id }, { $set: { execs: newExecArr } }, { multi: false });
 				    }
-
 				}).catch((error) => {
 					console.log('Error sending message:', error);
 				});

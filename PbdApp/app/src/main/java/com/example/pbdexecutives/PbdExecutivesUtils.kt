@@ -153,18 +153,5 @@ class PbdExecutivesUtils: Application() {
         fun stopSyncing(context: Context) {
             WorkManager.getInstance(context).cancelUniqueWork("serversync")
         }
-
-        fun startReminder(context: Context) {
-//        val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
-            val reminderService: PeriodicWorkRequest =
-                PeriodicWorkRequestBuilder<ReminderService>(1, TimeUnit.DAYS).build()
-
-            WorkManager.getInstance(context)
-                .enqueueUniquePeriodicWork("reminderManager", ExistingPeriodicWorkPolicy.KEEP, reminderService)
-        }
-
-        fun stopReminder(context: Context) {
-            WorkManager.getInstance(context).cancelUniqueWork("reminderManager")
-        }
     }
 }

@@ -2,6 +2,8 @@ import { Accounts } from 'meteor/accounts-base';
 import { Random } from 'meteor/random';
 import admin from "firebase-admin"; 
 import { firebaseServiceAccountKey } from 'meteor/pbd-apis';
+import { CronJob } from 'cron';
+import { Meteor } from 'meteor/meteor';
 
 //Script for creating roles.
 export const createRoles = () => {
@@ -60,11 +62,52 @@ const initializeEnvironmentVariables = () => {
 	process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
 }
 
+const initializeCronJob = () => {
+	var reminderJob = new CronJob('0 0 9 * * *', function() {
+		Meteor.users.rawCollection().find({ active: true, appToken: { $exists: true } }).toArray((err, docs) => {
+			const tokens = [];
+			
+			docs.forEach(doc => {
+				tokens.push(doc.appToken);
+			});
+
+			console.log("Running the reminderJob for tokens: " + tokens);
+			if(tokens.length > 0) {
+				let message = {
+					data: { checkForReminder: "true" },
+					tokens
+				};
+
+				admin.messaging().sendMulticast(message).then((response) => {
+					// let newExecArr = [...notificationData.execs];
+					// console.log('Successfully sent message:', response);
+					if (response.successCount > 0) {
+						response.responses.forEach((resp, idx) => {
+					        if (resp.success) {
+					        	// newExecArr[idx].status = true
+					        }
+				      	});
+
+				      	// Collections.notifications.update({ _id: notificationData._id }, { $set: { execs: newExecArr } }, { multi: false });
+				    }
+				}).catch((error) => {
+					console.log('Error sending message:', error);
+				});
+			}
+
+		});
+
+	}, null, true, 'Asia/Kolkata');
+
+	reminderJob.start();
+}
+
 const startupScripts = () => {
 	initializeEnvironmentVariables();
 	createRoles();
 	seedData();
 	initializeFirebaseServices();
+	initializeCronJob();
 }
 
 export default startupScripts;
