@@ -26,7 +26,6 @@
             android:layout_height="wrap_content"
             android:background="?attr/colorPrimary"
             android:minHeight="?attr/actionBarSize"
-            android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
             app:layout_scrollFlags="scroll|enterAlways">
 
             <TextView
@@ -34,6 +33,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/duty"
                 android:textAllCaps="false"
+                android:textColor="@color/design_default_color_background"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
@@ -49,6 +49,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/calculating"
                 android:textAllCaps="false"
+                android:textColor="@color/design_default_color_background"
                 android:textSize="18sp"
                 android:textStyle="bold" />
         </androidx.appcompat.widget.Toolbar>
@@ -86,6 +87,7 @@
         android:layout_width="match_parent"
 
         android:layout_height="match_parent"
+        android:onClick="changeDuty"
         app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior">
 
         <androidx.viewpager2.widget.ViewPager2
