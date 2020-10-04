@@ -568,7 +568,7 @@ if(Meteor.isServer) {
 
 						cursor.toArray(((error, docs) => {
 							if(error) reject(error);
-							// console.log("docs: " + JSON.stringify(docs));
+							console.log("docs: " + JSON.stringify(docs));
 
 							resolve.apply(this, [docs]);
 						}).bind(this));
@@ -793,7 +793,7 @@ if(Meteor.isServer) {
 					Collections.locations.rawCollection().aggregate([
 						{
 					        $match: {
-					            $or: [...datesArr]
+					            $or: [...datesArr]					//We want his presence only in duty time and not in any other time.
 					        }
 					    },
 					    {
@@ -891,6 +891,8 @@ if(Meteor.isServer) {
 											orientation:'landscape'
 										}
 									});
+					worksheet.addRow([`Note: Attendance is calculated based on location data between ${DUTY_START_TIME} to ${DUTY_END_TIME} for the period ${fromMoment.format("DD-MM-YYYY")} to ${endMoment.format("DD-MM-YYYY")}`]);
+					worksheet.addRow([" "]);
 
 					executivesAttendances[0].forEach((item, itemIndex) => {
 						if(itemIndex === 0) {
@@ -905,7 +907,7 @@ if(Meteor.isServer) {
 						worksheet.getRow(itemIndex + 2).style.font = normalText;
 					});
 
-					worksheet.getRow(1).style.font = boldTextProps;
+					worksheet.getRow(3).style.font = boldTextProps;
 
 					const tempFunc = async () => {
 						await workbook.xlsx.writeFile(`/tmp/${fileName}`);
@@ -941,7 +943,10 @@ if(Meteor.isServer) {
 						},
 				  	};
 
-				  	let content = [];
+				  	let content = [
+				  		{ "text": `Note: Attendance is calculated based on location data between ${DUTY_START_TIME} to ${DUTY_END_TIME} for the period ${fromMoment.format("DD-MM-YYYY")} to ${endMoment.format("DD-MM-YYYY")}`, fontSize: 12 },
+				  		{ "text": " " }
+				  	];
 
 					executivesAttendances.forEach((items, itemsIndex) => {
 						if(itemsIndex === 0) return;
