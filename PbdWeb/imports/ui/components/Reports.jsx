@@ -411,158 +411,247 @@ if(Meteor.isServer) {
 
 			const getData = async () => {
 				const executor = (resolve, reject) => {
-					Collections.tasks.rawCollection().aggregate([
+					Meteor.users.rawCollection().aggregate([
 						{
+					        $lookup: {
+					            from: "role-assignment",
+					            foreignField: "user._id",
+					            localField: "_id",
+					            as: "assignedRoleObject",
+					        }
+					    },
+					    { $unwind: "$assignedRoleObject" },
+					    {
 					        $match: {
-					            createdAt: {
-					                $gte: from,
-					                $lte: to
-					            }
+					            "assignedRoleObject.role._id": "executive",
 					        }
 					    },
 					    {
 					        $lookup: {
-					            from: "users",
-					            foreignField: "_id",
-					            localField: "userId",
-					            as: "execInfo"
+					            from: "tasks",
+					            foreignField: "userId",
+					            localField: "_id",
+					            as: "tasks"
 					        }
 					    },
 					    {
-					        $group: {
-					            _id: "$userId",
-					            execName: { $first: { $arrayElemAt: ["$execInfo.profile.name", 0] } },
-					            others: {
-					                $addToSet: {
-					                	type: "$type",
-					                    date: { $dateToString: { date: "$createdAt", format: "%d-%m-%Y", timezone: "Asia/Kolkata" } },
-					                    subject: "$subject",
-					                    remarks: "$remarks",
-					                    createdAt: "$createdAt",
-					                }
-					            },
-					            otherFields: {
-					                $addToSet: {
-					                    taskId: "$_id",
-					                    type: "$type",
-					                    partyId: "$partyId",
-					                    cpName: "$cpName",
-					                    cpNumber: "$cpNumber",
-					                    reason: "$reason",
-					                    remarks: "$remarks",
-					                    userId: "$userId",
-					                    createdAt: "$createdAt"
-					                }
-					            }
+					        $lookup: {
+					            from: "receipts",
+					            foreignField: "userId",
+					            localField: "_id",
+					            as: "receipts"
 					        }
 					    },
 					    {
-					        $unwind: "$others"
+					        $lookup: {
+					            from: "followUps",
+					            foreignField: "userId",
+					            localField: "_id",
+					            as: "followUps"
+					        }
 					    },
 					    {
-                            $match: {
-                                "others.type": 1
-                            }
-                        },
-					    {
-					        $unwind: "$otherFields"
+					        $unwind: { path: "$tasks", preserveNullAndEmptyArrays: true }
 					    },
 					    {
 					        $project: {
-					            _id: "$otherFields.taskId",
-					            execName: 1,
-					            type: "$otherFields.type",
-					            partyId: "$otherFields.partyId",
-					            cpName: "$otherFields.cpName",
-					            cpNumber: "$otherFields.cpNumber",
-					            reason: "$otherFields.reason",
-					            remarks: "$otherFields.remarks",
-					            userId: "$otherFields.userId",
-					            createdAt: "$otherFields.createdAt",
-					            others: 1
+					            _id: 1,
+					            execName: { $concat: [ "$profile.name", " (", "$username", ")" ] },
+					            receiptSeries: "$profile.receiptSeries",
+					            otherTask: {
+					                $cond: [
+					                    { $eq: ["$tasks.type", 1] },
+					                    {
+					                        type: "$tasks.type",
+					                        date: "$tasks.createdAt",
+					                        subject: "$tasks.subject",
+					                        remarks: "$tasks.remarks",
+					                        createdAt: "$tasks.createdAt",
+					                    },
+					                    null
+					                ]
+					            },
+					            
+					            visitedTask: {
+					                $cond: [
+					                    { $eq: ["$tasks.type", 0] },
+					                    {
+					                        taskId: "$tasks._id",
+					                        type: "$tasks.type",
+					                        partyId: "$tasks.partyId",
+					                        cpName: "$tasks.cpName",
+					                        cpNumber: "$tasks.cpNumber",
+					                        reason: "$tasks.reason",
+					                        doneWithTask: "$tasks.doneWithTask",
+					                        remarks: "$tasks.remarks",
+					                        userId: "$tasks.userId",
+					                        createdAt: "$tasks.createdAt"
+					                    },
+					                    null
+					                ]
+					            },
+					            receipts: 1,
+					            followUps: 1,
 					        }
 					    },
 					    {
 					        $lookup: {
 					            from: "users",
-					            localField: "partyId",
 					            foreignField: "_id",
-					            as: "partyInfo"
+					            localField: "visitedTask.partyId",
+					            as: "partyDetails"
 					        }
+					    },
+					    {
+					        $unwind: { path: "$partyDetails", preserveNullAndEmptyArrays: true }
 					    },
 					    {
 					        $project: {
 					            _id: 1,
 					            execName: 1,
-					            userId: "$userId",
-					            type: 1,
-					            date: { $dateToString: { date: "$createdAt", format: "%d-%m-%Y", timezone: "Asia/Kolkata" } },
-					            party: { 
-					                code: { $arrayElemAt: ["$partyInfo.username", 0] }, 
-					                name: { $arrayElemAt: ["$partyInfo.profile.name", 0] }, 
-					                address: { $arrayElemAt: ["$partyInfo.profile.address", 0]} 
+					            receiptSeries: 1,
+					            otherTask: 1,
+					            visitedTask: {
+					                $cond: [
+					                    { $ne: [ "$visitedTask", null ] }, 
+					                    {
+					                        taskId: "$visitedTask.taskId",
+					                        type: "$visitedTask.type",
+					                        partyName: "$partyDetails.profile.name",
+					                        partyAddress: "$partyDetails.profile.address",
+					                        partyCode: "$partyDetails.username",
+					                        cpName: "$visitedTask.cpName",
+					                        cpNumber: "$visitedTask.cpNumber",
+					                        doneWithTask: "$visitedTask.doneWithTask",
+					                        reason: "$visitedTask.reason",
+					                        remarks: "$visitedTask.remarks",
+					                        createdAt: "$visitedTask.createdAt"
+					                    },
+					                    null
+					                ]
 					            },
-					            cp: { name: "$cpName", number: "$cpNumber" },
-					            reason: 1,
-					            remarks: 1,
-					            others: 1,
-					            createdAt: 1,
+					            receipts: 1,
+					            followUps: 1
 					        }
 					    },
 					    {
 					        $group: {
-					            _id: "$userId",
-					            execName: { $first: "$execName" },
-					            visits: {
+					            _id: "$_id",
+					            "execName": { $first: "$execName" },
+					            "receiptSeries": { $first: "$receiptSeries" },
+					            "otherTask": {
 					                $addToSet: {
 					                    $cond: [
-					                        { $eq: [ "$type", 0 ] },
-					                        
+					                        { $eq: ["$otherTask", null] },
+					                        null,
 					                        {
-					                            date: "$date",
-					                            party: "$party",
-					                            cp: "$cp",
-					                            reason: "$reason",
-					                            remarks: "$remarks",
-					                            createdAt: "$createdAt",
-					                        },
-					                        
-					                        null
+					                            type: "$otherTask.type",
+					                            date: { $dateToString: { date: "$otherTask.createdAt", format: "%d-%m-%Y", timezone: "Asia/Kolkata" } },
+					                            subject: "$otherTask.subject",
+					                            remarks: "$otherTask.remarks",
+					                            createdAt: "$otherTask.createdAt",
+					                        }
 					                    ]
 					                }
 					            },
 					            
-					            others: {
+					            "visitedTask": {
 					                $addToSet: {
 					                    $cond: [
-					                        { $eq: [ "$type", 1 ] },
-					                        "$others",
-					                        null
+					                        { $eq: ["$visitedTask", null] },
+					                        null,
+					                        {
+					                            taskId: "$visitedTask.taskId",
+					                            type: "$visitedTask.type",
+					                            date: { $dateToString: { date: "$visitedTask.createdAt", format: "%d-%m-%Y", timezone: "Asia/Kolkata" } },
+					                            partyName: "$visitedTask.partyName",
+					                            partyAddress: "$visitedTask.partyAddress",
+					                            partyCode: "$visitedTask.partyCode",
+					                            cpName: "$visitedTask.cpName",
+					                            cpNumber: "$visitedTask.cpNumber",
+					                            doneWithTask: "$visitedTask.doneWithTask",
+					                            reason: "$visitedTask.reason",
+					                            remarks: "$visitedTask.remarks",
+					                            createdAt: "$visitedTask.createdAt"
+					                        },
 					                    ]
 					                }
-					            }
+					            },
+					            receipts: { $first: "$receipts" },
+					            followUps: { $first: "$followUps" },
 					        }
 					    },
 					    {
 					        $project: {
 					            _id: 1,
 					            execName: 1,
-					            visits: {
+					            receiptSeries: 1,
+					            otherTasks: {
 					                $filter: {
-					                    input: "$visits",
-					                    as: "visits",
-					                    cond: { $ne: [ "$$visits", null ] }
+					                    input: "$otherTask",
+					                    as: "otherTask",
+					                    cond: { $ne: [ "$$otherTask", null ] }
 					                }
 					            },
-					            others: {
+					            visitedTasks: {
 					                $filter: {
-					                    input: "$others",
-					                    as: "others",
-					                    cond: { $ne: [ "$$others", null ] }
+					                    input: "$visitedTask",
+					                    as: "visitedTask",
+					                    cond: { $ne: [ "$$visitedTask", null ] }
 					                }
-					            }
+					            },
+					            receipts: 1,
+					            followUps: 1
 					        }
-					    }
+					    },
+					    { $unwind: { path: "$receipts", preserveNullAndEmptyArrays: true } },
+					    {
+					        $lookup: {
+					            from: "users",
+					            foreignField: "_id",
+					            localField: "receipts.partyId",
+					            as: "partyDetails",
+					        }
+					    },
+					    {
+					        $project: {
+					            _id: 1,
+					            execName: 1,
+					            receipts: {
+					                _id: "$receipts._id",
+					                receiptNo: { $concat: [ "$receiptSeries", { $toString: "$receipts.receiptNo" } ] },
+					                date: { $dateToString: { date: "$receipts.createdAt", format: "%d-%m-%Y", timezone: "Asia/Kolkata" } },
+					                partyDetails: {
+					                    name: { $arrayElemAt: ["$partyDetails.profile.name", 0] },
+					                    address: { $arrayElemAt: ["$partyDetails.profile.address", 0] },
+					                    phoneNumber: { $arrayElemAt: ["$partyDetails.profile.phoneNumber", 0] },
+					                    partyCode: { $arrayElemAt: ["$partyDetails.username", 0] },
+					                },
+					                cpList: 1,
+					                amount: 1,
+					                paidBy: 1,
+					                payment: 1,
+					                chequeNo: 1,
+					                ddNo: 1,
+					                bankName: 1,
+					                bankBranch: 1,
+					                createdAt: 1,
+					            },
+					            followUps: 1,
+					            otherTasks: 1,
+					            visitedTasks: 1,
+					        }
+					    },
+					    {
+					        $group: {
+					            _id: "$_id",
+					            execName: { $first: "$execName" },
+					            receipts: { $addToSet: "$receipts" },
+					            followUps: { $first: "$followUps" },
+					            otherTasks: { $first: "$otherTasks" },
+					            visitedTasks: { $first: "$visitedTasks" },
+					        }
+					    },
 					], ((err, cursor) => {
 						if(err) reject(err);
 
@@ -597,7 +686,13 @@ if(Meteor.isServer) {
 										});
 						worksheet.addRow([`Name: ${exec.execName}`]);
 						worksheet.mergeCells('A1:F1');
-						worksheet.addRow([]);
+						worksheet.getCell('A1').style.font = { ...boldTextProps, size: 14 };
+						worksheet.getRow(1).height = 20;
+
+						worksheet.addRow(["Visits"]);
+						worksheet.mergeCells('A2:F2');
+						worksheet.getCell('A2').alignment = { horizontal: 'center' };
+						worksheet.getCell('A2').style.font = { ...boldTextProps, size: 12 };
 						worksheet.addRow(["SI No.", "Date", "Visited Party", "Party Code", "Contact Person", "Reason", "Remarks"]);
 
 						worksheet.getColumn(2).width = 20;
@@ -605,32 +700,84 @@ if(Meteor.isServer) {
 						worksheet.getColumn(4).width = 10;
 						worksheet.getColumn(5).width = 20;
 						worksheet.getColumn(6).width = 20;
-						worksheet.getColumn(7).width = 40;
+						worksheet.getColumn(7).width = 20;
+						worksheet.getColumn(8).width = 30;
+						worksheet.getColumn(11).width = 60;
 
 						worksheet.getRow(1).style.font = boldTextProps;
+						worksheet.getRow(2).style.font = boldTextProps;
 						worksheet.getRow(3).style.font = boldTextProps;
 
-						const visits = exec.visits.sort((a, b) => b.createdAt - a.createdAt);
+						const visitedTasks = exec.visitedTasks.sort((a, b) => b.createdAt - a.createdAt);
 
-						visits.forEach((visit, visitIndex) => {
+						visitedTasks.forEach((visitedTask, visitIndex) => {
 							const si = ++visitIndex;
-							worksheet.addRow([si, visit.date, `${visit.party.name}\n${visit.party.address}`, visit.party.code, `${visit.cp.name}\n(${visit.cp.number})`, getReasonFromCode(visit.reason), visit.remarks]);
+							worksheet.addRow([si, visitedTask.date, `${visitedTask.partyName}\n${visitedTask.partyAddress}`, visitedTask.partyCode, `${visitedTask.cpName}\n(${visitedTask.cpNumber})`, getReasonFromCode(visitedTask.reason), visitedTask.remarks]);
 							worksheet.getRow(3 + si).height = 30;
 							worksheet.getRow(3 + si).style.font = normalText;
 						});
 
 						worksheet.addRow([]);
+
+						worksheet.addRow(["Receipts"]);
+
+						let receiptsStartIndex = 3 + exec.visitedTasks.length + 2;
+
+						worksheet.mergeCells(`A${receiptsStartIndex}:F${receiptsStartIndex}`);
+						worksheet.getCell(`A${receiptsStartIndex}`);
+						worksheet.getCell(`A${receiptsStartIndex}`).alignment = { horizontal: 'center' };
+						worksheet.getCell(`A${receiptsStartIndex}`).style.font = { ...boldTextProps, size: 12 };
+
+						receiptsStartIndex++;
+
+						worksheet.addRow([
+							"SI No.", 
+							"Date", 
+							"Receipt to Party", 
+							"Party Code", 
+							"Receipt No.", 
+							"Paid Amt.", 
+							"Payment By", 
+							"Bank", 
+							"Branch", 
+							"Payment", 
+							"Sent To"
+						]);
+
+						worksheet.getRow(receiptsStartIndex).style.font = boldTextProps;
+
+						const receipts = exec.receipts.sort((a, b) => b.createdAt - a.createdAt);
+						receipts.forEach((receipt, receiptIndex) => {
+							receiptsStartIndex++;
+							worksheet.addRow([
+								++receiptIndex, 
+								receipt.date, 
+								`${receipt.partyDetails.name}\n${receipt.partyDetails.address}`, 
+								receipt.partyDetails.partyCode, 
+								receipt.receiptNo, 
+								receipt.amount, 
+								(receipt.paidBy === 0) ? "Cash" : (receipt.paidBy === 1) ? "Cheque" : (receipt.paidBy === 2) ? "Demand Draft" : " ",
+								receipt.bankName,
+								receipt.bankBranch,
+								(receipt.payment === 0) ? "Part" : "Full",
+								receipt.cpList.sort((a, b) => b.createdAt - a.createdAt).map(cp => `${cp.cpName} | ${cp.cpNumber} | ${cp.cpEmail} | ${moment(cp.createdAt).format("DD-MM-YYYY HH:mm")}`).reduce((acc, curr) => `${acc}\n${curr}`)
+							]);
+							worksheet.getRow(receiptsStartIndex).height = 30;
+							worksheet.getRow(receiptsStartIndex).style.font = normalText;
+						});
+
+						worksheet.addRow([]);
 						worksheet.addRow(["SI No.", "Date", "Other Task", "Remarks"]);
-						let otherStartIndex = 3 + exec.visits.length + 2;
+						let otherStartIndex = receiptsStartIndex + 2;
 
 						worksheet.getRow(otherStartIndex).style.font = boldTextProps;
 						worksheet.mergeCells(`D${otherStartIndex}:F${otherStartIndex}`);
 
-						const others = exec.others.sort((a, b) => b.createdAt - a.createdAt);
+						const otherTasks = exec.otherTasks.sort((a, b) => b.createdAt - a.createdAt);
 
-						others.forEach((other, otherIndex) => {
+						otherTasks.forEach((otherTask, otherIndex) => {
 							otherStartIndex++;
-							worksheet.addRow([++otherIndex, other.date, other.subject, other.remarks]);
+							worksheet.addRow([++otherIndex, otherTask.date, otherTask.subject, otherTask.remarks]);
 							worksheet.getRow(otherStartIndex).style.font = normalText;
 							worksheet.mergeCells(`D${otherStartIndex}:F${otherStartIndex}`);
 						});
@@ -689,10 +836,49 @@ if(Meteor.isServer) {
 				        	]
 					  	};
 
-					  	const visits = exec.visits.sort((a, b) => b.createdAt - a.createdAt);
-					  	visits.forEach((visit, visitIndex) => {
-							visitsTableData.body.push([++visitIndex, visit.date, `${visit.party.name}\n${visit.party.address}`, visit.party.code, `${visit.cp.name}\n(${visit.cp.number})`, getReasonFromCode(visit.reason), (visit.remarks || "")]);
+					  	const visitedTasks = exec.visitedTasks.sort((a, b) => b.createdAt - a.createdAt);
+					  	visitedTasks.forEach((visitedTask, visitIndex) => {
+							visitsTableData.body.push([++visitIndex, visitedTask.date, `${visitedTask.partyName}\n${visitedTask.partyAddress}`, visitedTask.partyCode, `${visitedTask.cpName}\n(${visitedTask.cpNumber})`, getReasonFromCode(visitedTask.reason), (visitedTask.remarks || "")]);
 					  	});
+
+					  	let receiptsTableData = {
+					  		headerRows: 1,
+					  		widths: [ 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto' ],
+				        	body: [
+				        		[ 
+				          			{ text: 'SI No', style: 'tableHeader', bold: true }, 
+				          			{ text: 'Date', style: 'tableHeader', bold: true }, 
+				          			{ text: 'Receipt to Party', style: 'tableHeader', bold: true }, 
+				          			{ text: 'Party Code', style: 'tableHeader', bold: true }, 
+				          			{ text: 'Receipt No.', style: 'tableHeader', bold: true }, 
+				          			{ text: 'Paid Amt.', style: 'tableHeader', bold: true }, 
+				          			{ text: 'Payment By', style: 'tableHeader', bold: true }, 
+				          			{ text: 'Bank', style: 'tableHeader', bold: true }, 
+				          			{ text: 'Branch', style: 'tableHeader', bold: true }, 
+				          			{ text: 'Payment', style: 'tableHeader', bold: true }, 
+				          			{ text: 'Sent To', style: 'tableHeader', bold: true } 
+				          		]
+				        	]
+					  	};
+
+					  	const receipts = exec.receipts.sort((a, b) => b.createdAt - a.createdAt);
+					  	receipts.forEach((receipt, receiptIndex) => {
+							receiptsTableData.body.push([
+								++receiptIndex, 
+								receipt.date, 
+								`${receipt.partyDetails.name}\n${receipt.partyDetails.address}`, 
+								receipt.partyDetails.partyCode, 
+								receipt.receiptNo, 
+								receipt.amount, 
+								(receipt.paidBy === 0) ? "Cash" : (receipt.paidBy === 1) ? "Cheque" : (receipt.paidBy === 2) ? "Demand Draft" : " ",
+								receipt.bankName || " ", 
+								receipt.bankBranch || " ", 
+								(receipt.payment === 0) ? "Part" : "Full", 
+								receipt.cpList.sort((a, b) => b.createdAt - a.createdAt).map(cp => `${cp.cpName} | ${cp.cpNumber} | ${cp.cpEmail} | ${moment(cp.createdAt).format("DD-MM-YYYY HH:mm")}`).reduce((acc, curr) => `${acc}\n${curr}`)
+							]);
+					  	});
+
+					  	// console.log("receiptsTableData: " + JSON.stringify(receiptsTableData));
 
 					  	let otherTableData = {
 					  		headerRows: 1,
@@ -707,24 +893,31 @@ if(Meteor.isServer) {
 				        	]
 					  	};
 
-					  	const others = exec.others.sort((a, b) => b.createdAt - a.createdAt);
-					  	others.forEach((other, otherIndex) => {
-							otherTableData.body.push([++otherIndex, other.date, (other.subject || ""), (other.remarks || "")]);
+					  	const otherTasks = exec.otherTasks.sort((a, b) => b.createdAt - a.createdAt);
+					  	otherTasks.forEach((otherTask, otherIndex) => {
+							otherTableData.body.push([++otherIndex, otherTask.date, (otherTask.subject || ""), (otherTask.remarks || "")]);
 					  	});
 
 					  	if(execIndex !== 0) {
 					  		content.push({ text: " " });
 					  	}
 
-						content.push({ text: name, fontSize: 15, bold: true });
+						content.push({ text: name, fontSize: 18, bold: true });
 
-						if(exec.visits.length !== 0) {
+						if(exec.visitedTasks.length !== 0) {
+							content.push({ text: "Visits", fontSize: 12, bold: true });
 							content.push({ layout: tableLayout, table: visitsTableData });
 						}
 
-						if(exec.others.length !== 0) {
+						if(exec.receipts.length !== 0) {
 							content.push({ text: " " });
-							content.push({ text: "Other Tasks", fontSize: 12 });
+							content.push({ text: "Receipts", fontSize: 12, bold: true });
+							content.push({ layout: tableLayout, table: receiptsTableData });
+						}
+
+						if(exec.otherTasks.length !== 0) {
+							content.push({ text: " " });
+							content.push({ text: "Other Tasks", fontSize: 12, bold: true });
 							content.push({ layout: tableLayout, table: otherTableData });
 						}
 					});
