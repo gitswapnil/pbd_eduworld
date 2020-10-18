@@ -973,7 +973,7 @@ if(Meteor.isServer) {
 				datesArr.push({
 					createdAt: { 
                         $gte: new Date(fromMoment.format(`YYYY-MM-DDT${DUTY_START_TIME}:00`)),
-                        $lte: new Date(endMoment.format(`YYYY-MM-DDT${DUTY_END_TIME}:00`))
+                        $lte: new Date(fromMoment.format(`YYYY-MM-DDT${DUTY_END_TIME}:00`))
                     }
 				});
 				fromMoment.add(1, "days");
