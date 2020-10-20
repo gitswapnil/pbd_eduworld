@@ -702,7 +702,8 @@ if(Meteor.isServer) {
 						worksheet.getColumn(6).width = 20;
 						worksheet.getColumn(7).width = 20;
 						worksheet.getColumn(8).width = 30;
-						worksheet.getColumn(11).width = 60;
+						worksheet.getColumn(9).width = 30;
+						worksheet.getColumn(12).width = 60;
 
 						worksheet.getRow(1).style.font = boldTextProps;
 						worksheet.getRow(2).style.font = boldTextProps;
@@ -738,6 +739,7 @@ if(Meteor.isServer) {
 							"Receipt No.", 
 							"Paid Amt.", 
 							"Payment By", 
+							"DD/Cheque No.",
 							"Bank", 
 							"Branch", 
 							"Payment", 
@@ -757,6 +759,7 @@ if(Meteor.isServer) {
 								receipt.receiptNo, 
 								receipt.amount, 
 								(receipt.paidBy === 0) ? "Cash" : (receipt.paidBy === 1) ? "Cheque" : (receipt.paidBy === 2) ? "Demand Draft" : " ",
+								(receipt.paidBy === 0) ? " " : (receipt.paidBy === 1) ? receipt.chequeNo : (receipt.paidBy === 2) ? receipt.ddNo : " ",
 								receipt.bankName,
 								receipt.bankBranch,
 								(receipt.payment === 0) ? "Part" : "Full",
@@ -843,7 +846,7 @@ if(Meteor.isServer) {
 
 					  	let receiptsTableData = {
 					  		headerRows: 1,
-					  		widths: [ 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto' ],
+					  		widths: [ 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto' ],
 				        	body: [
 				        		[ 
 				          			{ text: 'SI No', style: 'tableHeader', bold: true }, 
@@ -853,6 +856,7 @@ if(Meteor.isServer) {
 				          			{ text: 'Receipt No.', style: 'tableHeader', bold: true }, 
 				          			{ text: 'Paid Amt.', style: 'tableHeader', bold: true }, 
 				          			{ text: 'Payment By', style: 'tableHeader', bold: true }, 
+				          			{ text: 'DD/Cheque No.', style: 'tableHeader', bold: true }, 
 				          			{ text: 'Bank', style: 'tableHeader', bold: true }, 
 				          			{ text: 'Branch', style: 'tableHeader', bold: true }, 
 				          			{ text: 'Payment', style: 'tableHeader', bold: true }, 
@@ -864,17 +868,19 @@ if(Meteor.isServer) {
 					  	const receipts = exec.receipts.sort((a, b) => b.createdAt - a.createdAt);
 					  	receipts.forEach((receipt, receiptIndex) => {
 							receiptsTableData.body.push([
-								++receiptIndex, 
-								receipt.date, 
-								`${receipt.partyDetails.name}\n${receipt.partyDetails.address}`, 
-								receipt.partyDetails.partyCode, 
-								receipt.receiptNo, 
-								receipt.amount, 
-								(receipt.paidBy === 0) ? "Cash" : (receipt.paidBy === 1) ? "Cheque" : (receipt.paidBy === 2) ? "Demand Draft" : " ",
-								receipt.bankName || " ", 
-								receipt.bankBranch || " ", 
-								(receipt.payment === 0) ? "Part" : "Full", 
-								receipt.cpList.sort((a, b) => b.createdAt - a.createdAt).map(cp => `${cp.cpName} | ${cp.cpNumber} | ${cp.cpEmail} | ${moment(cp.createdAt).format("DD-MM-YYYY HH:mm")}`).reduce((acc, curr) => `${acc}\n${curr}`)
+								{ text: ++receiptIndex, fontSize: 10 }, 
+								{ text: receipt.date, fontSize: 10 }, 
+								{ text: `${receipt.partyDetails.name}\n${receipt.partyDetails.address}`, fontSize: 10 }, 
+								{ text: receipt.partyDetails.partyCode, fontSize: 10 }, 
+								{ text: receipt.receiptNo, fontSize: 10 }, 
+								{ text: receipt.amount, fontSize: 10 }, 
+								{ text: (receipt.paidBy === 0) ? "Cash" : (receipt.paidBy === 1) ? "Cheque" : (receipt.paidBy === 2) ? "Demand Draft" : " ", fontSize: 10 }, 
+								{ text: (receipt.paidBy === 0) ? " " : (receipt.paidBy === 1) ? receipt.chequeNo : (receipt.paidBy === 2) ? receipt.ddNo : " ", fontSize: 10 }, 
+								{ text: receipt.bankName || " ", fontSize: 10 }, 
+								{ text: receipt.bankBranch || " ", fontSize: 10 }, 
+								{ text: (receipt.payment === 0) ? "Part" : "Full", fontSize: 10 }, 
+								{ text: receipt.cpList.sort((a, b) => b.createdAt - a.createdAt).map(cp => `${cp.cpName} | ${cp.cpNumber} | ${cp.cpEmail} | ${moment(cp.createdAt).format("DD-MM-YYYY HH:mm")}`).reduce((acc, curr) => `${acc}\n${curr}`), fontSize: 10 } 
+								
 							]);
 					  	});
 
