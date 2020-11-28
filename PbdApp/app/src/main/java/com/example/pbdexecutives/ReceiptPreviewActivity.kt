@@ -1,18 +1,18 @@
 package com.example.pbdexecutives
 
 import android.app.Activity
+import android.app.DownloadManager
+import android.content.Context
 import android.content.DialogInterface
-import android.content.DialogInterface.OnShowListener
-import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
+import android.net.Uri
 import android.os.Bundle
-import android.text.Editable
 import android.util.Log
 import android.view.MenuItem
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.room.Room
 import com.android.volley.DefaultRetryPolicy
@@ -27,10 +27,12 @@ import kotlinx.android.synthetic.main.receipt_receiver_details.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import java.io.File
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.properties.Delegates
+
 
 class ReceiptPreviewActivity : AppCompatActivity() {
     private var receiptId: Long = 0
@@ -97,7 +99,7 @@ class ReceiptPreviewActivity : AppCompatActivity() {
                 receipt_sent_to.visibility = View.GONE
 
             } else {
-                val receiptDetails = db.receiptsDao().getReceiptDetails(id = receiptId)
+                val receiptDetails: ReceiptsWithSendToList = db.receiptsDao().getReceiptDetails(id = receiptId)
 
                 serverId = receiptDetails.serverId
                 partyId = receiptDetails.partyId
@@ -121,16 +123,13 @@ class ReceiptPreviewActivity : AppCompatActivity() {
                 this_receipt_sent_to.visibility = View.VISIBLE
                 receipt_sent_to.visibility = View.VISIBLE
 
-                val cpNames = receiptDetails.cpName.split(",")
-                val cpNumbers = receiptDetails.cpNumber.split(",")
-                val cpEmails = receiptDetails.cpEmail?.split(",")
+                val sentTos = receiptDetails.sentToList.split(",")
                 val cpCreatedAts = receiptDetails.concatCreatedAt?.split(",")
                 var finalString: String = ""
-                if (cpCreatedAts != null) {
-                    cpCreatedAts.forEachIndexed { index, s ->
-                        val email = if(cpEmails != null && (index < cpEmails.size)) cpEmails[index] else ""
-                        finalString += "\n ${cpNumbers[index]}, ${email}, (${cpNames[index]}) at ${SimpleDateFormat("dd/MM/yy HH:mm").format(Date(cpCreatedAts[index].toLong()))}"
-                    }
+                cpCreatedAts?.forEachIndexed { index, s ->
+                    finalString += "\n ${sentTos[index]} at ${SimpleDateFormat(
+                        "dd/MM/yy HH:mm"
+                    ).format(Date(cpCreatedAts[index].toLong()))}"
                 }
                 receipt_sent_to.text = finalString
 //
@@ -162,7 +161,9 @@ class ReceiptPreviewActivity : AppCompatActivity() {
                 receipt_bank_branch.text = bankBranch
             }
 
-            receipt_payment.text = if(payment == 1.toByte()) getString(R.string.full) else getString(R.string.part)
+            receipt_payment.text = if(payment == 1.toByte()) getString(R.string.full) else getString(
+                R.string.part
+            )
             paid_amount.text = "${getString(R.string.rupee)} $amount"
         }
     }
@@ -193,9 +194,16 @@ class ReceiptPreviewActivity : AppCompatActivity() {
             retValue = false
         }
 
-        if(receipt_send_to_dialog_cpEmail.text == null || receipt_send_to_dialog_cpEmail.text.toString() == "") {
-            receipt_send_to_dialog_cpEmail.error = getString(R.string.this_field_is_required)
-            retValue = false
+        val emailRegex = "^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$".toRegex()
+        if(receipt_send_to_dialog_cpEmail.text != null) {
+            val receipantEmail = receipt_send_to_dialog_cpEmail.text.toString()
+            if(receipantEmail != "") {
+                val emailValidationResult = emailRegex.matches(receipantEmail)
+                if(!emailValidationResult) {
+                    receipt_send_to_dialog_cpEmail.error = getString(R.string.invalid_email_address)
+                    retValue = false
+                }
+            }
         }
 
         return retValue
@@ -208,10 +216,12 @@ class ReceiptPreviewActivity : AppCompatActivity() {
 
         alertDialog = builder   .setView(dialogView)
                                 .setPositiveButton(R.string.ok, null)
-                                .setNegativeButton(R.string.cancel, DialogInterface.OnClickListener { dialog, id ->
-                                    // User cancelled the dialog
-                                    dialog.dismiss()
-                                })
+                                .setNegativeButton(
+                                    R.string.cancel,
+                                    DialogInterface.OnClickListener { dialog, id ->
+                                        // User cancelled the dialog
+                                        dialog.dismiss()
+                                    })
                                 .setCancelable(false)
                                 .setTitle(R.string.send_receipt_to)
                                 .create()
@@ -219,10 +229,13 @@ class ReceiptPreviewActivity : AppCompatActivity() {
             val button: Button = (alertDialog as AlertDialog).getButton(AlertDialog.BUTTON_POSITIVE)
             button.setOnClickListener(View.OnClickListener {
                 // User clicked OK button
-                if(validateDialogInputs(dialogView)) {
-                    cpNumber = dialogView.findViewById<EditText>(R.id.receipt_send_to_dialog_ph_number).text.toString()
-                    cpName = dialogView.findViewById<EditText>(R.id.receipt_send_to_dialog_cp_name).text.toString()
-                    cpEmail = dialogView.findViewById<EditText>(R.id.receipt_send_to_dialog_cp_email).text.toString()
+                if (validateDialogInputs(dialogView)) {
+                    cpNumber =
+                        dialogView.findViewById<EditText>(R.id.receipt_send_to_dialog_ph_number).text.toString()
+                    cpName =
+                        dialogView.findViewById<EditText>(R.id.receipt_send_to_dialog_cp_name).text.toString()
+                    cpEmail =
+                        dialogView.findViewById<EditText>(R.id.receipt_send_to_dialog_cp_email).text.toString()
                     sendReceipt()
                 }
 
@@ -231,7 +244,27 @@ class ReceiptPreviewActivity : AppCompatActivity() {
         alertDialog.show()
     }
 
-    data class ReceiptDetailsObject (
+    private fun downloadReceipt(context: Context, filename: String) {
+
+//        var url: String = "${PbdExecutivesUtils.serverAddress}/downloadFile/";
+//        var fileName = url.substring(url.lastIndexOf('/') + 1)
+//        fileName = fileName.substring(0, 1).toUpperCase() + fileName.substring(1)
+//        val file: File = Util.createDocumentFile(fileName, context)
+//
+//        val request = DownloadManager.Request(Uri.parse(url))
+//            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_HIDDEN) // Visibility of the download Notification
+//            .setDestinationUri(Uri.fromFile(file)) // Uri of the destination file
+//            .setTitle(fileName) // Title of the Download Notification
+//            .setDescription("Downloading") // Description of the Download Notification
+//            .setAllowedOverMetered(true) // Set if download is allowed on Mobile network
+//            .setAllowedOverRoaming(true) // Set if download is allowed on roaming network
+
+
+        setResult(Activity.RESULT_OK)
+        finish()
+    }
+
+    data class ReceiptDetailsObject(
         @SerializedName("serverId") val serverId: String?,
         @SerializedName("partyId") val partyId: String,
         @SerializedName("cpName") val cpName: String,
@@ -269,30 +302,49 @@ class ReceiptPreviewActivity : AppCompatActivity() {
             builder.create()
         }
 
+        val downloadingReceiptDialog = this.let {
+            val builder = AlertDialog.Builder(it)
+            val inflater = this.layoutInflater
+
+            builder.setView(inflater.inflate(R.layout.receipt_downloading_loader, null))
+
+            // Set other dialog properties
+            builder.setTitle(R.string.please_wait)
+//            .setMessage("${getString(R.string.confirm_send_receipt)} ${cpNumber.toString()}")
+            builder.setCancelable(false)
+
+            // Create the AlertDialog
+            builder.create()
+        }
+
         sendingReceiptDialog.show()
         lifecycleScope.launch {
             val db = Room.databaseBuilder(this@ReceiptPreviewActivity, AppDB::class.java, "PbdDB").build()
             val apiKey = db.userDetailsDao().getApiKey()
             val requestJSONObject = JSONObject(
-                Gson().toJson(RequestObject(
-                    apiKey = apiKey,
-                    receiptDetails = ReceiptDetailsObject(
-                        serverId = serverId,
-                        partyId = partyId,
-                        cpName = cpName,
-                        cpNumber = cpNumber,
-                        cpEmail = cpEmail,
-                        amount = amount.toBigDecimal(),
-                        paidBy = paidBy,
-                        chequeNo = chequeNo,
-                        ddNo = ddNo,
-                        bankName = bankName,
-                        bankBranch = bankBranch,
-                        payment = payment
-                    ))
-                ))
+                Gson().toJson(
+                    RequestObject(
+                        apiKey = apiKey,
+                        receiptDetails = ReceiptDetailsObject(
+                            serverId = serverId,
+                            partyId = partyId,
+                            cpName = cpName,
+                            cpNumber = cpNumber,
+                            cpEmail = cpEmail,
+                            amount = amount.toBigDecimal(),
+                            paidBy = paidBy,
+                            chequeNo = chequeNo,
+                            ddNo = ddNo,
+                            bankName = bankName,
+                            bankBranch = bankBranch,
+                            payment = payment
+                        )
+                    )
+                )
+            )
 
-            PbdExecutivesUtils.sendData(this@ReceiptPreviewActivity, "generatereceipt", requestJSONObject,
+            PbdExecutivesUtils.sendData(
+                this@ReceiptPreviewActivity, "generatereceipt", requestJSONObject,
                 { code, response ->
                     Log.i("pbdLog", "response: $response")
                     val responseObject = Gson().fromJson(
@@ -301,15 +353,26 @@ class ReceiptPreviewActivity : AppCompatActivity() {
                     );      //convert the response back into JSON Object from the response string
 
                     sendingReceiptDialog.dismiss()
+                    //add the receipt into database
                     GlobalScope.launch {
                         db.receiptsDao().addReceipt(responseObject)
-                        setResult(Activity.RESULT_OK)
-                        finish()
+                    }
+
+                    //download the receipt after saving.
+                    downloadingReceiptDialog.show()
+
+                    GlobalScope.launch {
+                        val receiptSeries = db.userDetailsDao().getCurrentUser().receiptSeries
+                        downloadReceipt(this@ReceiptPreviewActivity, filename = "${receiptSeries}${responseObject.receiptNo}.pdf")
                     }
                 },
                 { code, error ->
                     sendingReceiptDialog.dismiss()
-                    Snackbar.make(receipt_preview_layout, "${getString(R.string.cannot_generate_the_receipt)} $error", Snackbar.LENGTH_LONG).show()
+                    Snackbar.make(
+                        receipt_preview_layout,
+                        "${getString(R.string.cannot_generate_the_receipt)} $error",
+                        Snackbar.LENGTH_LONG
+                    ).show()
                 },
                 DefaultRetryPolicy(500000, 0, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT)
             )

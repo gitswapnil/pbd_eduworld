@@ -30,8 +30,8 @@ import java.util.concurrent.TimeUnit
 class PbdExecutivesUtils: Application() {
     companion object {
         //global variables go here...
-//        val serverAddress = "http://localhost:3000/api";
-        val serverAddress = "http://15.207.53.164:3000/api";
+        val serverAddress = "http://localhost:3000/api";
+//        val serverAddress = "http://15.207.53.164:3000/api";
         val PERMISSION_REQUEST_FINE_ACCESS = 1;
         val REQUEST_CHECK_LOCATION_SETTINGS = 2;
         val CHANNEL_ID = "TrackingServiceChannel";

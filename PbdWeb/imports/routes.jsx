@@ -189,6 +189,7 @@ if(Meteor.isClient) {
 				PBD_PHONE2,
 				PBD_MOBILE1,
 				PBD_MOBILE2,
+				PBD_OFFICIAL_MAIL, 
 				_2FACTORSENDERID,
 				_2FATCORAPIKEY } from 'meteor/pbd-apis';
 
@@ -938,33 +939,35 @@ if(Meteor.isClient) {
 		}	if error is false then message is the apiKey for that user.
 	*/
 
-	const emailReceipt = async (userId, receiptDetails) => {
-		if(!receiptDetails) {
-			console.log("Receipt not found. Hence not sending the email.");
-			return;
-		}
-
-		const to = receiptDetails.cpEmail;
-		console.log("to: " + to);
-		if(!to) {
-			console.log("contact person email not found, hence exiting from the function \"emailReceipt\".");
+	const createPDFReceipt = (receiptId) => {
+		const receipt = Collections.receipts.findOne({ _id: receiptId });
+		if(!receipt) {
+			console.log("receipt not found. Please check for the receipt ID.");
+			throw new Error("Receipt Not Found with given receipt ID: " + receiptId);
 			return;
 		}
 
 		try {
-			const details = receiptDetails;
-			details.execProfile = Meteor.users.findOne({ _id: userId }).profile;
-			details.party = Meteor.users.findOne({ _id: details.partyId });
 
-			const prevReceipt = Collections.receipts.findOne({ userId }, {sort: { createdAt: -1 }});
-			const prevReceiptNo = (prevReceipt && prevReceipt.receiptNo || 0);
-			const receiptNo = parseInt(prevReceiptNo) + 1;
-
-			if(typeof receiptNo !== "number") {
-				throw new Error("last receipt Number not found. Hence exiting from the function \"emailReceipt\".");
-			}
-			const fName = `${details.execProfile.receiptSeries}${receiptNo}`;
-
+			const partyDetails = Meteor.users.findOne({ _id: receipt.partyId });
+			const execProfile = Meteor.users.findOne({ _id: receipt.userId }).profile;
+			const executiveName = execProfile.name;
+			const receiptSeries = execProfile.receiptSeries;
+			const receiptNo = receipt.receiptNo;
+			const receiptCreatedAt = receipt.createdAt;
+			const partyName = partyDetails.profile.name;
+			const partyCode = partyDetails.username;
+			const partyAddress = partyDetails.profile.address;
+			const partyPhoneNumber = partyDetails.profile.phoneNumber;
+			const paidBy = receipt.paidBy;
+			const chequeNo = receipt.chequeNo;
+			const ddNo = receipt.ddNo;
+			const bankBranch = receipt.bankBranch;
+			const bankName = receipt.bankName;
+			const payment = receipt.payment;
+			const amount = receipt.amount;
+			const fName = `${receiptSeries}${receiptNo}.pdf`;
+			
 			const fonts = {
 			  	Helvetica: {
 				    normal: 'Helvetica',
@@ -975,32 +978,32 @@ if(Meteor.isClient) {
 			};
 
 			let body = [
-				[{text: 'Representative:', color: '#444'}, { text: `${details.execProfile.name}`, alignment: 'right'}],
-				[{text: 'Receipt No.:', color: '#444'}, { text: `${details.execProfile.receiptSeries}${receiptNo}`, alignment: 'right'}],
-				[{text: 'Date:', color: '#444'}, { text: `${moment(details.createdAt).format("DD-MMM-YYYY")}`, alignment: 'right'}],
-				[{text: 'Customer Code:', color: '#444'}, { text: `${details.party.username}`, alignment: 'right'}],
-				[{text: 'Name:', color: '#444'}, { text: `${details.party.profile.name}`, alignment: 'right'}],
-				[{text: 'Address:', color: '#444'}, { text: `${details.party.profile.address}`, alignment: 'right'}],
-				[{text: 'Customer Contact:', color: '#444'}, { text: `${details.party.profile.phoneNumber}`, alignment: 'right'}],
-				[{text: 'Paid By:', color: '#444'}, { text: `${(details.paidBy === 0) ? "Cash" : (details.paidBy === 1) ? "Cheque" : "Demand Draft"}`, alignment: 'right'}],
+				[{text: 'Representative:', color: '#444'}, { text: `${executiveName}`, alignment: 'right'}],
+				[{text: 'Receipt No.:', color: '#444'}, { text: `${receiptSeries}${receiptNo}`, alignment: 'right'}],
+				[{text: 'Date:', color: '#444'}, { text: `${moment(receiptCreatedAt).format("DD-MMM-YYYY")}`, alignment: 'right'}],
+				[{text: 'Customer Code:', color: '#444'}, { text: `${partyCode}`, alignment: 'right'}],
+				[{text: 'Name:', color: '#444'}, { text: `${partyName}`, alignment: 'right'}],
+				[{text: 'Address:', color: '#444'}, { text: `${partyAddress}`, alignment: 'right'}],
+				[{text: 'Customer Contact:', color: '#444'}, { text: `${partyPhoneNumber}`, alignment: 'right'}],
+				[{text: 'Paid By:', color: '#444'}, { text: `${(paidBy === 0) ? "Cash" : (paidBy === 1) ? "Cheque" : "Demand Draft"}`, alignment: 'right'}],
 			];
 
-			if(details.paidBy === 1) {
-				body.push([{text: 'Cheque No.:', color: '#444'}, { text: `${details.chequeNo}`, alignment: 'right'}]);
+			if(paidBy === 1) {
+				body.push([{text: 'Cheque No.:', color: '#444'}, { text: `${chequeNo}`, alignment: 'right'}]);
 			} 
 
-			if(details.paidBy === 2) {
-				body.push([{text: 'Demand Draft No.:', color: '#444'}, { text: `${details.ddNo}`, alignment: 'right'}]);
+			if(paidBy === 2) {
+				body.push([{text: 'Demand Draft No.:', color: '#444'}, { text: `${ddNo}`, alignment: 'right'}]);
 			}
 
-			if(details.paidBy !== 0) {
-				body.push([{text: 'Bank Branch:', color: '#444'}, { text: `${details.bankBranch}`, alignment: 'right'}]);
-				body.push([{text: 'Bank Name:', color: '#444'}, { text: `${details.bankName}`, alignment: 'right'}]);
+			if(paidBy !== 0) {
+				body.push([{text: 'Bank Branch:', color: '#444'}, { text: `${bankBranch}`, alignment: 'right'}]);
+				body.push([{text: 'Bank Name:', color: '#444'}, { text: `${bankName}`, alignment: 'right'}]);
 			}
 
-			body.push([{text: 'Payment:', color: '#444'}, { text: `${(details.payment === 0) ? "Part" : "Full"}`, alignment: 'right'}]);
+			body.push([{text: 'Payment:', color: '#444'}, { text: `${(payment === 0) ? "Part" : "Full"}`, alignment: 'right'}]);
 			body.push([{text: 'Paid:', color: '#444'}, { text: `Rs.${(() => {
-														let numStr = (parseFloat(details.amount) + 0.00001).toString().split(".");
+														let numStr = (parseFloat(amount) + 0.00001).toString().split(".");
 														return `${numStr[0]}.${numStr[1].slice(0, 2)}`
 													})()}`, alignment: 'right', fontSize: 18, bold: true}]);
 
@@ -1086,19 +1089,59 @@ if(Meteor.isClient) {
 			};
 
 			// console.log("docDefinition: " + JSON.stringify(docDefinition));
-
 			let pdfDoc = pdfMake.createPdfKitDocument(docDefinition);
-			pdfDoc.pipe(fs.createWriteStream(`/tmp/${fName}.pdf`));
+			pdfDoc.pipe(fs.createWriteStream(`/tmp/${fName}`));
 			pdfDoc.end();
 
+			return;
+
+		} catch(e) {
+			console.log("Error in generating the PDF: " + e.message);
+			throw new Error("Error in generating the PDF: " + e.message);
+		}
+	};
+
+	const emailReceipt = (receiptId, recipientEmail) => {
+		if(!recipientEmail || recipientEmail === "") {
+			console.log("contact person email not found, hence exiting from the function \"emailReceipt\".");
+			return;
+		}
+
+		const receipt = Collections.receipts.findOne({ _id: receiptId });
+		if(!receipt) {
+			console.log("Receipt not found. Hence exiting from email send function.");
+			throw new Error("Receipt not found. Hence exiting from email send function.");
+		}
+
+		try {
+			const execProfile = Meteor.users.findOne({ _id: receipt.userId }).profile;
+			const partyDetails = Meteor.users.findOne({ _id: receipt.partyId });
+			const receiptSeries = execProfile.receiptSeries;
+			const receiptNo = receipt.receiptNo;
+			const receiptCreatedAt = receipt.createdAt;
+			const partyName = partyDetails.profile.name;
+			const partyCode = partyDetails.username;
+			const partyAddress = partyDetails.profile.address;
+			const partyPhoneNumber = partyDetails.profile.phoneNumber;
+			const paidBy = receipt.paidBy;
+			const chequeNo = receipt.chequeNo;
+			const ddNo = receipt.ddNo;
+			const bankBranch = receipt.bankBranch;
+			const bankName = receipt.bankName;
+			const payment = receipt.payment;
+			const amount = receipt.amount;
+			const fName = `${receiptSeries}${receiptNo}.pdf`;
+
+			console.log("all the definitions are done.");
+
 			Email.send({ 
-				to, 
-				from: "no-reply@mypbd.com", 
-				subject: `PBD Eduworld Receipt #${fName}`, 
+				to: recipientEmail, 
+				from: PBD_OFFICIAL_MAIL, 
+				subject: `PBD Eduworld Receipt #${receiptSeries}${receiptNo}`, 
 				html: ReactDomServer.renderToStaticMarkup(
 					<div>
 						<div>
-							Hi, <b style={{ "fontSize": "18px" }}>{details.party.profile.name}</b>
+							Hi, <b style={{ "fontSize": "18px" }}>{partyName}</b>
 							<div>Thanks for ordering from <b>{PBD_NAME}</b> This email serves as a receipt for your purchase. Please retain this email receipt for your records.</div>
 						</div>
 						<div style={{ textAlign: "center" }}>
@@ -1112,76 +1155,76 @@ if(Meteor.isClient) {
 									<tbody>
 										<tr>
 											<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Representative:</td>
-											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.execProfile.name}</td>
+											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{execProfile.name}</td>
 										</tr>
 										<tr>
 											<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Receipt No.:</td>
-											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.execProfile.receiptSeries}{receiptNo}</td>
+											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{receiptSeries}{receiptNo}</td>
 										</tr>
 										<tr>
 											<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Date:</td>
-											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{moment(details.createdAt).format("DD-MMM-YYYY")}</td>
+											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{moment(receiptCreatedAt).format("DD-MMM-YYYY")}</td>
 										</tr>
 										<tr>
 											<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Customer Code:</td>
-											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.party.username}</td>
+											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{partyCode}</td>
 										</tr>
 										<tr>
 											<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Name:</td>
-											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.party.profile.name}</td>
+											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{partyName}</td>
 										</tr>
 										<tr>
 											<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Address:</td>
-											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.party.profile.address}</td>
+											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{partyAddress}</td>
 										</tr>
 										<tr>
 											<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Customer Contact:</td>
-											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.party.profile.phoneNumber}</td>
+											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{partyPhoneNumber}</td>
 										</tr>
 										<tr>
 											<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Paid By:</td>
-											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{(details.paidBy === 0) ? <span>Cash</span> : (details.paidBy === 1) ? <span>Cheque</span> : <span>Demand Draft</span>}</td>
+											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{(paidBy === 0) ? <span>Cash</span> : (paidBy === 1) ? <span>Cheque</span> : <span>Demand Draft</span>}</td>
 										</tr>
 										{
-											(details.paidBy === 1) ?
+											(paidBy === 1) ?
 											<tr>
 												<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Cheque No.:</td>
-												<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.chequeNo}</td>
+												<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{chequeNo}</td>
 											</tr>
 											: null
 										}
 										{
-											(details.paidBy === 2) ?
+											(paidBy === 2) ?
 											<tr>
 												<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Demand Draft No.:</td>
-												<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.ddNo}</td>
+												<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{ddNo}</td>
 											</tr>
 											: null
 										}
 										{
-											(details.paidBy !== 0) ? 
+											(paidBy !== 0) ? 
 											<React.Fragment>
 												<tr>
 													<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Bank Name:</td>
-													<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.bankName}</td>
+													<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{bankName}</td>
 												</tr>
 												<tr>
 													<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Bank Branch:</td>
-													<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{details.bankBranch}</td>
+													<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{bankBranch}</td>
 												</tr>
 											</React.Fragment>
 											: null
 										}
 										<tr>
 											<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Payment:</td>
-											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{(details.payment === 0) ? <span>Part</span> : <span>Full</span>}</td>
+											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>{(payment === 0) ? <span>Part</span> : <span>Full</span>}</td>
 										</tr>
 										<tr>
 											<td style={{ borderBottom: "1px solid #ddd", textAlign: "left" }}>Paid:</td>
 											<td style={{ borderBottom: "1px solid #ddd", textAlign: "right", color: "#000" }}>
 												<div style={{ fontSize: "large", fontWeight: "bold" }}>₹
 													{(() => {
-														let numStr = (parseFloat(details.amount) + 0.00001).toString().split(".");
+														let numStr = (parseFloat(amount) + 0.00001).toString().split(".");
 														return `${numStr[0]}.${numStr[1].slice(0, 2)}`
 													})()}
 												</div>
@@ -1208,104 +1251,13 @@ if(Meteor.isClient) {
 						</div>
 					</div>
 				), 
-				attachments: [{ path: `/tmp/${fName}.pdf` }],
-			});
-
-			fs.unlink(`/tmp/${fName}.pdf`, (err) => {
-				if(err) throw err;
-				console.log("successfully deleted the temperary file.");
+				attachments: [{ path: `/tmp/${fName}` }],
 			});
 
 			return;
 		} catch(e) {
 			console.log("Error in emailing the receipt: " + e.message);
 			throw new Error("Error in emailing the receipt: " + e.message);
-		}
-	};
-
-	const sendSMS = async (receiptId) => {
-		const receipt = Collections.receipts.findOne({ _id: receiptId });
-
-		if(!receipt) {
-			console.log("Receipt not found. Hence not sending the sms.");
-			return;
-		}
-
-		const cps = receipt.cpList;
-		if(!cps.length) {
-			console.log("no contact person information is present, hence exiting from the function \"sendSMS\".");
-			return; 
-		}
-
-		// console.log("cps: " + JSON.stringify(cps));
-		const to = cps.sort((a, b) => (b.createdAt - a.createdAt))[0].cpNumber;
-		console.log("to: " + to);
-		if(!to) {
-			console.log("contact person number not found, hence exiting from the function \"sendSMS\".");
-			return;
-		}
-
-		try {
-			const exec = Meteor.users.findOne({ _id: receipt.userId });
-			const party = Meteor.users.findOne({ _id: receipt.partyId });
-
-			let numStr = (parseFloat(receipt.amount) + 0.00001).toString().split(".");
-
-			let post_data = {
-				From : _2FACTORSENDERID,
-				To: to,
-				VAR1: `${numStr[0]}.${numStr[1].slice(0, 2)}`,
-				VAR2: `${party.profile.name}, ${party.profile.address}`,
-				VAR3: `${exec.profile.receiptSeries}${receipt.receiptNo}`
-			};
-
-			if(receipt.paidBy == 0) {
-				post_data.TemplateName = "ACK_paid_in_cash";
-			} else if(receipt.paidBy == 1) {
-				post_data.TemplateName = "ACK_paid_by_dd";
-				post_data.VAR4 = receipt.ddNo;
-				post_data.VAR5 = `${receipt.bankName}, ${receipt.bankBranch}`;
-			} else if(receipt.paidBy == 2) {
-				post_data.TemplateName = "ACK_paid_by_cheque";
-				post_data.VAR4 = receipt.chequeNo;
-				post_data.VAR5 = `${receipt.bankName}, ${receipt.bankBranch}`;
-			}
-
-			let sendResponse = new Promise((resolve, reject) => {
-				var options = {
-					host: 'www.2factor.in',
-					path: `/API/V1/${_2FATCORAPIKEY}/ADDON_SERVICES/SEND/TSMS`,
-					//This is what changes the request to a POST request
-					method: 'POST',
-					headers: {
-					  	'Content-Type': 'multipart/form-data'
-					}
-
-				};
-
-				const callback = function(response) {
-					var str = ''
-						response.on('data', function (chunk) {
-						str += chunk;
-					});
-
-					response.on('end', function () {
-						console.log(str);
-						resolve(str);
-					});
-				};
-
-				console.log("post_data: " + querystring.stringify(post_data));
-
-				const httpRequest = http.request(options, callback);
-				httpRequest.write(querystring.stringify(post_data));
-				httpRequest.end();
-			});
-
-			return await sendResponse;
-		} catch(e) {
-			console.log("Error in sending the SMS: " + e.message);
-			throw new Error("Error in sending the SMS: " + e.message);
 		}
 	};
 
@@ -1409,14 +1361,6 @@ if(Meteor.isClient) {
 			}
 		}
 
-		const emailReceiptApi = emailReceipt(userId, receiptDetails).catch(err => {
-			// res.end(JSON.stringify({error: true, message: err.message, code: 400}));
-			throw new Error("Unable to mail the receipt to the customer, Error: " + err);
-			return;
-		});
-
-		const sendArrRetValues = await Promise.all([emailReceiptApi]);
-
 		let details = new Promise((resolve, reject) => {
 			const cpObj = {
 				cpName: receiptDetails.cpName,
@@ -1436,7 +1380,20 @@ if(Meteor.isClient) {
 					delete retObj.cpList;
 					Object.assign(retObj, cpObj);
 					retObj.createdAt = moment(cpObj.createdAt).valueOf();
+
+					try {
+						createPDFReceipt(serverId);
+						//After saving the receipt pdf send the email to receipent
+						emailReceipt(serverId, cpObj.cpEmail);
+					} catch(err) {
+						// res.end(JSON.stringify({error: true, message: err.message, code: 400}));
+						Collections.receipts.update({ _id: serverId }, { $pull: { cpList: cpObj } });
+						console.log("Unable to generate the receipt, Error: " + err);
+						reject(new Error("Unable to generate the receipt, Error: " + err));
+					}
+
 					resolve(retObj);
+
 				} catch(e) {
 					console.log("error in cpList update..." + e);
 					reject(new Error("Problem in updating the receipt, please check the database and the request."));
@@ -1471,9 +1428,22 @@ if(Meteor.isClient) {
 
 					const serverId = Collections.receipts.insert(insertObj);
 
+					//After storing the receipt create the pdf
+					try {
+						createPDFReceipt(serverId);
+						//After saving the receipt pdf send the email to receipent
+						emailReceipt(serverId, cpObj.cpEmail);
+					} catch(err) {
+						// res.end(JSON.stringify({error: true, message: err.message, code: 400}));
+						Collections.receipts.remove({ _id: serverId });
+						console.log("Unable to generate the receipt, Error: " + err);
+						reject(new Error("Unable to generate the receipt, Error: " + err));
+					}
+
+
 			        const retObj = {
 			        	serverId,
-			        	receiptNo,
+			        	receiptNo: receiptDetails.receiptNo,
 			        	partyId: receiptDetails.partyId,
 			        	cpName: cpObj.cpName,
 						cpNumber: cpObj.cpNumber,
@@ -1489,13 +1459,15 @@ if(Meteor.isClient) {
 			        }
 
 			        resolve(retObj);
+
 				} catch(e) {
 					reject(new Error("Problem in insertion of receipt, please check the database."));
 				}
 			}
-		})
+		});
 		
 		return await details;
+
 	};
 
 	Router.route('/api/generatereceipt', {where: 'server'}).post(function(req, res, next){

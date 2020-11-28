@@ -59,9 +59,10 @@ export const PBD_PHONE1 = "0831-4208621";
 export const PBD_PHONE2 = "0831-4208622";
 export const PBD_MOBILE1 = "9341108584";
 export const PBD_MOBILE2 = "9845646605";
+export const PBD_OFFICIAL_MAIL = "no-reply@mypbd.com";
 
-export const _2FACTORSENDERID = "PBDEWB";
-export const _2FATCORAPIKEY = "59129664-e9c0-11ea-9fa5-0200cd936042";
+// export const _2FACTORSENDERID = "PBDEWB";
+// export const _2FATCORAPIKEY = "59129664-e9c0-11ea-9fa5-0200cd936042";
 
 export const firebaseServiceAccountKey = {
   "type": "service_account",

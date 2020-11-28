@@ -126,6 +126,8 @@
     <string name="bank_branch">Bank Branch</string>
     <string name="proper_mobile_number">Enter a proper 10 digit mobile number</string>
     <string name="about_us">About Us</string>
+    <string name="downloading_receipt">Downloading the receipt...</string>
+    <string name="invalid_email_address">Invalid email address</string>
 
     <string-array name="task_done_questions">
         <item>Done with Sampling?</item>
