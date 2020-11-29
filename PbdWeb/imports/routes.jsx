@@ -230,32 +230,46 @@ if(Meteor.isClient) {
 		return: File
 	*/
 	Router.route('/api/downloadFile/:filename', {where: 'server'}).get(function(req, res, next) {
-		console.log("API: downloadFile invoked.");
-		console.log("filename: " + this.params.filename);
-		const filename = this.params.filename;
-		const extension = filename.split(".")[1];
+		try {
+			console.log("API: downloadFile invoked.");
+			console.log("filename: " + this.params.filename);
+			const filename = this.params.filename;
+			const extension = filename.split(".")[1];
+			const path = `/tmp/${filename}`;
 
-		const readStream = fs.createReadStream(`/tmp/${filename}`);
-		const fileStat = fs.statSync(`/tmp/${filename}`);
-		const promisifiedFinished = promisify(finished);
-		async function run() {
-		  	await promisifiedFinished(readStream);
-		  	console.log('Stream is done reading.');
-		  	fs.unlink(`/tmp/${filename}`, (err) => {
-				if (err) throw err;
-				console.log('successfully deleted /tmp/'+filename);
-			});
+			if (!fs.existsSync(path)) {
+				throw new Error("File does not exists.");
+			}
+
+			const readStream = fs.createReadStream(path);
+			const fileStat = fs.statSync(path);
+			const promisifiedFinished = promisify(finished);
+			
+			async function run() {
+			  	await promisifiedFinished(readStream);
+			  	console.log('Stream is done reading.');
+			  	fs.unlink(path, (err) => {
+					if (err) throw err;
+					console.log(`successfully deleted ${path}`);
+				});
+			}
+
+			run().catch(console.error);
+			readStream.resume(); // Drain the stream.
+
+			res.writeHead(200, {
+				'Content-disposition': `attachment; filename=${filename}`, 
+				'Content-Length': fileStat.size,
+				'Content-Type': (extension === "xls") ? 'application/vnd.ms-excel' : (extension === "pdf") ? 'application/pdf' : null
+			}); //here you can add more headers
+			readStream.pipe(res);
+
+		} catch(e) {
+			console.log("Error in downloading the file: " + e.message);
+			res.writeHead(404);
+			res.end("File not found.");
+
 		}
-
-		run().catch(console.error);
-		readStream.resume(); // Drain the stream.
-
-		res.writeHead(200, {
-			'Content-disposition': `attachment; filename=${filename}`, 
-			'Content-Length': fileStat.size,
-			'Content-Type': (extension === "xls") ? 'application/vnd.ms-excel' : (extension === "pdf") ? 'application/pdf' : null
-		}); //here you can add more headers
-		readStream.pipe(res);
 
 		return;
 	});
@@ -1131,8 +1145,6 @@ if(Meteor.isClient) {
 			const payment = receipt.payment;
 			const amount = receipt.amount;
 			const fName = `${receiptSeries}${receiptNo}.pdf`;
-
-			console.log("all the definitions are done.");
 
 			Email.send({ 
 				to: recipientEmail, 

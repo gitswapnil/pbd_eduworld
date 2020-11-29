@@ -1,22 +1,29 @@
 package com.example.pbdexecutives
 
+import android.Manifest
 import android.app.Activity
 import android.app.DownloadManager
 import android.content.Context
 import android.content.DialogInterface
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.util.Log
 import android.view.MenuItem
 import android.view.View
+import android.webkit.MimeTypeMap
 import android.widget.Button
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.room.Room
 import com.android.volley.DefaultRetryPolicy
 import com.google.android.material.snackbar.Snackbar
+import com.google.android.play.core.splitinstall.c
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import kotlinx.android.synthetic.main.activity_add_new_receipt.*
@@ -27,14 +34,13 @@ import kotlinx.android.synthetic.main.receipt_receiver_details.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.json.JSONObject
-import java.io.File
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.properties.Delegates
 
 
-class ReceiptPreviewActivity : AppCompatActivity() {
+class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsResultCallback {
     private var receiptId: Long = 0
     private var serverId: String? = null
     private lateinit var partyId: String
@@ -49,6 +55,9 @@ class ReceiptPreviewActivity : AppCompatActivity() {
     private var bankBranch: String? = null
     private var payment by Delegates.notNull<Byte>()
     private lateinit var alertDialog: AlertDialog
+
+    private lateinit var filename: String
+    private lateinit var downloadUrl: String
 
     override fun onOptionsItemSelected(item: MenuItem) =
         when (item.itemId) {
@@ -244,21 +253,55 @@ class ReceiptPreviewActivity : AppCompatActivity() {
         alertDialog.show()
     }
 
-    private fun downloadReceipt(context: Context, filename: String) {
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions!!, grantResults)
+        if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            downloadReceipt(this)
+        }
+    }
 
-//        var url: String = "${PbdExecutivesUtils.serverAddress}/downloadFile/";
-//        var fileName = url.substring(url.lastIndexOf('/') + 1)
-//        fileName = fileName.substring(0, 1).toUpperCase() + fileName.substring(1)
-//        val file: File = Util.createDocumentFile(fileName, context)
-//
-//        val request = DownloadManager.Request(Uri.parse(url))
-//            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_HIDDEN) // Visibility of the download Notification
-//            .setDestinationUri(Uri.fromFile(file)) // Uri of the destination file
-//            .setTitle(fileName) // Title of the Download Notification
-//            .setDescription("Downloading") // Description of the Download Notification
-//            .setAllowedOverMetered(true) // Set if download is allowed on Mobile network
-//            .setAllowedOverRoaming(true) // Set if download is allowed on roaming network
+    private fun checkPermissionAndDownloadReceipt(context: Context, receiptNo: Long) {
+        val db = Room.databaseBuilder(context, AppDB::class.java, "PbdDB").build()
 
+        GlobalScope.launch {
+            val receiptSeries = db.userDetailsDao().getCurrentUser().receiptSeries
+            filename = "${receiptSeries}${receiptNo}.pdf"
+            downloadUrl = "${PbdExecutivesUtils.serverAddress}/downloadFile/${filename}";
+
+            if (Build.VERSION.SDK_INT >= 23) {
+                if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+                    Log.e("pbdLog", "You have permission");
+                    downloadReceipt(context)
+                } else {
+                    Log.e("pbdLog", "You have asked for permission");
+                    ActivityCompat.requestPermissions(
+                        this@ReceiptPreviewActivity,
+                        arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                        1
+                    );
+                }
+            }
+        }
+    }
+
+    private fun downloadReceipt(context: Context) {
+        val request = DownloadManager.Request(Uri.parse(downloadUrl))
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED) // Visibility of the download Notification
+            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "${filename}") // Uri of the destination file
+            .setTitle(filename) // Title of the Download Notification
+            .setDescription("Downloading...") // Description of the Download Notification
+            .setAllowedOverMetered(true) // Set if download is allowed on Mobile network
+            .setAllowedOverRoaming(true) // Set if download is allowed on roaming network
+
+        // get download service and enqueue file
+
+        // get download service and enqueue file
+        val manager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+        manager.enqueue(request)
 
         setResult(Activity.RESULT_OK)
         finish()
@@ -360,11 +403,7 @@ class ReceiptPreviewActivity : AppCompatActivity() {
 
                     //download the receipt after saving.
                     downloadingReceiptDialog.show()
-
-                    GlobalScope.launch {
-                        val receiptSeries = db.userDetailsDao().getCurrentUser().receiptSeries
-                        downloadReceipt(this@ReceiptPreviewActivity, filename = "${receiptSeries}${responseObject.receiptNo}.pdf")
-                    }
+                    checkPermissionAndDownloadReceipt(this@ReceiptPreviewActivity, responseObject.receiptNo)
                 },
                 { code, error ->
                     sendingReceiptDialog.dismiss()
