@@ -3,8 +3,10 @@ package com.example.pbdexecutives
 import android.Manifest
 import android.app.Activity
 import android.app.DownloadManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.DialogInterface
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -13,9 +15,9 @@ import android.os.Environment
 import android.util.Log
 import android.view.MenuItem
 import android.view.View
-import android.webkit.MimeTypeMap
 import android.widget.Button
 import android.widget.EditText
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -23,7 +25,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.room.Room
 import com.android.volley.DefaultRetryPolicy
 import com.google.android.material.snackbar.Snackbar
-import com.google.android.play.core.splitinstall.c
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import kotlinx.android.synthetic.main.activity_add_new_receipt.*
@@ -288,6 +289,18 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
+    private fun whatsAppInstalled() : Boolean {
+        val pm = packageManager
+        var app_installed = false
+        app_installed = try {
+            pm.getPackageInfo("com.whatsapp", PackageManager.GET_ACTIVITIES)
+            true
+        } catch (e: PackageManager.NameNotFoundException) {
+            false
+        }
+        return app_installed
+    }
+
     private fun downloadReceipt(context: Context) {
         val request = DownloadManager.Request(Uri.parse(downloadUrl))
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED) // Visibility of the download Notification
@@ -303,8 +316,34 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
         val manager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
         manager.enqueue(request)
 
-        setResult(Activity.RESULT_OK)
-        finish()
+        downloadingReceiptDialog.dismiss()
+//        setResult(Activity.RESULT_OK)
+//        finish()
+
+//        if(whatsAppInstalled()) {
+//            val whatsappIntent: Intent = Intent().apply {
+//                action = Intent.ACTION_MAIN
+//                component = ComponentName(
+//                    "com.whatsapp",
+//                    "com.whatsapp.Conversation"
+//                )
+//                putExtra("jid", "919686253652" + "@s.whatsapp.net")
+////                action = Intent.ACTION_SEND
+////                putExtra(Intent.EXTRA_TEXT, "This is my text to send.")
+////                type = "text/plain"
+//                setPackage("com.whatsapp")
+//            }
+//
+//            startActivity(whatsappIntent)
+//        } else {
+//            val uri = Uri.parse("market://details?id=com.whatsapp")
+//            val goToMarket = Intent(Intent.ACTION_VIEW, uri)
+//            Toast.makeText(
+//                this, "WhatsApp not Installed",
+//                Toast.LENGTH_SHORT
+//            ).show()
+//            startActivity(goToMarket)
+//        }
     }
 
     data class ReceiptDetailsObject(
@@ -327,6 +366,21 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
         @SerializedName("receiptDetails") val receiptDetails: ReceiptDetailsObject
     )
 
+    private val downloadingReceiptDialog = this.let {
+        val builder = AlertDialog.Builder(it)
+        val inflater = this.layoutInflater
+
+        builder.setView(inflater.inflate(R.layout.receipt_downloading_loader, null))
+
+        // Set other dialog properties
+        builder.setTitle(R.string.please_wait)
+//            .setMessage("${getString(R.string.confirm_send_receipt)} ${cpNumber.toString()}")
+        builder.setCancelable(false)
+
+        // Create the AlertDialog
+        builder.create()
+    }
+
     private fun sendReceipt() {
         alertDialog.dismiss()
 
@@ -335,21 +389,6 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
             val inflater = this.layoutInflater
 
             builder.setView(inflater.inflate(R.layout.receipt_sending_loader, null))
-
-            // Set other dialog properties
-            builder.setTitle(R.string.please_wait)
-//            .setMessage("${getString(R.string.confirm_send_receipt)} ${cpNumber.toString()}")
-            builder.setCancelable(false)
-
-            // Create the AlertDialog
-            builder.create()
-        }
-
-        val downloadingReceiptDialog = this.let {
-            val builder = AlertDialog.Builder(it)
-            val inflater = this.layoutInflater
-
-            builder.setView(inflater.inflate(R.layout.receipt_downloading_loader, null))
 
             // Set other dialog properties
             builder.setTitle(R.string.please_wait)
@@ -403,7 +442,10 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
 
                     //download the receipt after saving.
                     downloadingReceiptDialog.show()
-                    checkPermissionAndDownloadReceipt(this@ReceiptPreviewActivity, responseObject.receiptNo)
+                    checkPermissionAndDownloadReceipt(
+                        this@ReceiptPreviewActivity,
+                        responseObject.receiptNo
+                    )
                 },
                 { code, error ->
                     sendingReceiptDialog.dismiss()
