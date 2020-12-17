@@ -948,12 +948,13 @@ if(Meteor.isClient) {
 				payment: 0, 1,
 				serverId: String,
 				createdAt: Long,
+				pdf:Base64
 			}",
 			code: Integer
 		}	if error is false then message is the apiKey for that user.
 	*/
 
-	const createPDFReceipt = (receiptId) => {
+	const createPDFReceipt = async (receiptId) => {
 		const receipt = Collections.receipts.findOne({ _id: receiptId });
 		if(!receipt) {
 			console.log("receipt not found. Please check for the receipt ID.");
@@ -1103,12 +1104,23 @@ if(Meteor.isClient) {
 			};
 
 			// console.log("docDefinition: " + JSON.stringify(docDefinition));
-			let pdfDoc = pdfMake.createPdfKitDocument(docDefinition);
-			pdfDoc.pipe(fs.createWriteStream(`/tmp/${fName}`));
-			pdfDoc.end();
+			await new Promise(resolve => {
+				let pdfDoc = pdfMake.createPdfKitDocument(docDefinition);
+				const writeStream = fs.createWriteStream(`/tmp/${fName}`);
+				writeStream.on('finish', () => {
+					// console.log("PDF file write is complete.");
+					resolve();
+				});
+				pdfDoc.pipe(writeStream);
+				// console.log("PDF file write pipe created.");
+
+				pdfDoc.end();
+			});
+
+			// const fileContents = fs.readFileSync(`/tmp/${fName}`, { encoding: "base64" });
+			// console.log("fileContents: " + fileContents);
 
 			return;
-
 		} catch(e) {
 			console.log("Error in generating the PDF: " + e.message);
 			throw new Error("Error in generating the PDF: " + e.message);
@@ -1373,38 +1385,30 @@ if(Meteor.isClient) {
 			}
 		}
 
-		let details = new Promise((resolve, reject) => {
-			const cpObj = {
-				cpName: receiptDetails.cpName,
-				cpNumber: receiptDetails.cpNumber,
-				cpEmail: (receiptDetails.cpEmail == "") ? undefined : receiptDetails.cpEmail,
-				createdAt: new Date()
-			}
+		const receiptSeries = Meteor.users.findOne({ _id: userId }).profile.receiptSeries;
+		let receipantEmail = (receiptDetails.cpEmail == "") ? undefined : receiptDetails.cpEmail;
+		const cpObj = {
+			cpName: receiptDetails.cpName,
+			cpNumber: receiptDetails.cpNumber,
+			cpEmail: receipantEmail,
+			createdAt: new Date()
+		}
+		console.log("cpObj: " + JSON.stringify(cpObj))
 
+		let details = await new Promise(async (resolve, reject) => {
 			if(serverId) {
 				try {
-					console.log("cpObj: " + JSON.stringify(cpObj))
 					Collections.receipts.update({ _id: serverId }, { $push: { cpList: cpObj } });
 
-					const retObj = Collections.receipts.findOne({ _id: serverId })
+					const retObj = Collections.receipts.findOne({ _id: serverId });
+
 					retObj.serverId = retObj._id;
 					delete retObj._id;
 					delete retObj.cpList;
 					Object.assign(retObj, cpObj);
 					retObj.createdAt = moment(cpObj.createdAt).valueOf();
 
-					try {
-						createPDFReceipt(serverId);
-						//After saving the receipt pdf send the email to receipent
-						emailReceipt(serverId, cpObj.cpEmail);
-					} catch(err) {
-						// res.end(JSON.stringify({error: true, message: err.message, code: 400}));
-						Collections.receipts.update({ _id: serverId }, { $pull: { cpList: cpObj } });
-						console.log("Unable to generate the receipt, Error: " + err);
-						reject(new Error("Unable to generate the receipt, Error: " + err));
-					}
-
-					resolve(retObj);
+				    resolve(retObj);
 
 				} catch(e) {
 					console.log("error in cpList update..." + e);
@@ -1440,19 +1444,6 @@ if(Meteor.isClient) {
 
 					const serverId = Collections.receipts.insert(insertObj);
 
-					//After storing the receipt create the pdf
-					try {
-						createPDFReceipt(serverId);
-						//After saving the receipt pdf send the email to receipent
-						emailReceipt(serverId, cpObj.cpEmail);
-					} catch(err) {
-						// res.end(JSON.stringify({error: true, message: err.message, code: 400}));
-						Collections.receipts.remove({ _id: serverId });
-						console.log("Unable to generate the receipt, Error: " + err);
-						reject(new Error("Unable to generate the receipt, Error: " + err));
-					}
-
-
 			        const retObj = {
 			        	serverId,
 			        	receiptNo: receiptDetails.receiptNo,
@@ -1477,9 +1468,26 @@ if(Meteor.isClient) {
 				}
 			}
 		});
-		
-		return await details;
 
+		//After storing the receipt create the pdf
+		try {
+			await createPDFReceipt(details.serverId);
+			//After saving the receipt pdf send the email to receipent
+			emailReceipt(details.serverId, receipantEmail);
+			const data = fs.readFileSync(`/tmp/${receiptSeries}${details.receiptNo}.pdf`, { encoding: 'base64' });
+			details.pdf = `${data}`;
+		} catch(err) {
+			// res.end(JSON.stringify({error: true, message: err.message, code: 400}));
+			if(serverId) { 		//if serverId is present then it means we are adding the receipant
+				Collections.receipts.update({ _id: serverId }, { $pull: { cpList: cpObj } });
+			} else {
+				Collections.receipts.remove({ _id: details.serverId });
+			}
+			console.log("Unable to generate the receipt reverting back the save operation, Error: " + err);
+			throw new Error("Unable to generate the receipt reverting back the save operation, Error: " + err);
+		}
+
+		return details;
 	};
 
 	Router.route('/api/generatereceipt', {where: 'server'}).post(function(req, res, next){
@@ -1527,7 +1535,7 @@ if(Meteor.isClient) {
 		const callAllFuncs = async () => {
 			const values = await Promise.all([generateReceiptApi]);
 
-			// console.log(`values: ${JSON.stringify(values)}`);
+			// console.log(`values: ${JSON.stringify(values[0])}`);
 			const message = { ...values[0] };
 
 			// const sendSMSApi = sendSMS(message.serverId).catch(err => {
@@ -2011,4 +2019,9 @@ if(Meteor.isClient) {
 
 	// 	res.end(JSON.stringify({error: false, message: serverId, code: 200}));
 	// });
+
+	/*	
+		params: { filename: String }
+		return: File
+	*/
 }

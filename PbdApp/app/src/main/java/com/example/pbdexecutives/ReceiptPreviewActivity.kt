@@ -1,23 +1,21 @@
 package com.example.pbdexecutives
 
-import android.Manifest
-import android.app.Activity
-import android.app.DownloadManager
-import android.content.ComponentName
-import android.content.Context
-import android.content.DialogInterface
-import android.content.Intent
+import android.content.*
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.StrictMode
+import android.os.StrictMode.VmPolicy
+import android.util.Base64
 import android.util.Log
 import android.view.MenuItem
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -35,6 +33,8 @@ import kotlinx.android.synthetic.main.receipt_receiver_details.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import java.io.File
+import java.io.FileOutputStream
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.util.*
@@ -56,9 +56,12 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
     private var bankBranch: String? = null
     private var payment by Delegates.notNull<Byte>()
     private lateinit var alertDialog: AlertDialog
+    private lateinit var downloadingReceiptDialog: AlertDialog
 
-    private lateinit var filename: String
-    private lateinit var downloadUrl: String
+    private var receiptSeries: String = ""
+    private var receiptNo by Delegates.notNull<Long>()
+
+//    private lateinit var pdfByteArray: ByteArray
 
     override fun onOptionsItemSelected(item: MenuItem) =
         when (item.itemId) {
@@ -83,6 +86,7 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
 
         val db = Room.databaseBuilder(this@ReceiptPreviewActivity, AppDB::class.java, "PbdDB").build()
         GlobalScope.launch {
+            receiptSeries = db.userDetailsDao().getCurrentUser().receiptSeries
             receiptId = intent.getLongExtra("receiptId", 0)
             val thisUser = db.userDetailsDao().getCurrentUser()
             representative.text = thisUser.name
@@ -176,10 +180,35 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
             )
             paid_amount.text = "${getString(R.string.rupee)} $amount"
         }
+
+//        registerReceiver(onDownloadComplete, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+        initializeDownloadingDialog()
+    }
+
+    private fun initializeDownloadingDialog() {
+        downloadingReceiptDialog = this.let {
+            val builder = AlertDialog.Builder(it)
+            val inflater = this.layoutInflater
+
+            builder.setView(inflater.inflate(R.layout.receipt_downloading_loader, null))
+
+            // Set other dialog properties
+            builder.setTitle(R.string.please_wait)
+//            .setMessage("${getString(R.string.confirm_send_receipt)} ${cpNumber.toString()}")
+            builder.setCancelable(false)
+
+            // Create the AlertDialog
+            builder.create()
+        }
     }
 
     override fun onResume() {
         super.onResume()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+//        unregisterReceiver(onDownloadComplete)
     }
 
     private fun validateDialogInputs(view: View): Boolean {
@@ -254,40 +283,32 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
         alertDialog.show()
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions!!, grantResults)
-        if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            downloadReceipt(this)
-        }
-    }
-
-    private fun checkPermissionAndDownloadReceipt(context: Context, receiptNo: Long) {
-        val db = Room.databaseBuilder(context, AppDB::class.java, "PbdDB").build()
-
-        GlobalScope.launch {
-            val receiptSeries = db.userDetailsDao().getCurrentUser().receiptSeries
-            filename = "${receiptSeries}${receiptNo}.pdf"
-            downloadUrl = "${PbdExecutivesUtils.serverAddress}/downloadFile/${filename}";
-
-            if (Build.VERSION.SDK_INT >= 23) {
-                if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-                    Log.e("pbdLog", "You have permission");
-                    downloadReceipt(context)
-                } else {
-                    Log.e("pbdLog", "You have asked for permission");
-                    ActivityCompat.requestPermissions(
-                        this@ReceiptPreviewActivity,
-                        arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
-                        1
-                    );
-                }
-            }
-        }
-    }
+//    override fun onRequestPermissionsResult(
+//        requestCode: Int,
+//        permissions: Array<out String>,
+//        grantResults: IntArray
+//    ) {
+//        super.onRequestPermissionsResult(requestCode, permissions!!, grantResults)
+//        if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+//            downloadReceipt()
+//        }
+//    }
+//
+//    private fun checkPermissionAndDownloadReceipt() {
+//        if (Build.VERSION.SDK_INT >= 23) {
+//            if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+//                Log.i("pbdLog", "You have permission");
+//                downloadReceipt()
+//            } else {
+//                Log.i("pbdLog", "You have asked for permission");
+//                ActivityCompat.requestPermissions(
+//                    this@ReceiptPreviewActivity,
+//                    arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
+//                    1
+//                );
+//            }
+//        }
+//    }
 
     private fun whatsAppInstalled() : Boolean {
         val pm = packageManager
@@ -301,24 +322,48 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
         return app_installed
     }
 
-    private fun downloadReceipt(context: Context) {
-        val request = DownloadManager.Request(Uri.parse(downloadUrl))
-            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED) // Visibility of the download Notification
-            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "${filename}") // Uri of the destination file
-            .setTitle(filename) // Title of the Download Notification
-            .setDescription("Downloading...") // Description of the Download Notification
-            .setAllowedOverMetered(true) // Set if download is allowed on Mobile network
-            .setAllowedOverRoaming(true) // Set if download is allowed on roaming network
+//    private var downloadID by Delegates.notNull<Long>()
+//
+//    private val onDownloadComplete: BroadcastReceiver = object : BroadcastReceiver() {
+//        override fun onReceive(context: Context?, intent: Intent) {
+//            //Fetching the download id received with the broadcast
+//            val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+//            //Checking if the received broadcast is for our enqueued download by matching download id
+//            if (downloadID === id) {
+//                Toast.makeText(
+//                    this@ReceiptPreviewActivity,
+//                    "Download Completed",
+//                    Toast.LENGTH_SHORT
+//                ).show()
+//            }
+//
+////            downloadingReceiptDialog.dismiss()
+//            setResult(Activity.RESULT_OK)
+//            finish()
+//        }
+//    }
 
-        // get download service and enqueue file
+//    private fun downloadReceipt() {
+//        val filename = "${receiptSeries}${receiptNo}.pdf"
+//        val downloadUrl = "${PbdExecutivesUtils.serverAddress}/downloadFile/${filename}";
+////        val downloadUrl = "https://file-examples-com.github.io/uploads/2017/10/file-sample_150kB.pdf";
+//
+//        val request: DownloadManager.Request = DownloadManager.Request(Uri.parse(downloadUrl))
+//            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED) // Visibility of the download Notification
+//            .setTitle(filename) // Title of the Download Notification
+//            .setDescription("Downloading...") // Description of the Download Notification
+//            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename) // Uri of the destination file
+//            .setAllowedOverRoaming(true)
+//            .setAllowedOverMetered(true)
+//
+//        // get download service and enqueue file
+//
+//        // get download service and enqueue file
+//        val manager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+//        downloadID = manager.enqueue(request)
 
-        // get download service and enqueue file
-        val manager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
-        manager.enqueue(request)
 
-        downloadingReceiptDialog.dismiss()
-//        setResult(Activity.RESULT_OK)
-//        finish()
+
 
 //        if(whatsAppInstalled()) {
 //            val whatsappIntent: Intent = Intent().apply {
@@ -344,6 +389,44 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
 //            ).show()
 //            startActivity(goToMarket)
 //        }
+//    }
+
+    private fun folderPath(): String {
+        return "${applicationContext.getExternalFilesDir(null)}${File.separator}Receipts"
+    }
+
+    private fun gotoWhatsapp(mobileNo: String, fileName: String) {
+//        val builder = VmPolicy.Builder()
+//        StrictMode.setVmPolicy(builder.build())
+
+        if(whatsAppInstalled()) {
+            val receiptFile = File(folderPath(), fileName)
+            val uri = Uri.fromFile(receiptFile)
+
+            val whatsappIntent: Intent = Intent().apply {
+                action = Intent.ACTION_SEND
+//                component = ComponentName(
+//                    "com.whatsapp",
+//                    "com.whatsapp.Conversation"
+//                )
+//                putExtra("jid", "$mobileNo" + "@s.whatsapp.net")
+//                action = Intent.ACTION_SEND
+//                putExtra(Intent.EXTRA_TEXT, "This is my text to send.")
+                type = "application/pdf"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                setPackage("com.whatsapp")
+            }
+
+            startActivity(whatsappIntent)
+        } else {
+            val uri = Uri.parse("market://details?id=com.whatsapp")
+            val goToMarket = Intent(Intent.ACTION_VIEW, uri)
+            Toast.makeText(
+                this, "WhatsApp not Installed",
+                Toast.LENGTH_SHORT
+            ).show()
+            startActivity(goToMarket)
+        }
     }
 
     data class ReceiptDetailsObject(
@@ -361,25 +444,14 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
         @SerializedName("payment") val payment: Byte
     )
 
+    data class ReceiptPdf(
+        @SerializedName("pdf") val pdf: String
+    )
+
     data class RequestObject(
         @SerializedName("apiKey") val apiKey: String,
         @SerializedName("receiptDetails") val receiptDetails: ReceiptDetailsObject
     )
-
-    private val downloadingReceiptDialog = this.let {
-        val builder = AlertDialog.Builder(it)
-        val inflater = this.layoutInflater
-
-        builder.setView(inflater.inflate(R.layout.receipt_downloading_loader, null))
-
-        // Set other dialog properties
-        builder.setTitle(R.string.please_wait)
-//            .setMessage("${getString(R.string.confirm_send_receipt)} ${cpNumber.toString()}")
-        builder.setCancelable(false)
-
-        // Create the AlertDialog
-        builder.create()
-    }
 
     private fun sendReceipt() {
         alertDialog.dismiss()
@@ -440,12 +512,24 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
                         db.receiptsDao().addReceipt(responseObject)
                     }
 
+                    val receiptPdf = Gson().fromJson(
+                        response.toString(),
+                        ReceiptPdf::class.java
+                    );      //convert the response of ReceiptPDF key to base64 string as returned by the server.
+
+                    receiptNo = responseObject.receiptNo
+                    val fileName = "${receiptSeries}${receiptNo}.pdf"
+
+                    createReceiptFile(fileName, receiptPdf.pdf, {
+                        ->
+                        gotoWhatsapp(cpNumber, fileName)
+                    }, { errorMessage ->
+                        Toast.makeText(applicationContext, errorMessage, Toast.LENGTH_SHORT)
+                    })
+
                     //download the receipt after saving.
-                    downloadingReceiptDialog.show()
-                    checkPermissionAndDownloadReceipt(
-                        this@ReceiptPreviewActivity,
-                        responseObject.receiptNo
-                    )
+//                    downloadingReceiptDialog.show()
+//                    checkPermissionAndDownloadReceipt()
                 },
                 { code, error ->
                     sendingReceiptDialog.dismiss()
@@ -459,4 +543,87 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
             )
         }
     }
+
+//    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+//        super.onActivityResult(requestCode, resultCode, data)
+//
+//        if (requestCode == CREATE_FILE && resultCode == Activity.RESULT_OK) {
+//            // The result data contains a URI for the document or directory that
+//            // the user selected.
+//            data?.data?.also { uri ->
+//                // Perform operations on the document using its URI.
+//
+//                Log.i("pbdLog", "url: ${uri}");
+//            }
+//        }
+//
+//    }
+
+//    // Request code for creating a PDF document.
+//    private val CREATE_FILE = 1
+//
+    private fun createReceiptFile(
+    fileName: String,
+    base64Data: String,
+    onSuccess: () -> Unit,
+    onError: (message: String) -> Unit
+) {
+        try {
+            val storageState = Environment.getExternalStorageState()
+            Log.i("pbdLog", "receipt base64: $base64Data")
+
+            val pdfByteArray = Base64.decode(base64Data, Base64.DEFAULT)
+            if(Environment.MEDIA_MOUNTED == storageState) {        //If storage is mounted then
+                Log.i("pbdLog", "External Storage is Mounted. We can save file now.")
+                var folder = File(folderPath())
+                if(!folder.exists()) {          //create the folder if it does not exists.
+                    folder.mkdirs()
+                }
+
+                var file: File = File(folderPath())
+                var cond = true
+                var index = 0
+                do {
+                    file = File(
+                        folderPath(),
+                        "${receiptSeries}${receiptNo}${if (index == 0) "" else "($index)"}.pdf"
+                    )
+                    if(!file.exists()) {
+                        index = 0
+                        cond = false
+                    }
+                    index++
+                } while (cond)
+
+                val stream = FileOutputStream(file)
+                stream.write(pdfByteArray)
+                stream.flush()
+                stream.close()
+                onSuccess()
+            } else {
+                Log.i("pbdLog", "External Storage is Mounted")
+                onError("External storage is not either not present or not mounted.")
+            }
+        } catch (e: Exception) {
+            Log.e("pbdLog", e.message)
+            e.message?.toString()?.let { onError(it) }
+        }
+    }
+//
+//
+//    private fun openDirectory(pickerInitialUri: Uri) {
+//        // Choose a directory using the system's file picker.
+//        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+//            // Provide read access to files and sub-directories in the user-selected
+//            // directory.
+//            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+//
+//            // Optionally, specify a URI for the directory that should be opened in
+//            // the system file picker when it loads.
+//            putExtra(DocumentsContract.EXTRA_INITIAL_URI, pickerInitialUri)
+//        }
+//
+//        startActivityForResult(intent, 11)
+//    }
+
 }
