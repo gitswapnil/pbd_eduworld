@@ -1,5 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import Collections from 'meteor/collections';
+import { ReactiveVar } from 'meteor/reactive-var';
 
 if(Meteor.isServer) {
 	Meteor.publish('history.getExecutivesList', function(){
@@ -420,6 +421,7 @@ if(Meteor.isServer) {
 					            payment: "$history.payment",
 					            chequeNo: "$history.chequeNo",
 					            userId: "$history.userId",
+                                receivedAt: "$history.receivedAt",
 					            createdAt: { $ifNull: ["$history.createdAt", "$history"] },
 					        }
 					    },
@@ -478,6 +480,7 @@ if(Meteor.isServer) {
 					            "party.emails": 1,
 					            "party.profile": { $ifNull: [ "$party.profile", { name: "", phoneNumber: "", address: "" } ] },
 					            userId: 1,
+                                receivedAt: 1,
 					            createdAt: 1,
 					            category: { 
 					                $cond: [
@@ -504,8 +507,8 @@ if(Meteor.isServer) {
 					    },
 					    { $match: searchCondition },
 					    { $sort: { "createdAt": -1 } },
-					    { $skip: skip },
-					    { $limit: limit },
+					    // { $skip: skip },
+					    { $limit: (skip + limit) },
 					], ((err, cursor) => {
 						if(err) reject(err);
 
@@ -544,6 +547,7 @@ if(Meteor.isServer) {
 						doc.party = Meteor.users.findOne({ _id: doc.partyId }, { fields: { services: 0, availableTo: 0 } });
 					}
 					doc.category = "task";
+                    delete doc._id;
 					this.changed("temp", _id, doc);
 				},
 
@@ -570,6 +574,7 @@ if(Meteor.isServer) {
 					doc.amount = `${doc.amount}`;
 					doc.party = Meteor.users.findOne({ _id: doc.partyId }, { fields: { services: 0, availableTo: 0 } });
 					doc.category = "receipt";
+                    delete doc._id;
 					this.changed("temp", _id, doc);
 				},
 
@@ -594,6 +599,7 @@ if(Meteor.isServer) {
 					let doc = Collections.followUps.findOne({ _id });
 					doc.party = Meteor.users.findOne({ _id: doc.partyId }, { fields: { services: 0, availableTo: 0 } });
 					doc.category = "followUp";
+                    delete doc._id;
 					this.changed("temp", _id, doc);
 				},
 
@@ -603,9 +609,15 @@ if(Meteor.isServer) {
 			});
 
 			getHistory.apply(this).then(docs => {			
-				docs.forEach(item => {
+				docs.forEach((item, index) => {
 					// console.log("createdAt: " + item.createdAt);
-					this.added("temp", item._id, item);
+                    let _id = `${item._id}`;
+                    // delete item._id;
+                    // Collections.temp.upsert({ _id }, { $set: { ...item } });
+
+                    // if((index + 1) > skip) {
+    					this.added("temp", _id, item);
+                    // }
 				});
 
 				initializing = false;
@@ -619,6 +631,7 @@ if(Meteor.isServer) {
 				handle1.stop();
 				handle2.stop();
 				handle3.stop();
+                // Collections.temp.remove({});
 				this.stop();
 				console.log("Publication, \"history.getExecutiveHistory\" is stopped.");
 			});
@@ -628,10 +641,42 @@ if(Meteor.isServer) {
 	});
 }
 
+let reactiveError = new ReactiveVar("{}");
+
+Meteor.methods({
+    'history.receipts.markPaymentReceived'(editId) {        //if editId is given, then it is a method to edit the executive's details.
+        console.log("history.receipts.markPaymentReceived method with editId: " + (editId || "undefined"));
+
+        if(Roles.userIsInRole(this.userId, 'admin', Roles.GLOBAL_GROUP)) {      //authorization
+            if(editId || editId !== "") {       //if edit method
+                if(!Collections.receipts.findOne({"_id": editId})){         //check if the edit Id is genuine or not.
+                    throw new Meteor.Error(400, "general-error", "{\"generalError\":\"Invalid ReceiptId\"}");
+                    return;
+                };
+
+                console.log("Saving the changes for receipt with _id: " + editId + "...");
+                Collections.receipts.update({"_id": editId}, { $set: { "receivedAt": new Date() } }, {multi: false, upsert: false});
+            } else {
+                throw new Meteor.Error(400, "general-error", "{\"generalError\":\"Invalid ReceiptId\"}");
+            }
+        }
+
+        console.log("history.receipts.markPaymentReceived method is completed successfully.");
+        return "Receipt marked as paid successfully";
+    },
+});
+
+
 if(Meteor.isClient) {
 	import React, { useState, useEffect, useRef } from 'react';
 	import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-	import { faSearch, faCircleNotch, faCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
+	import { faSearch, 
+             faCircleNotch, 
+             faCheck, 
+             faTimes, 
+             faExclamationTriangle, 
+             faPrint,
+             faStamp } from '@fortawesome/free-solid-svg-icons';
 	import { Tracker } from 'meteor/tracker';
 	import { 	getReasonFromCode, 
 				getCodeFromReason,
@@ -643,6 +688,7 @@ if(Meteor.isClient) {
 				PBD_MOBILE1,
 				PBD_MOBILE2 } from 'meteor/pbd-apis';
 	import ExecutiveDaySnapshot from './ExecutiveDaySnapshot';
+    import Modal from './Modal.jsx';
 
 	const ExecutivesList = (props) => {
 		const [executives, setExecutives] = useState([]);
@@ -779,6 +825,8 @@ if(Meteor.isClient) {
 			}
 		}, [props.selectedExecutiveId]);
 
+        const getSelectedItemId = () => selectedItemId;
+
 		useEffect(() => {
 			const searchCriterion = getSearchCriteria();
 
@@ -799,26 +847,32 @@ if(Meteor.isClient) {
 
 				Tracker.autorun(() => {
 					if(handle.ready()) {
-						let data = [...listItems];
-						data.splice(-1, 1);
+						let data = [];
+						// data.splice(-1, 1);
 
 						Collections.temp.find({}).forEach((serverItem, i) => {
 							// console.log("got createdAt: " + serverItem.createdAt);
+                            let _id = serverItem._id;
 							data.push(serverItem);
-							Collections.null.insert(serverItem);
+							Collections.null.upsert({ _id }, { $set: { ...serverItem } });
 						});
 
 						data.sort((a, b) => (b.createdAt - a.createdAt));
 
+                        // console.log("selectedItemId: " + getSelectedItemId());
+                        // console.log("data.length: " + data.length);
+
 						setListItems(data);
 						setLoading(false);
 
-						if((selectedItemId === "0") && data.length) {
+						if((getSelectedItemId() === "0") && data.length) {
 							const nonNullCategoryItem = data.find(elem => (elem.category != null));
 							if(nonNullCategoryItem) {
 								setSelectedItemId(nonNullCategoryItem._id);
 							}
 						}
+
+                        props.refreshDetailsPage(Date().toString());        //refresh the details page after updating the local database.
 					}
 				});
 
@@ -895,9 +949,16 @@ if(Meteor.isClient) {
 															</div>
 															: 
 															(item.category === "receipt") ? 
-															<div>
-																<div style={{ color: "#BE7A04" }}>Receipt</div>
-																<div style={{ fontSize: "smaller" }}>₹ 
+															<div style={
+                                                                    Object.assign({}, item.receivedAt ? {  
+                                                                        backgroundImage: "url('/paid-icon-list.png')",
+                                                                        backgroundRepeat: "no-repeat",
+                                                                        backgroundPositionY: "center",
+                                                                        backgroundPositionX: "center",
+                                                                        backgroundSize: "contain"
+                                                                    } : {})}>
+																<div style={{color: "#BE7A04"}}>Receipt</div>
+																<div style={{ fontSize: "smaller", fontWeight: "bold" }}>₹ 
 																	{
 																		(() => {
 																			let numStr = (parseFloat(item.amount) + 0.00001).toString().split(".");
@@ -947,6 +1008,8 @@ if(Meteor.isClient) {
 	};
 
 	const ItemDetails = (props) => {
+        // const [refresh, setRefresh] = useState("0");
+
 		if(!props.itemId) {
 			return <div></div>;
 		}
@@ -959,8 +1022,13 @@ if(Meteor.isClient) {
 			return <ExecutiveDaySnapshot execId={execId} date={moment(itemId, "DD-MM-YYYY").toDate()}/>;
 		};
 
-
 		let itemDetails = Collections.null.findOne({ _id: itemId });
+
+        useEffect(() => {
+            itemDetails = Collections.null.findOne({ _id: itemId });
+            // setRefresh(props.refreshTrigger);
+        }, [props.refreshTrigger]);
+
 		// console.log("itemDetails: " + JSON.stringify(itemDetails));
 
 		if(!itemDetails) {
@@ -1082,6 +1150,8 @@ if(Meteor.isClient) {
 
 		const ReceiptDetails = (props) => {
 			const details = props.details;
+            const [showModal, setShowModal] = useState(false);
+            const [generalError, setGeneralError] = useState("");
 
 			function closePrint() {
 				document.body.removeChild(this.__container__);
@@ -1121,8 +1191,60 @@ if(Meteor.isClient) {
 				document.body.appendChild(oHiddFrame);
 			}
 
-			return 	<div className="receipt-details-block" style={{ boxShadow: "1px 1px 5px #aaa", padding: "20px", textAlign: "center", color: "#555", marginBottom: "20px" }}>
-						<h5><b>{PBD_NAME}</b></h5>
+            function removeAllErrors() {
+                setGeneralError("");
+            }
+
+            function clearModal() {
+                setShowModal(false);
+                removeAllErrors();
+            }
+
+            function markPaymentReceived() {
+                const editId = details._id;
+                console.log("receiptId: " + details._id);
+
+                Tracker.autorun(() => {
+                    removeAllErrors();          //remove all the errors before setting the new messages.
+                    const errorObj = JSON.parse(reactiveError.get());
+                    // console.log("errorObj: " + JSON.stringify(errorObj));
+                    for(let [key, value] of Object.entries(errorObj)) {
+                        switch(key) {
+                            case "generalError": setGeneralError(value); break;
+                        }
+                    }
+                });
+
+                Meteor.apply('history.receipts.markPaymentReceived', 
+                    [editId], 
+                    {returnStubValues: true, throwStubExceptions: true}, 
+                    (err, res) => {
+                        // console.log("err: " + err);
+                        if(err){
+                            if(err.reason == "general-error") {      //if validation error occurs
+                                // console.log("err.details: " + err.details);
+                                reactiveError.set(err.details);
+                            }
+                        } else {        //when success, 
+                            // console.log("res: " + res);
+                            clearModal();
+                        }
+                    });
+            }
+
+			return 	<div className="receipt-details-block" style={
+                                                            Object.assign({ boxShadow: "1px 1px 5px #aaa", 
+                                                                            padding: "20px", 
+                                                                            textAlign: "center", 
+                                                                            color: "#555", 
+                                                                            marginBottom: "20px",
+                                                                        }, (typeof details.receivedAt == "object") ? {
+                                                                            backgroundImage: "url('/paid-icon.png')",
+                                                                            backgroundRepeat: "no-repeat",
+                                                                            backgroundSize: "contain",
+                                                                            backgroundPositionY: "top" 
+                                                                        } : {})}>
+                        <h5><b>{PBD_NAME}</b></h5>
 						<div style={{ fontSize: "small" }}>{PBD_ADDRESS}</div>
 						<div style={{ fontSize: "small" }}><b>Email: </b>{PBD_EMAIL}</div>
 						<div style={{ fontSize: "small" }}><b>Phone: </b>{PBD_PHONE1}, {PBD_PHONE2}</div>
@@ -1213,13 +1335,41 @@ if(Meteor.isClient) {
 							<div>This receipt is sent to:</div>
 							{
 								details.cpList.map(cp => {
-									return <div key={cp.cpNumber}>{cp.cpNumber}, ({cp.cpName}) at {moment(cp.createdAt).format("DD/MM/YY HH:mm")}</div>
+									return <div key={cp.createdAt.toString()}>{cp.cpNumber}, ({cp.cpName}) at {moment(cp.createdAt).format("DD/MM/YY HH:mm")}</div>
 								})
 							}
 						</div>
 						<br/>
 						<div id="btnPrint">
-							<button className="btn btn-outline-secondary" onClick={printPage.bind(this)}>Print</button>
+							<button className="btn btn-outline-secondary" onClick={printPage.bind(this)}>
+                                <FontAwesomeIcon icon={faPrint}/> Print Receipt
+                            </button>
+                            {/*--- Mark Receipt Received confirmation Modal ----*/}
+                            <Modal  show={showModal} 
+                                    onHide={clearModal} 
+                                    customOkButton={<button className="btn btn-warning" onClick={() => markPaymentReceived()}>Yes</button>}>
+                                <Modal.Title>
+                                    <FontAwesomeIcon icon={faExclamationTriangle}/> Warning
+                                </Modal.Title>
+
+                                <Modal.Body>
+                                    <div className="modal-body" style={{"fontSize": "18px"}}>
+                                        Once the payment is marked as <b>Received</b>, the operation cannot be undone.<br/>
+                                        Are you sure you want to mark this payment as received?
+                                    </div>
+                                    <small className="form-text text-danger text-center">
+                                        {generalError}
+                                    </small>
+                                </Modal.Body>
+                            </Modal>
+                            <br/> 
+                            {
+                                (typeof details.receivedAt != "object") ?
+                                <button className="btn btn-outline-danger" onClick={() => setShowModal(true)}>
+                                    <FontAwesomeIcon icon={faStamp}/> Mark Received
+                                </button>
+                                : null
+                            }
 						</div>
 					</div>
 		};
@@ -1246,6 +1396,7 @@ if(Meteor.isClient) {
 	const History = (props) => {
 		const [selectedExecutiveId, setSelectedExecutiveId] = useState("0");
 		const [selectedHistoryItemId, setSelectedHistoryItemId] = useState();
+        const [refreshDetailsPageCode, setRefreshDetailsPageCode] = useState("0");
 
 		onExecutiveSelection = (executiveId) => {
 			setSelectedExecutiveId(executiveId);
@@ -1254,6 +1405,10 @@ if(Meteor.isClient) {
 		onHistoryItemSelection = (itemId) => {
 			setSelectedHistoryItemId(itemId);
 		}
+
+        refreshDetailsPage = (code) => {
+            setRefreshDetailsPageCode(code);
+        }
 
 		useEffect(() => {
 			$(".tabs-content-container").css({ padding: "0 0 0 20px" });
@@ -1270,10 +1425,12 @@ if(Meteor.isClient) {
 						<ExecutivesList onExecutiveSelection={onExecutiveSelection.bind(this)}/>
 					</div>
 					<div className="col-4 history-details-list">
-						<ExecutiveHistory selectedExecutiveId={selectedExecutiveId} onHistoryItemSelection={onHistoryItemSelection.bind(this)}/>
+						<ExecutiveHistory   selectedExecutiveId={selectedExecutiveId} 
+                                            onHistoryItemSelection={onHistoryItemSelection.bind(this)}
+                                            refreshDetailsPage={refreshDetailsPage.bind(this)} />
 					</div>
 					<div className="col-6 history-details" style={{ height: "100%" }}>
-						<ItemDetails itemId={selectedHistoryItemId} />
+						<ItemDetails itemId={selectedHistoryItemId} refreshTrigger={refreshDetailsPageCode}/>
 					</div>
 				</div>
 			</div>

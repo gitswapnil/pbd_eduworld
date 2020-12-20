@@ -60,6 +60,10 @@ receipts.attachSchema(new SimpleSchema({
 		type: String, 
 		regEx: SimpleSchema.RegEx.Id 
 	},
+	"receivedAt": {
+		type: Date,
+		optional: true
+	},
 	"createdAt": { 
 		type: Date
 	}

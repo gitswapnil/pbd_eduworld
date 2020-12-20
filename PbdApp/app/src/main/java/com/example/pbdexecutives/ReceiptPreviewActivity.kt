@@ -456,7 +456,7 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
     private fun sendReceipt() {
         alertDialog.dismiss()
 
-        val sendingReceiptDialog = this.let {
+        val generatingReceiptDialog = this.let {
             val builder = AlertDialog.Builder(it)
             val inflater = this.layoutInflater
 
@@ -471,7 +471,7 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
             builder.create()
         }
 
-        sendingReceiptDialog.show()
+        generatingReceiptDialog.show()
         lifecycleScope.launch {
             val db = Room.databaseBuilder(this@ReceiptPreviewActivity, AppDB::class.java, "PbdDB").build()
             val apiKey = db.userDetailsDao().getApiKey()
@@ -506,7 +506,7 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
                         Receipts::class.java
                     );      //convert the response back into JSON Object from the response string
 
-                    sendingReceiptDialog.dismiss()
+                    generatingReceiptDialog.dismiss()
                     //add the receipt into database
                     GlobalScope.launch {
                         db.receiptsDao().addReceipt(responseObject)
@@ -521,8 +521,9 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
                     val fileName = "${receiptSeries}${receiptNo}.pdf"
 
                     createReceiptFile(fileName, receiptPdf.pdf, {
-                        ->
-                        gotoWhatsapp(cpNumber, fileName)
+                        newFileName ->
+                        gotoWhatsapp(cpNumber, newFileName)
+                        finish()
                     }, { errorMessage ->
                         Toast.makeText(applicationContext, errorMessage, Toast.LENGTH_SHORT)
                     })
@@ -532,7 +533,7 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
 //                    checkPermissionAndDownloadReceipt()
                 },
                 { code, error ->
-                    sendingReceiptDialog.dismiss()
+                    generatingReceiptDialog.dismiss()
                     Snackbar.make(
                         receipt_preview_layout,
                         "${getString(R.string.cannot_generate_the_receipt)} $error",
@@ -565,7 +566,7 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
     private fun createReceiptFile(
     fileName: String,
     base64Data: String,
-    onSuccess: () -> Unit,
+    onSuccess: (fileName: String) -> Unit,
     onError: (message: String) -> Unit
 ) {
         try {
@@ -599,7 +600,8 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
                 stream.write(pdfByteArray)
                 stream.flush()
                 stream.close()
-                onSuccess()
+                Log.i("pbdLog", file.name)
+                onSuccess(file.name)
             } else {
                 Log.i("pbdLog", "External Storage is Mounted")
                 onError("External storage is not either not present or not mounted.")
