@@ -363,6 +363,7 @@ if(Meteor.isClient) {
 				fcmToken: String
 			},
 			lastPartyDetails: timestamp<Long Int>,
+			lastReceiptReceivedAt: timestamp<Long Int>,
 			tasks: [
 				{
 					id: Long,
@@ -388,9 +389,6 @@ if(Meteor.isClient) {
     				createdAt: Long,
 				}, ...
 			],
-			firebaseData: {
-				token: String
-			}
 			notificationLastUpdatedAt: timestamp<Long Int>
 		}
 		return: {
@@ -421,6 +419,9 @@ if(Meteor.isClient) {
 					],
 					remove: [HexString, HexString, ...]
 				},
+				receiptDetails: [
+					{ serverId: String, receivedAt: timestamp<Long Int> }, ...
+				],
 				taskIds: [
 					{ id: Long, serverId: String }, ...
 				],
@@ -516,7 +517,7 @@ if(Meteor.isClient) {
 	};
 
 	const getPartyDetails = async (userId, lastUpdatedAtUnix) => {
-		if(lastUpdatedAtUnix) {
+		if(typeof lastUpdatedAtUnix != "undefined") {
 			let partyDetails = new Promise((resolve, reject) => {
 				const lastUpdatedAt = new Date(lastUpdatedAtUnix);
 
@@ -661,6 +662,27 @@ if(Meteor.isClient) {
 		return;
 	};
 
+	const getReceiptDetails = (userId, lastReceivedAtUnix) => {
+		console.log("userId: " + userId);
+		console.log("lastReceivedAtUnix: " + lastReceivedAtUnix);
+		if(typeof lastReceivedAtUnix != "undefined") {
+
+			const lastReceivedAt = new Date(lastReceivedAtUnix);
+
+			// console.log("lastReceivedAt: " + lastReceivedAt);
+
+			const receivedReceipts = Collections.receipts.find({ userId, receivedAt: { $gte: lastReceivedAt } }).map(receipt => {
+				return { serverId: receipt._id, receivedAt: moment(receipt.receivedAt).valueOf() };
+			});
+
+			console.log("receivedReceipts: " + JSON.stringify(receivedReceipts));
+
+			return receivedReceipts;
+		}
+
+		return;
+	};
+
 	const storeTasks = async (userId, tasks) => {
 		//if the locations key is defined.
 		if(tasks) {
@@ -757,7 +779,7 @@ if(Meteor.isClient) {
 	};
 
 	const getNotifications = async (userId, notificationLastUpdatedAt) => {
-		if(notificationLastUpdatedAt) {
+		if(typeof notificationLastUpdatedAt != "undefined") {
 			let notificationsPromise = new Promise((resolve, reject) => {
 				const lastUpdatedAt = new Date(notificationLastUpdatedAt);
 
@@ -897,6 +919,9 @@ if(Meteor.isClient) {
 
 			//this function is made separate because, it needs saved task ids
 			const followUpsRetIds = storeFollowUps(user._id, reqBody.followUps, values[5]);
+			const receiptDetails = getReceiptDetails(user._id, reqBody.lastReceiptReceivedAt);
+
+			console.log("receiptDetails: " + JSON.stringify(receiptDetails));
 
 			const message = {
 				deletedIds: values[0],
@@ -906,6 +931,7 @@ if(Meteor.isClient) {
 				notifications: values[4],
 				taskIds: values[5],
 				followUpIds: followUpsRetIds,
+				receiptDetails
 			}
 			
 			console.log(`return Message: ${JSON.stringify(message)}`);
@@ -947,6 +973,7 @@ if(Meteor.isClient) {
 				ddNo: String,
 				payment: 0, 1,
 				serverId: String,
+				receivedAt: Long,
 				createdAt: Long,
 				pdf:Base64
 			}",
@@ -1406,6 +1433,7 @@ if(Meteor.isClient) {
 					delete retObj._id;
 					delete retObj.cpList;
 					Object.assign(retObj, cpObj);
+					retObj.receivedAt = (typeof retObj.receivedAt !== "undefined") ? moment(retObj.receivedAt).valueOf() : 0;
 					retObj.createdAt = moment(cpObj.createdAt).valueOf();
 
 				    resolve(retObj);
@@ -1458,6 +1486,7 @@ if(Meteor.isClient) {
 			        	bankName: receiptDetails.bankName,
 			        	bankBranch: receiptDetails.bankBranch,
 			        	payment: receiptDetails.payment,
+			        	receivedAt: 1,		//send this as 1 because 0 may cause some problems
 			        	createdAt: moment(cpObj.createdAt).valueOf()
 			        }
 
@@ -1716,7 +1745,8 @@ if(Meteor.isClient) {
                     "receipts.cpName": "$receipts.cpList.cpName",
                     "receipts.cpNumber": "$receipts.cpList.cpNumber",
                     "receipts.cpEmail": "$receipts.cpList.cpEmail",
-                    "receipts.createdAt": "$receipts.cpList.createdAt"
+                    "receipts.createdAt": "$receipts.cpList.createdAt",
+                    "receipts.receivedAt": { $cond: [ {$eq: [{ $type: "$receipts.receivedAt" }, "missing"]}, 1, { $toLong: "$receipts.receivedAt" }] }
                 }
             },
             { $unset: ["receipts.cpList"] },
