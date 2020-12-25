@@ -94,7 +94,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
 
             if (MyTasksFragment.selected) {
                 intent.putExtra("selectedTab", 0)
-            } else if (ReceiptsFragment.selected) {
+            } else if (ReceiptsListSwipeToRefreshContainer.selected) {
                 intent.putExtra("selectedTab", 1)
             } else if (FollowUpsFragment.selected) {
                 intent.putExtra("selectedTab", 2)
@@ -379,20 +379,6 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         setContentView(R.layout.activity_home)
         setSupportActionBar(findViewById(R.id.home_toolbar))
         setTabConfigurations(selectedTab)
-
-        //initialize the on swipe refresh listener
-        swipe_refresh_layout.setOnRefreshListener {
-            Log.i("pbdLog", "Refresh called.")
-
-            if (MyTasksFragment.selected) {
-                MyTasksFragment.ref.reloadData()
-            } else if (ReceiptsFragment.selected) {
-                ReceiptsFragment.ref.reloadData()
-            } else if (FollowUpsFragment.selected) {
-                FollowUpsFragment.ref.reloadData()
-            }
-//            swipe_refresh_layout.isRefreshing = false
-        }
     }
 
     private fun locationObjectMonitor() {

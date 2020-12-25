@@ -13,7 +13,7 @@ class TabsAdapter(activity: AppCompatActivity, tabCount: Int) : FragmentStateAda
 
     override fun createFragment(position: Int): Fragment {
         return when(position) {
-            1 -> ReceiptsFragment.newInstance(1)
+            1 -> ReceiptsListSwipeToRefreshContainer.newInstance()
             2 -> FollowUpsFragment.newInstance(1)
             else -> MyTasksFragment.newInstance(1)
         }

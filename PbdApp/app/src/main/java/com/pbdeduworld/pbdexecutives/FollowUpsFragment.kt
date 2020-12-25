@@ -177,10 +177,10 @@ class FollowUpsFragment : Fragment() {
             isLoading = false
 
             //After loading everything switch off the refresh circle from swipe to refresh layout
-            val swipeToRefreshLayout = requireActivity().findViewById<SwipeRefreshLayout>(R.id.swipe_refresh_layout)
-            if(swipeToRefreshLayout !== null) {
-                swipeToRefreshLayout.isRefreshing = false
-            }
+//            val swipeToRefreshLayout = requireActivity().findViewById<SwipeRefreshLayout>(R.id.swipe_refresh_layout)
+//            if(swipeToRefreshLayout !== null) {
+//                swipeToRefreshLayout.isRefreshing = false
+//            }
         }
     }
 

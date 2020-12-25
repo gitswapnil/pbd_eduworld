@@ -35,7 +35,6 @@ class ReceiptsFragment : Fragment() {
     private lateinit var recyclerViewAdapter: ReceiptsRecyclerViewAdapter
     private lateinit var listItems: MutableList<ReceiptsListItemModel?>
     private var listForComparing: MutableList<ReceiptsWithJoins> = ArrayList()
-    private var columnCount = 1
     private var limit = 20
     private var offset: Int = 0
     private var searchQuery: String = "%%"
@@ -66,10 +65,6 @@ class ReceiptsFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         db = Room.databaseBuilder(this@ReceiptsFragment.context as Context, AppDB::class.java, "PbdDB").build()
-
-        arguments?.let {
-            columnCount = it.getInt(ARG_COLUMN_COUNT)
-        }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -181,10 +176,7 @@ class ReceiptsFragment : Fragment() {
             isLoading = false
 
             //After loading everything switch off the refresh circle from swipe to refresh layout
-            val swipeToRefreshLayout = requireActivity().findViewById<SwipeRefreshLayout>(R.id.swipe_refresh_layout)
-            if(swipeToRefreshLayout !== null) {
-                swipeToRefreshLayout.isRefreshing = false
-            }
+            parentFragment?.view?.findViewById<SwipeRefreshLayout>(R.id.swipe_to_refresh_layout)?.isRefreshing = false
         }
     }
 
@@ -199,7 +191,6 @@ class ReceiptsFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        selected = true
 
         if(requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn) != null) {
             requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn).visibility = View.VISIBLE
@@ -239,7 +230,6 @@ class ReceiptsFragment : Fragment() {
 
     override fun onPause() {
         super.onPause()
-        selected = false
 
         if(requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn) != null) {
             requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn).setOnClickListener(null)
@@ -262,23 +252,15 @@ class ReceiptsFragment : Fragment() {
     }
 
     companion object {
-        var selected: Boolean = false
-        lateinit var ref: ReceiptsFragment
-
-        // TODO: Customize parameter argument names
-        const val ARG_COLUMN_COUNT = "column-count"
-
         // TODO: Customize parameter initialization
         @JvmStatic
-        fun newInstance(columnCount: Int): ReceiptsFragment {
-            ref = ReceiptsFragment().apply {
-                Log.i("pbdLog", "Creating new Instance Receipts")
-                arguments = Bundle().apply {
-                    putInt(ARG_COLUMN_COUNT, columnCount)
-                }
+        fun instance(): ReceiptsFragment {
+            return ReceiptsFragment().apply {
+                Log.i("pbdLog", "Creating Instance Receipts")
+//                arguments = Bundle().apply {
+//                    putInt(ARG_COLUMN_COUNT, columnCount)
+//                }
             }
-
-            return ref
         }
     }
 }

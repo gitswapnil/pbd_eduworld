@@ -1474,7 +1474,7 @@ if(Meteor.isClient) {
 
 			        const retObj = {
 			        	serverId,
-			        	receiptNo: receiptDetails.receiptNo,
+			        	receiptNo,
 			        	partyId: receiptDetails.partyId,
 			        	cpName: cpObj.cpName,
 						cpNumber: cpObj.cpNumber,
@@ -1498,13 +1498,23 @@ if(Meteor.isClient) {
 			}
 		});
 
+		console.log("details: " + JSON.stringify(details));
+
 		//After storing the receipt create the pdf
 		try {
 			await createPDFReceipt(details.serverId);
 			//After saving the receipt pdf send the email to receipent
 			emailReceipt(details.serverId, receipantEmail);
-			const data = fs.readFileSync(`/tmp/${receiptSeries}${details.receiptNo}.pdf`, { encoding: 'base64' });
+
+			const filePath = `/tmp/${receiptSeries}${details.receiptNo}.pdf`;
+			const data = fs.readFileSync(filePath, { encoding: 'base64' });
 			details.pdf = `${data}`;
+			fs.unlink(filePath, (err) => {
+				if(err) {
+					console.error(`Error in deleting the file...${receiptSeries}${details.receiptNo}.pdf, Error: ${err.message}`);
+					throw new Error(`Error in deleting the file...${receiptSeries}${details.receiptNo}.pdf, Error: ${err.message}`);
+				}
+			});
 		} catch(err) {
 			// res.end(JSON.stringify({error: true, message: err.message, code: 400}));
 			if(serverId) { 		//if serverId is present then it means we are adding the receipant
@@ -1512,7 +1522,7 @@ if(Meteor.isClient) {
 			} else {
 				Collections.receipts.remove({ _id: details.serverId });
 			}
-			console.log("Unable to generate the receipt reverting back the save operation, Error: " + err);
+			console.error("Unable to generate the receipt reverting back the save operation, Error: " + err);
 			throw new Error("Unable to generate the receipt reverting back the save operation, Error: " + err);
 		}
 

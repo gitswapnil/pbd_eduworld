@@ -101,7 +101,7 @@ class SearchActivity : AppCompatActivity() {
             }
 
             1 -> {
-                addFragment(R.id.search_fragment_container, ReceiptsFragment.newInstance(1), "Receipts")
+                addFragment(R.id.search_fragment_container, ReceiptsFragment.instance(), "Receipts")
                 true
             }
 
