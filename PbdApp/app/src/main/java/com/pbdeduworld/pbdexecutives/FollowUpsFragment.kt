@@ -15,6 +15,7 @@ import android.view.ViewGroup
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.room.Room
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.android.synthetic.main.fragment_follow_ups_list.*
 import kotlinx.android.synthetic.main.fragment_my_tasks_list.*
@@ -174,10 +175,16 @@ class FollowUpsFragment : Fragment() {
             }
 
             isLoading = false
+
+            //After loading everything switch off the refresh circle from swipe to refresh layout
+            val swipeToRefreshLayout = requireActivity().findViewById<SwipeRefreshLayout>(R.id.swipe_refresh_layout)
+            if(swipeToRefreshLayout !== null) {
+                swipeToRefreshLayout.isRefreshing = false
+            }
         }
     }
 
-    private fun reloadData() {
+    fun reloadData() {
         offset = 0
         listItems.clear()
         listItems.add(null)
@@ -190,8 +197,8 @@ class FollowUpsFragment : Fragment() {
         super.onResume()
         selected = true
 
-        if(activity!!.findViewById<FloatingActionButton>(R.id.floating_btn) != null) {
-            activity!!.findViewById<FloatingActionButton>(R.id.floating_btn).visibility = View.GONE
+        if(requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn) != null) {
+            requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn).visibility = View.GONE
         } else {
             searchReceiverMonitor()
         }
@@ -228,7 +235,7 @@ class FollowUpsFragment : Fragment() {
 
         selected = false
 
-        if(activity!!.findViewById<FloatingActionButton>(R.id.floating_btn) == null) {
+        if(requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn) == null) {
             searchReceiverUnmonitor()
         }
     }
@@ -244,18 +251,23 @@ class FollowUpsFragment : Fragment() {
 
     companion object {
         var selected: Boolean = false
+        lateinit var ref: FollowUpsFragment
 
         // TODO: Customize parameter argument names
         const val ARG_COLUMN_COUNT = "column-count"
 
         // TODO: Customize parameter initialization
         @JvmStatic
-        fun newInstance(columnCount: Int) =
-            FollowUpsFragment().apply {
+        fun newInstance(columnCount: Int): FollowUpsFragment {
+            ref = FollowUpsFragment().apply {
                 Log.i("pbdLog", "Creating new Instance Follow up")
                 arguments = Bundle().apply {
                     putInt(ARG_COLUMN_COUNT, columnCount)
                 }
             }
+
+            return ref
+        }
+
     }
 }

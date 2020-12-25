@@ -15,11 +15,14 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.room.Room
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import kotlinx.android.synthetic.main.activity_home.*
 import kotlinx.android.synthetic.main.fragment_receipts_list.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.lang.NullPointerException
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -176,10 +179,16 @@ class ReceiptsFragment : Fragment() {
             }
 
             isLoading = false
+
+            //After loading everything switch off the refresh circle from swipe to refresh layout
+            val swipeToRefreshLayout = requireActivity().findViewById<SwipeRefreshLayout>(R.id.swipe_refresh_layout)
+            if(swipeToRefreshLayout !== null) {
+                swipeToRefreshLayout.isRefreshing = false
+            }
         }
     }
 
-    private fun reloadData() {
+    fun reloadData() {
         offset = 0
         listItems.clear()
         listItems.add(null)
@@ -254,18 +263,22 @@ class ReceiptsFragment : Fragment() {
 
     companion object {
         var selected: Boolean = false
+        lateinit var ref: ReceiptsFragment
 
         // TODO: Customize parameter argument names
         const val ARG_COLUMN_COUNT = "column-count"
 
         // TODO: Customize parameter initialization
         @JvmStatic
-        fun newInstance(columnCount: Int) =
-            ReceiptsFragment().apply {
+        fun newInstance(columnCount: Int): ReceiptsFragment {
+            ref = ReceiptsFragment().apply {
                 Log.i("pbdLog", "Creating new Instance Receipts")
                 arguments = Bundle().apply {
                     putInt(ARG_COLUMN_COUNT, columnCount)
                 }
             }
+
+            return ref
+        }
     }
 }
