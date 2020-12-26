@@ -1,5 +1,6 @@
 package com.pbdeduworld.pbdexecutives
 
+import android.app.Activity
 import android.content.*
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -523,6 +524,7 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
                     createReceiptFile(fileName, receiptPdf.pdf, {
                         newFileName ->
                         gotoWhatsapp(cpNumber, newFileName)
+                        setResult(Activity.RESULT_OK)
                         finish()
                     }, { errorMessage ->
                         Toast.makeText(applicationContext, errorMessage, Toast.LENGTH_SHORT)

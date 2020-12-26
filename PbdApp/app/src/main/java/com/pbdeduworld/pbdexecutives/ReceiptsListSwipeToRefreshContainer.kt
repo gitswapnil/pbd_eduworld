@@ -8,7 +8,13 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.FragmentTransaction
 import androidx.fragment.app.commit
+import androidx.lifecycle.Observer
+import androidx.lifecycle.observe
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.android.synthetic.main.fragment_receipts_list_swipe_to_refresh_container.*
 
@@ -27,6 +33,20 @@ class ReceiptsListSwipeToRefreshContainer : Fragment() {
 //        }
     }
 
+    private fun syncOnce(onComplete: () -> Unit) {
+        val serverSyncRequest = OneTimeWorkRequestBuilder<ServerSyncWorker>().build()
+        activity?.let {
+            WorkManager.getInstance(it.applicationContext).enqueueUniqueWork("receiptsSync", ExistingWorkPolicy.REPLACE, serverSyncRequest)
+            WorkManager.getInstance(it.applicationContext).getWorkInfosForUniqueWorkLiveData("receiptsSync")
+                .observe(it, Observer<List<WorkInfo>> { workInfos ->
+                    Log.i("pbdLog", "workInfos: $workInfos")
+                    if (workInfos[0].state == WorkInfo.State.SUCCEEDED || workInfos[0].state == WorkInfo.State.FAILED) {
+                        onComplete()
+                    }
+                })
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -42,8 +62,10 @@ class ReceiptsListSwipeToRefreshContainer : Fragment() {
         view.findViewById<SwipeRefreshLayout>(R.id.swipe_to_refresh_layout).setOnRefreshListener {
             Log.i("pbdLog", "Refresh receipts called.")
 
-            PbdExecutivesUtils.syncData(this.requireContext())   //Start the background work that syncs the data to the server
-            receiptsFragment.reloadData()
+            //sync the data once and reload the list of receipts...
+            syncOnce {
+                receiptsFragment.reloadData()
+            }
         }
 
         childFragmentManager.commit {

@@ -177,7 +177,7 @@ class FollowUpsFragment : Fragment() {
             isLoading = false
 
             //After loading everything switch off the refresh circle from swipe to refresh layout
-//            val swipeToRefreshLayout = requireActivity().findViewById<SwipeRefreshLayout>(R.id.swipe_refresh_layout)
+//            val swipeToRefreshLayout = activity?.findViewById<SwipeRefreshLayout>(R.id.swipe_refresh_layout)
 //            if(swipeToRefreshLayout !== null) {
 //                swipeToRefreshLayout.isRefreshing = false
 //            }
@@ -197,8 +197,8 @@ class FollowUpsFragment : Fragment() {
         super.onResume()
         selected = true
 
-        if(requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn) != null) {
-            requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn).visibility = View.GONE
+        if(activity?.findViewById<FloatingActionButton>(R.id.floating_btn) != null) {
+            activity?.findViewById<FloatingActionButton>(R.id.floating_btn)!!.visibility = View.GONE
         } else {
             searchReceiverMonitor()
         }
@@ -235,7 +235,7 @@ class FollowUpsFragment : Fragment() {
 
         selected = false
 
-        if(requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn) == null) {
+        if(activity?.findViewById<FloatingActionButton>(R.id.floating_btn) == null) {
             searchReceiverUnmonitor()
         }
     }

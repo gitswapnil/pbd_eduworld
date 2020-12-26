@@ -151,9 +151,10 @@ class MyTasksFragment : Fragment() {
         super.onResume()
         selected = true
 
-        if(requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn) != null) {
-            requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn).visibility = View.VISIBLE
-            requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn).setOnClickListener { view ->
+        if(activity?.findViewById<FloatingActionButton>(R.id.floating_btn) != null) {
+            activity?.findViewById<FloatingActionButton>(R.id.floating_btn)!!.visibility = View.VISIBLE
+            activity?.findViewById<FloatingActionButton>(R.id.floating_btn)!!
+                .setOnClickListener { view ->
                 createNewTask(view)
             }
         } else {
@@ -165,8 +166,8 @@ class MyTasksFragment : Fragment() {
         super.onPause()
         selected = false
 
-        if(requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn) != null) {
-            requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn).setOnClickListener(null)
+        if(activity?.findViewById<FloatingActionButton>(R.id.floating_btn) != null) {
+            activity?.findViewById<FloatingActionButton>(R.id.floating_btn)!!.setOnClickListener(null)
         } else {
             searchReceiverUnmonitor()
         }
@@ -230,7 +231,7 @@ class MyTasksFragment : Fragment() {
             isLoading = false
 
             //After loading everything switch off the refresh circle from swipe to refresh layout
-//            val swipeToRefreshLayout = requireActivity().findViewById<SwipeRefreshLayout>(R.id.swipe_refresh_layout)
+//            val swipeToRefreshLayout = activity?.findViewById<SwipeRefreshLayout>(R.id.swipe_refresh_layout)
 //            if(swipeToRefreshLayout !== null) {
 //                swipeToRefreshLayout.isRefreshing = false
 //            }

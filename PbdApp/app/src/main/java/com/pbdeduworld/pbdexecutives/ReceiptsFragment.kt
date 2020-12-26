@@ -192,9 +192,10 @@ class ReceiptsFragment : Fragment() {
     override fun onResume() {
         super.onResume()
 
-        if(requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn) != null) {
-            requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn).visibility = View.VISIBLE
-            requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn).setOnClickListener { view ->
+        if(activity?.findViewById<FloatingActionButton>(R.id.floating_btn) != null) {
+            activity?.findViewById<FloatingActionButton>(R.id.floating_btn)!!.visibility = View.VISIBLE
+            activity?.findViewById<FloatingActionButton>(R.id.floating_btn)!!
+                .setOnClickListener { view ->
                 createNewReceipt(view)
             }
         } else {
@@ -231,8 +232,8 @@ class ReceiptsFragment : Fragment() {
     override fun onPause() {
         super.onPause()
 
-        if(requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn) != null) {
-            requireActivity().findViewById<FloatingActionButton>(R.id.floating_btn).setOnClickListener(null)
+        if(activity?.findViewById<FloatingActionButton>(R.id.floating_btn) != null) {
+            activity?.findViewById<FloatingActionButton>(R.id.floating_btn)!!.setOnClickListener(null)
         } else {
             searchReceiverUnmonitor()
         }
