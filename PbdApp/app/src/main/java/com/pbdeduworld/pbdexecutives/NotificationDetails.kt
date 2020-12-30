@@ -7,6 +7,7 @@ import android.util.Log
 import android.view.MenuItem
 import android.view.View
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.room.Room
 import kotlinx.android.synthetic.main.activity_notification_details.*
 import kotlinx.coroutines.GlobalScope
@@ -33,7 +34,7 @@ class NotificationDetails : AppCompatActivity() {
 
         val db = Room.databaseBuilder(this, AppDB::class.java, "PbdDB").build()
 
-        GlobalScope.launch {
+        lifecycleScope.launch {
             val notification = db.notificationsDao().getNotification(notificationId)
 
             if(notification.type == "info") {
@@ -55,6 +56,5 @@ class NotificationDetails : AppCompatActivity() {
 
             nt_details_text.text = notification.text
         }
-
     }
 }

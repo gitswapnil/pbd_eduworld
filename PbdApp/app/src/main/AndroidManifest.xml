@@ -22,7 +22,6 @@
         android:theme="@style/AppTheme">
         <activity android:name="com.pbdeduworld.pbdexecutives.NotificationDetails"></activity>
         <activity android:name="com.pbdeduworld.pbdexecutives.NotificationsActivity" />
-        <activity android:name="com.pbdeduworld.pbdexecutives.Notifications" />
 
         <!--
  Set custom default icon. This is used when no icon is set for incoming notification messages.

@@ -105,8 +105,8 @@ Meteor.methods({
 			}
 		}
 
-		console.log("party.saveParty method is completed successfully.");
-		return "Party saved successfully";
+		console.log("settings.saveAdminSettings method is completed successfully.");
+		return "Admin Settings saved successfully";
 	},
 });
 
