@@ -4,6 +4,7 @@ import admin from "firebase-admin";
 import { firebaseServiceAccountKey } from 'meteor/pbd-apis';
 import { CronJob } from 'cron';
 import { Meteor } from 'meteor/meteor';
+import Collections from 'meteor/collections';
 
 //Script for creating roles.
 export const createRoles = () => {
@@ -59,7 +60,7 @@ const initializeFirebaseServices = () => {
 
 const initializeEnvironmentVariables = () => {
 	process.env.MAIL_URL = "smtps://no-reply@mypbd.com:mypbd1247@@mail.mypbd.com:465";
-	process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
+	// process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
 }
 
 const initializeCronJob = () => {
@@ -102,12 +103,36 @@ const initializeCronJob = () => {
 	reminderJob.start();
 }
 
+const runMigrationScripts = () => {
+	console.log("Running Migrations if any...");
+
+	const _1_0_222 = () => {
+		const dataCount = Collections.projectData.find().count();
+		if(dataCount == 0) {
+			Collections.projectData.insert({
+				webAppMajorVersion: 1,
+				webAppMinorVersion: 0,
+				webAppBuildNumber: 222,
+				mobileAppMajorVersion: 1,
+				mobileAppMinorVersion: 0,
+				mobileAppBuildNumber: 222,
+				createdAt: new Date()
+			});
+		}
+	};
+
+	_1_0_222();
+
+	console.log("Migration successful");
+}
+
 const startupScripts = () => {
 	initializeEnvironmentVariables();
 	createRoles();
 	seedData();
 	initializeFirebaseServices();
 	initializeCronJob();
+	runMigrationScripts();
 }
 
 export default startupScripts;

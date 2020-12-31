@@ -428,6 +428,11 @@ if(Meteor.isClient) {
 				followUpIds: [
 					{ id: Long, serverId: String }, ...
 				],
+				currentAppVersion: {
+					major: Short,
+					minor: Short,
+					build: Int
+				}
 			}",
 			code: Integer
 		}	if error is false then message is the apiKey for that user.
@@ -923,6 +928,8 @@ if(Meteor.isClient) {
 
 			console.log("receiptDetails: " + JSON.stringify(receiptDetails));
 
+			const appVersionDetails = Collections.projectData.findOne({}, { sort: { createdAt: -1 } }) || {};
+
 			const message = {
 				deletedIds: values[0],
 				locationIds: values[1],
@@ -931,7 +938,12 @@ if(Meteor.isClient) {
 				notifications: values[4],
 				taskIds: values[5],
 				followUpIds: followUpsRetIds,
-				receiptDetails
+				receiptDetails,
+				currentAppVersion: {
+					major: appVersionDetails.mobileAppMajorVersion || 1,
+					minor: appVersionDetails.mobileAppMinorVersion || 0,
+					build: appVersionDetails.mobileAppBuildNumber || 0
+				}
 			}
 			
 			console.log(`return Message: ${JSON.stringify(message)}`);

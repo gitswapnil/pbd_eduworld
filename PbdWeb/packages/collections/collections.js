@@ -5,6 +5,7 @@ import tasks from './tasks.js';
 import followUps from './followUps.js';
 import receipts from './receipts.js';
 import notifications from './notifications.js';
+import projectData from './projectData.js';
 
 import './users.js';		//just attach the schema
 
@@ -17,6 +18,7 @@ const Collections = {
 	notifications,
 	temp: new Mongo.Collection("temp"),
 	null: new Mongo.Collection(null),
+	projectData,
 }
 
 export default Collections;

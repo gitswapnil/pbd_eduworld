@@ -128,6 +128,8 @@
     <string name="about_us">About Us</string>
     <string name="downloading_receipt">Downloading the receipt...</string>
     <string name="invalid_email_address">Invalid email address</string>
+    <string name="app_version_changed">A newer version of this app has been released, Please download the app from the following link</string>
+    <string name="app_download_link">https://mypbd.net/api/downloadFile/app</string>
 
     <string-array name="task_done_questions">
         <item>Done with Sampling?</item>

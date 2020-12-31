@@ -42,6 +42,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
     private lateinit var gpsSwitchStateReceiver: BroadcastReceiver
     private lateinit var dutyTimeUpdateReceiver: BroadcastReceiver
     private lateinit var userLoginStateReceiver: BroadcastReceiver
+    private lateinit var appVersionStateReceiver: BroadcastReceiver
 
     override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
         val db = Room.databaseBuilder(this, AppDB::class.java, "PbdDB").build()
@@ -461,6 +462,27 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         LocalBroadcastManager.getInstance(this).registerReceiver(userLoginStateReceiver, filter)
     }
 
+    private fun appVersionChangeMonitor() {
+        val filter = IntentFilter(PbdExecutivesUtils.appVersionChanged)
+//        val newIntent = Intent(this, MainActivity::class.java)        //go to home activity after save
+
+        appVersionStateReceiver = object : BroadcastReceiver() {         //receiver always called only when the duty switch is OFF.
+            override fun onReceive(context: Context, intent: Intent) {
+                val builder = AlertDialog.Builder(this@HomeActivity)
+                // Set the dialog title
+                builder.setView(this@HomeActivity.layoutInflater.inflate(R.layout.getting_location_object, null))
+                    // Add action buttons
+                    .setCancelable(false)
+
+                val bldr = builder.create()
+                bldr.setCanceledOnTouchOutside(false)
+                bldr.show()
+            }
+        }
+
+        LocalBroadcastManager.getInstance(this).registerReceiver(appVersionStateReceiver, filter)
+    }
+
     private fun locationObjectUnmonitor() {
         LocalBroadcastManager.getInstance(this).unregisterReceiver(locationObtainedStateReceiver)
     }
@@ -477,6 +499,10 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         LocalBroadcastManager.getInstance(this).unregisterReceiver(userLoginStateReceiver)
     }
 
+    private fun appVersionChangeUnonitor() {
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(appVersionStateReceiver)
+    }
+
     override fun onResume() {
         super.onResume()
         this.invalidateOptionsMenu()        //invalidate the menu so that it validate the notifications count again
@@ -491,6 +517,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         calculateDutyTime()
         dutyTimeMonitor()
         userLoginStatusMonitor()
+        appVersionChangeMonitor()
     }
 
     override fun onPause() {
@@ -500,6 +527,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         gpsSwitchUnmonitor()       //Leave the resources.
         dutyTimeUnmonitor()
         userLoginStatusUnonitor()
+        appVersionChangeUnonitor()
     }
 
     override fun onDestroy() {

@@ -3,11 +3,14 @@ package com.pbdeduworld.pbdexecutives
 import android.app.ActivityManager
 import android.app.Application
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.NetworkInfo
 import android.os.Build
+import android.util.Log
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.room.Room
@@ -26,12 +29,19 @@ import java.util.concurrent.TimeUnit
 class PbdExecutivesUtils: Application() {
     companion object {
         //global variables go here...
-        val serverAddress = "http://localhost:3000/api";
-//        val serverAddress = "http://15.207.53.164:3000/api";
-        val PERMISSION_REQUEST_FINE_ACCESS = 1;
-        val REQUEST_CHECK_LOCATION_SETTINGS = 2;
-        val CHANNEL_ID = "TrackingServiceChannel";
+        val serverAddress = "http://localhost:3000/api"
+//        val serverAddress = "http://15.207.53.164:3000/api"
+//        val serverAddress = "https://mypbd.net/api"
+
+        val APP_MAJOR_VERSION = 1.toShort()
+        val APP_MINOR_VERSION = 0.toShort()
+        val APP_BUILD = 222
+
+        val PERMISSION_REQUEST_FINE_ACCESS = 1
+        val REQUEST_CHECK_LOCATION_SETTINGS = 2
+        val CHANNEL_ID = "TrackingServiceChannel"
         val actionUserLoggedOut: String = "${android.provider.ContactsContract.Directory.PACKAGE_NAME}.broadcastUserLoggedOut";
+        val appVersionChanged: String = "${android.provider.ContactsContract.Directory.PACKAGE_NAME}.broadcastAppVersionChanged";
 
         fun fromTimestamp(value: Long?): Date? {
             return value?.let { Date(it) }
@@ -89,6 +99,12 @@ class PbdExecutivesUtils: Application() {
             }
         }
 
+        fun requestToInstallNewApp(context: Context) {
+            //send the broadcast signal that the app version is changed.
+            val intent = Intent(appVersionChanged)
+            LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
+        }
+
         fun sendData(context: Context,
                      api: String,
                      jsonRequestObject: JSONObject,
@@ -100,7 +116,7 @@ class PbdExecutivesUtils: Application() {
 
             val request = JsonObjectRequest(
                 Request.Method.POST, url, jsonRequestObject,
-                Response.Listener { response ->
+                { response ->
                     val responseJSON: JSONObject = JSONObject(response.toString())      //convert the response back into JSON Object from the response string
                     if(responseJSON.get("error") == false) {            //If it has no errors, then store the apiKey and go to HomeActivity
                         successCallback(responseJSON.get("code") as Int, responseJSON.get("message"))
@@ -108,7 +124,7 @@ class PbdExecutivesUtils: Application() {
                         failureCallback(responseJSON.get("code") as Int, responseJSON.get("message"))
                     }
                 },
-                Response.ErrorListener {
+                {
                     failureCallback(500, it)
                 })
             // Volley request policy, only one time request to avoid duplicate transaction

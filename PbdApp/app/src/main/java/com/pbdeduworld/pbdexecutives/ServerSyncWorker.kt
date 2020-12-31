@@ -110,6 +110,12 @@ data class NotificationsResponseObject(
     @SerializedName("createdAt") val createdAt: Long
 )
 
+data class CurrentAppVersion(
+    @SerializedName("major") val major: Short,
+    @SerializedName("minor") val minor: Short,
+    @SerializedName("build") val build: Int
+)
+
 data class MessageObject(
     @SerializedName("deletedIds") val deletedIds: List<Long>?,
     @SerializedName("locationIds") val locationIds: List<Long>?,
@@ -118,7 +124,8 @@ data class MessageObject(
     @SerializedName("receiptDetails") val receiptDetails: List<ReceiptDetailsResponseObject>?,
     @SerializedName("taskIds") val taskIds: List<TaskIdsResponseObject>?,
     @SerializedName("followUpIds") val followUpIds: List<FollowUpIdsResponseObject>?,
-    @SerializedName("notifications") val notifications: List<NotificationsResponseObject>?
+    @SerializedName("notifications") val notifications: List<NotificationsResponseObject>?,
+    @SerializedName("currentAppVersion") val currentAppVersion: CurrentAppVersion
 )
 
 class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): ListenableWorker(appContext, workerParams){
@@ -336,6 +343,13 @@ class ServerSyncWorker(appContext: Context, workerParams: WorkerParameters): Lis
                                 }
                                 db.notificationsDao().addNotifications(notifications)
                             }
+
+                            if((responseObject.currentAppVersion.major != PbdExecutivesUtils.APP_MAJOR_VERSION)
+                                || (responseObject.currentAppVersion.minor != PbdExecutivesUtils.APP_MINOR_VERSION)
+                                || (responseObject.currentAppVersion.build != PbdExecutivesUtils.APP_BUILD)) {
+                                PbdExecutivesUtils.requestToInstallNewApp(applicationContext)
+                            }
+
 
                             val dIds = db.deletedIdsDao().getUnsyncedDeletedIds()
                             val lIds = db.locationsDao().getUnsyncedLocations()
