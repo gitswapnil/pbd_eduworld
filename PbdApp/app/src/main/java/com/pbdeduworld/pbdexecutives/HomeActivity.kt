@@ -121,7 +121,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         })
                 }
                 // Set other dialog properties
-                builder?.setMessage("PBD Eduworld PVT LTD. \nCTS 5448, Mahatma Phule Road, Shahapur Belgaum, 590003.\nThis app is developed by,\n Swapnil Bandiwadekar(9686059262)")
+                builder?.setMessage("PBD Eduworld PVT LTD. \nCTS 5448, Mahatma Phule Road, Shahapur Belgaum, 590003.\nApp Version: 1.0.222")
                     .setTitle(R.string.about_us)
 
                 // Create the AlertDialog
