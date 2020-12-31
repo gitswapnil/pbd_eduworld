@@ -14,7 +14,7 @@
 
     <application
         android:name="com.pbdeduworld.pbdexecutives.PbdExecutivesUtils"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/pbd_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/pbd_launcher_round"

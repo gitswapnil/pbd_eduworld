@@ -470,7 +470,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
             override fun onReceive(context: Context, intent: Intent) {
                 val builder = AlertDialog.Builder(this@HomeActivity)
                 // Set the dialog title
-                builder.setView(this@HomeActivity.layoutInflater.inflate(R.layout.getting_location_object, null))
+                builder.setView(this@HomeActivity.layoutInflater.inflate(R.layout.app_version_changed, null))
                     // Add action buttons
                     .setCancelable(false)
 
