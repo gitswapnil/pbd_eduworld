@@ -29,9 +29,9 @@ import java.util.concurrent.TimeUnit
 class PbdExecutivesUtils: Application() {
     companion object {
         //global variables go here...
-        val serverAddress = "http://localhost:3000/api"
+//        val serverAddress = "http://localhost:3000/api"
 //        val serverAddress = "http://15.207.53.164:3000/api"
-//        val serverAddress = "https://mypbd.net/api"
+        val serverAddress = "https://mypbd.net/api"
 
         val APP_MAJOR_VERSION = 1.toShort()
         val APP_MINOR_VERSION = 0.toShort()
