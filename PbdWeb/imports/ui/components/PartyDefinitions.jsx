@@ -369,10 +369,11 @@ if(Meteor.isClient) {
 
 			Tracker.autorun(() => {
 				if(handle.ready()) {
+					let serialIndex = skip + 1;
 					let arr = Meteor.users.find({ isParty: true }).map((doc, index) => {
 						return {
 							cells: [
-								{ style: {"textAlign": "right", "color": !doc.active ? "#AAA" : null}, content: (index + 1)}, 
+								{ style: {"textAlign": "right", "color": !doc.active ? "#AAA" : null}, content: serialIndex++}, 
 								{ style: {"color": !doc.active ? "#AAA" : null}, content: doc.username}, 
 								{ style: {"color": !doc.active ? "#AAA" : null}, key: ((doc.profile && doc.profile.name) + (doc.profile && doc.profile.address)), content: <div>{doc.profile && doc.profile.name}<br/>{doc.profile && doc.profile.address}</div>},
 								{ style: {"color": !doc.active ? "#AAA" : null}, content: (doc.profile && doc.profile.phoneNumber)},

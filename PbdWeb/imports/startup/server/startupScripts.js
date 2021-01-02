@@ -129,7 +129,7 @@ const runMigrationScripts = () => {
 // const insertParties = () => {
 // 	const parties = require("./parties_json.json").parties;
 
-// 	const execId = "6J9D4FsTLFBj3paYs";
+// 	const execId = "Rhn2XtGM4AuSBGrwf";
 	
 // 	parties.forEach((party, i) => {
 // 		const createdAt = new Date();
