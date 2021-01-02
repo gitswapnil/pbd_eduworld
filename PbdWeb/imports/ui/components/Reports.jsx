@@ -635,6 +635,13 @@ if(Meteor.isServer) {
 					                ddNo: 1,
 					                bankName: 1,
 					                bankBranch: 1,
+					                receivedAt: { 
+					                	$cond: [
+					                		{ $not: "$receipts.receivedAt" },
+					                		"$$REMOVE",
+					                		{ $dateToString: { date: "$receipts.receivedAt", format: "%d-%m-%Y %H:%M:%S", timezone: "Asia/Kolkata" } },
+					                	]
+					                },
 					                createdAt: 1,
 					            },
 					            followUps: 1,
@@ -652,6 +659,60 @@ if(Meteor.isServer) {
 					            visitedTasks: { $first: "$visitedTasks" },
 					        }
 					    },
+					    {
+					    	$project: {
+					    		_id: 1,
+					    		execName: 1,
+					    		visitedTasks: {
+					    			$filter: {
+					                    input: "$visitedTasks",
+					                    as: "visitedTasks",
+					                    cond: {
+					                        "$and": [
+					                            { "$gte": ["$$visitedTasks.createdAt", from] },
+					                            { "$lte": ["$$visitedTasks.createdAt", to] }
+					                        ]
+					                    }
+					                }
+					    		},
+					    		otherTasks: {
+					    			$filter: {
+					                    input: "$otherTasks",
+					                    as: "otherTasks",
+					                    cond: {
+					                        "$and": [
+					                            { "$gte": ["$$otherTasks.createdAt", from] },
+					                            { "$lte": ["$$otherTasks.createdAt", to] }
+					                        ]
+					                    }
+					                }
+					    		},
+					    		receipts: {
+					    			$filter: {
+					                    input: "$receipts",
+					                    as: "receipts",
+					                    cond: {
+					                        "$and": [
+					                            { "$gte": ["$$receipts.createdAt", from] },
+					                            { "$lte": ["$$receipts.createdAt", to] }
+					                        ]
+					                    }
+					                }
+					    		},
+					    		followUps: {
+					    			$filter: {
+					                    input: "$followUps",
+					                    as: "followUps",
+					                    cond: {
+					                        "$and": [
+					                            { "$gte": ["$$followUps.createdAt", from] },
+					                            { "$lte": ["$$followUps.createdAt", to] }
+					                        ]
+					                    }
+					                }
+					    		},
+					    	}
+					    }
 					], ((err, cursor) => {
 						if(err) reject(err);
 
@@ -743,6 +804,7 @@ if(Meteor.isServer) {
 							"Bank", 
 							"Branch", 
 							"Payment", 
+							"receivedAt",
 							"Sent To"
 						]);
 
@@ -763,7 +825,8 @@ if(Meteor.isServer) {
 								receipt.bankName,
 								receipt.bankBranch,
 								(receipt.payment === 0) ? "Part" : "Full",
-								receipt.cpList.sort((a, b) => b.createdAt - a.createdAt).map(cp => `${cp.cpName} | ${cp.cpNumber} | ${cp.cpEmail} | ${moment(cp.createdAt).format("DD-MM-YYYY HH:mm")}`).reduce((acc, curr) => `${acc}\n${curr}`)
+								(receipt.receivedAt) ? receipt.receivedAt : "Not yet received",
+								receipt.cpList.sort((a, b) => b.createdAt - a.createdAt).map(cp => `${cp.cpName} | ${cp.cpNumber} | ${cp.cpEmail || ""} | ${moment(cp.createdAt).format("DD-MM-YYYY HH:mm")}`).reduce((acc, curr) => `${acc}\n${curr}`)
 							]);
 							worksheet.getRow(receiptsStartIndex).height = 30;
 							worksheet.getRow(receiptsStartIndex).style.font = normalText;
@@ -846,7 +909,7 @@ if(Meteor.isServer) {
 
 					  	let receiptsTableData = {
 					  		headerRows: 1,
-					  		widths: [ 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto' ],
+					  		widths: [ 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto' ],
 				        	body: [
 				        		[ 
 				          			{ text: 'SI No', style: 'tableHeader', bold: true }, 
@@ -860,6 +923,7 @@ if(Meteor.isServer) {
 				          			{ text: 'Bank', style: 'tableHeader', bold: true }, 
 				          			{ text: 'Branch', style: 'tableHeader', bold: true }, 
 				          			{ text: 'Payment', style: 'tableHeader', bold: true }, 
+				          			{ text: 'Received At', style: 'tableHeader', bold: true }, 
 				          			{ text: 'Sent To', style: 'tableHeader', bold: true } 
 				          		]
 				        	]
@@ -879,7 +943,8 @@ if(Meteor.isServer) {
 								{ text: receipt.bankName || " ", fontSize: 10 }, 
 								{ text: receipt.bankBranch || " ", fontSize: 10 }, 
 								{ text: (receipt.payment === 0) ? "Part" : "Full", fontSize: 10 }, 
-								{ text: receipt.cpList.sort((a, b) => b.createdAt - a.createdAt).map(cp => `${cp.cpName} | ${cp.cpNumber} | ${cp.cpEmail} | ${moment(cp.createdAt).format("DD-MM-YYYY HH:mm")}`).reduce((acc, curr) => `${acc}\n${curr}`), fontSize: 10 } 
+								{ text: (receipt.receivedAt) ? receipt.receivedAt : "Not Yet Received", fontSize: 10 },
+								{ text: receipt.cpList.sort((a, b) => b.createdAt - a.createdAt).map(cp => `${cp.cpName} | ${cp.cpNumber} | ${cp.cpEmail || ""} | ${moment(cp.createdAt).format("DD-MM-YYYY HH:mm")}`).reduce((acc, curr) => `${acc}\n${curr}`), fontSize: 10 } 
 								
 							]);
 					  	});
@@ -936,7 +1001,8 @@ if(Meteor.isServer) {
 						content,
 						defaultStyle: {
 						    font: 'Helvetica'
-						}
+						},
+						pageMargins: [ 10, 30, 10, 30 ],
 					};
 
 					const pdfDoc = (new PdfMake(fonts)).createPdfKitDocument(docDefinition);

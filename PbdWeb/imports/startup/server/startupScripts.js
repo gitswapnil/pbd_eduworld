@@ -126,41 +126,41 @@ const runMigrationScripts = () => {
 	console.log("Migration successful");
 }
 
-const insertParties = () => {
-	const parties = require("./parties_json.json").parties;
+// const insertParties = () => {
+// 	const parties = require("./parties_json.json").parties;
 
-	const execId = "6J9D4FsTLFBj3paYs";
+// 	const execId = "6J9D4FsTLFBj3paYs";
 	
-	parties.forEach((party, i) => {
-		const createdAt = new Date();
+// 	parties.forEach((party, i) => {
+// 		const createdAt = new Date();
 
-		let insertData = {
-			username: party.partyCode,
-			services: {
-				password: {
-					bcrypt: "$2b$10$DRS..07JMRBVWcGrQRheHOAvWr3/O1NyvaxTe6sChEb9t1eEDLhWq"
-				}
-			},
-			emails: (party.partyEmail && party.partyEmail != "") ? [{
-				address: party.partyEmail,
-				verified: false
-			}] : undefined,
-			profile: {
-				name: party.partyName,
-				phoneNumber: party.partyPhoneNo,
-				address: party.partyAddress,
-			},
-			availableTo: [execId],
-			active: true,
-			createdAt,
-			updatedAt: createdAt
-		};
+// 		let insertData = {
+// 			username: party.partyCode,
+// 			services: {
+// 				password: {
+// 					bcrypt: "$2b$10$DRS..07JMRBVWcGrQRheHOAvWr3/O1NyvaxTe6sChEb9t1eEDLhWq"
+// 				}
+// 			},
+// 			emails: (party.partyEmail && party.partyEmail != "") ? [{
+// 				address: party.partyEmail,
+// 				verified: false
+// 			}] : undefined,
+// 			profile: {
+// 				name: party.partyName,
+// 				phoneNumber: party.partyPhoneNo,
+// 				address: party.partyAddress,
+// 			},
+// 			availableTo: [execId],
+// 			active: true,
+// 			createdAt,
+// 			updatedAt: createdAt
+// 		};
 
-		const newUserId = Meteor.users.insert(insertData);
-		Roles.addUsersToRoles(newUserId, "party", Roles.GLOBAL_GROUP);
-		console.log("Party Added: " + newUserId);
-	});
-}
+// 		const newUserId = Meteor.users.insert(insertData);
+// 		Roles.addUsersToRoles(newUserId, "party", Roles.GLOBAL_GROUP);
+// 		console.log("Party Added: " + newUserId);
+// 	});
+// }
 
 const startupScripts = () => {
 	initializeEnvironmentVariables();
