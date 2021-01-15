@@ -609,6 +609,7 @@ if(Meteor.isServer) {
 			});
 
 			getHistory.apply(this).then(docs => {			
+                // console.log("docs: " + JSON.stringify(docs));
 				docs.forEach((item, index) => {
 					// console.log("createdAt: " + item.createdAt);
                     let _id = `${item._id}`;
@@ -616,6 +617,7 @@ if(Meteor.isServer) {
                     // Collections.temp.upsert({ _id }, { $set: { ...item } });
 
                     // if((index + 1) > skip) {
+                        // console.log("item: " + JSON.stringify(item));
     					this.added("temp", _id, item);
                     // }
 				});
@@ -832,51 +834,47 @@ if(Meteor.isClient) {
 
 			if(!loading && (selectedExecutiveId !== "0")) {
 				setLoading(true);
-				let handle = Meteor.subscribe('history.getExecutiveHistory', { executiveId: selectedExecutiveId, skip, limit, searchCriterion }, {
-					onStop(error) {
-						console.log("history.getExecutiveHistory is stopped.");
-						if(error) {
-							console.log(error);
-						}
-					},
 
-					onReady() {
-						console.log("history.getExecutiveHistory is ready to get the data.");
-					}
-				});
+				let handle = Meteor.subscribe('history.getExecutiveHistory', { executiveId: selectedExecutiveId, skip, limit, searchCriterion });
 
 				Tracker.autorun(() => {
 					if(handle.ready()) {
-						let data = [];
-						// data.splice(-1, 1);
+                        setTimeout(function() {
 
-						Collections.temp.find({}).forEach((serverItem, i) => {
-							// console.log("got createdAt: " + serverItem.createdAt);
-                            let _id = serverItem._id;
-							data.push(serverItem);
-							Collections.null.upsert({ _id }, { $set: { ...serverItem } });
-						});
+    						let data = [];
+    						// data.splice(-1, 1);
+    						Collections.temp.find({}).forEach((serverItem, i) => {
+    							// console.log("got createdAt: " + serverItem.createdAt);
+                                let _id = serverItem._id;
+    							data.push(serverItem);
+    							Collections.null.upsert({ _id }, { $set: { ...serverItem } });
+    						});
 
-						data.sort((a, b) => (b.createdAt - a.createdAt));
+    						data.sort((a, b) => (b.createdAt - a.createdAt));
 
-                        // console.log("selectedItemId: " + getSelectedItemId());
-                        // console.log("data.length: " + data.length);
+                            // console.log("data: " + JSON.stringify(Collections.temp.find({}).fetch()));
 
-						setListItems(data);
-						setLoading(false);
+                            // console.log("selectedItemId: " + getSelectedItemId());
+                            // console.log("data.length: " + data.length);
 
-						if((getSelectedItemId() === "0") && data.length) {
-							const nonNullCategoryItem = data.find(elem => (elem.category != null));
-							if(nonNullCategoryItem) {
-								setSelectedItemId(nonNullCategoryItem._id);
-							}
-						}
+    						setListItems(data);
+    						setLoading(false);
 
-                        props.refreshDetailsPage(Date().toString());        //refresh the details page after updating the local database.
+    						if((getSelectedItemId() === "0") && data.length) {
+    							const nonNullCategoryItem = data.find(elem => (elem.category != null));
+    							if(nonNullCategoryItem) {
+    								setSelectedItemId(nonNullCategoryItem._id);
+    							}
+    						}
+
+                            props.refreshDetailsPage(Date().toString());        //refresh the details page after updating the local database.
+
+                        }, 500);
 					}
 				});
 
 				return function() {
+                    console.log("Publication history.getExecutiveHistory is stopped.");
 					handle.stop();
 				}
 			} else {
