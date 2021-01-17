@@ -14,6 +14,7 @@ import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
+import android.widget.CompoundButton
 import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -166,7 +167,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         val locationRequest = LocationRequest.create()?.apply {
             interval = 10000
             fastestInterval = 5000
-            priority = LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY
+            priority = LocationRequest.PRIORITY_HIGH_ACCURACY
         }
 
         val builder = locationRequest?.let { LocationSettingsRequest.Builder().addLocationRequest(it) };
@@ -294,17 +295,6 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         return true;
     }
 
-    fun changeDuty(view: View) {
-        val duty: Boolean = findViewById<Switch>(R.id.duty_switch).isChecked;
-        dutySwitch(false);      //reset the duty switch first;
-        if(duty) {          //if the duty is ON
-//            findViewById<TextView>(R.id.textView2).text = "";
-            checkLocationPermissionAndSettings();      //check for the permissions.
-        } else {            //if the duty is OFF
-            PbdExecutivesUtils.stopTrackingService(applicationContext);
-        }
-    }
-
     private fun dutySwitch(input: Boolean) {
         findViewById<Switch>(R.id.duty_switch).isChecked = input;
     }
@@ -422,6 +412,21 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         )
     }
 
+    //This function initializes the duty switch operations
+    private fun initializeDutySwitchOperations() {
+        //Set the duty switch change listener
+        duty_switch.setOnCheckedChangeListener{ compoundButton: CompoundButton, isChecked: Boolean ->
+//            changeDuty(isChecked);
+            Log.i("pbdLog", "duty: ${if(isChecked) {"ON"} else {"OFF"}} ")
+            if(isChecked) {          //if the duty is ON
+//            findViewById<TextView>(R.id.textView2).text = "";
+                checkLocationPermissionAndSettings();      //check for the permissions.
+            } else {            //if the duty is OFF
+                PbdExecutivesUtils.stopTrackingService(applicationContext);
+            }
+        }
+    }
+
     //This function monitors the state of the switch. It listens to the broadcast from the service
     private fun gpsSwitchMonitor() {
         val filter = IntentFilter(TrackingService.actionSwitchStateBroadcast)
@@ -483,6 +488,10 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         LocalBroadcastManager.getInstance(this).registerReceiver(appVersionStateReceiver, filter)
     }
 
+    private fun deinitializeDutySwitchOperations() {
+        duty_switch.setOnCheckedChangeListener(null)
+    }
+
     private fun locationObjectUnmonitor() {
         LocalBroadcastManager.getInstance(this).unregisterReceiver(locationObtainedStateReceiver)
     }
@@ -518,11 +527,13 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
         dutyTimeMonitor()
         userLoginStatusMonitor()
         appVersionChangeMonitor()
+        initializeDutySwitchOperations()
     }
 
     override fun onPause() {
         super.onPause();
 
+        deinitializeDutySwitchOperations()
         locationObjectUnmonitor()
         gpsSwitchUnmonitor()       //Leave the resources.
         dutyTimeUnmonitor()
