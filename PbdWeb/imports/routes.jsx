@@ -233,9 +233,20 @@ if(Meteor.isClient) {
 		try {
 			console.log("API: downloadFile invoked.");
 			console.log("filename: " + this.params.filename);
-			const filename = this.params.filename;
-			const extension = filename.split(".")[1];
-			const path = `/tmp/${filename}`;
+			let filename = this.params.filename;
+
+			let extension = "";
+			let path = "";
+
+			if(filename && (filename == "app")) {
+				extension = "apk";
+				const projectData = Collections.projectData.findOne({});
+				filename = `pbd_executives_${projectData.mobileAppMajorVersion}.${projectData.mobileAppMinorVersion}.${projectData.mobileAppBuildNumber}`;
+				path = `/home/ubuntu/prod/app/${filename}.${extension}`;
+			} else {
+				extension = filename.split(".")[1];
+				path = `/tmp/${filename}`;
+			}
 
 			if (!fs.existsSync(path)) {
 				throw new Error("File does not exists.");
@@ -260,7 +271,14 @@ if(Meteor.isClient) {
 			res.writeHead(200, {
 				'Content-disposition': `attachment; filename=${filename}`, 
 				'Content-Length': fileStat.size,
-				'Content-Type': (extension === "xls") ? 'application/vnd.ms-excel' : (extension === "pdf") ? 'application/pdf' : null
+				'Content-Type': (extension === "xls") ? 
+								'application/vnd.ms-excel' : 
+								(extension === "pdf") ? 
+								'application/pdf' : 
+								(extension === "apk") ? 
+								'application/vnd.android.package-archive'
+								:
+								null
 			}); //here you can add more headers
 			readStream.pipe(res);
 
