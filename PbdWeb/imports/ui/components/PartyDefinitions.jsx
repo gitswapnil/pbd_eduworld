@@ -237,7 +237,7 @@ if(Meteor.isClient) {
 		const [selectedPage, setSelectedPage] = useState(1);
 		const [totalPages, setTotalPages] = useState(1);
 
-		const viewLimit = 10;
+		const viewLimit = 100;
 
 		const [searchQuery, setSearchQuery] = useState("");
 		const [searchText, setSearchText] = useState("");

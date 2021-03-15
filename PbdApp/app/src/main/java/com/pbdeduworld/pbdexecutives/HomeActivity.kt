@@ -31,6 +31,9 @@ import com.google.android.gms.location.*
 import com.google.android.gms.tasks.Task
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayoutMediator
+import com.pbdeduworld.pbdexecutives.PbdExecutivesUtils.Companion.APP_BUILD
+import com.pbdeduworld.pbdexecutives.PbdExecutivesUtils.Companion.APP_MAJOR_VERSION
+import com.pbdeduworld.pbdexecutives.PbdExecutivesUtils.Companion.APP_MINOR_VERSION
 import kotlinx.android.synthetic.main.activity_home.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -122,7 +125,7 @@ class HomeActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsRes
                         })
                 }
                 // Set other dialog properties
-                builder?.setMessage("PBD Eduworld PVT LTD. \nCTS 5448, Mahatma Phule Road, Shahapur Belgaum, 590003.\nApp Version: 1.0.222")
+                builder?.setMessage("PBD Eduworld PVT LTD. \nCTS 5448, Mahatma Phule Road, Shahapur Belgaum, 590003.\nApp Version: ${APP_MAJOR_VERSION}.${APP_MINOR_VERSION}.${APP_BUILD}")
                     .setTitle(R.string.about_us)
 
                 // Create the AlertDialog

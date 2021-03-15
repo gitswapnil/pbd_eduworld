@@ -106,33 +106,48 @@ const initializeCronJob = () => {
 const runMigrationScripts = () => {
 	console.log("Running Migrations if any...");
 
-	const _1_0_222 = () => {
+	const _1_0_232 = () => {
 		const dataCount = Collections.projectData.find().count();
 		if(dataCount == 0) {
 			Collections.projectData.insert({
 				webAppMajorVersion: 1,
 				webAppMinorVersion: 0,
-				webAppBuildNumber: 222,
+				webAppBuildNumber: 232,
 				mobileAppMajorVersion: 1,
 				mobileAppMinorVersion: 0,
-				mobileAppBuildNumber: 222,
+				mobileAppBuildNumber: 232,
 				createdAt: new Date()
 			});
 		}
 	};
 
-	_1_0_222();
+	_1_0_232();
 
 	console.log("Migration successful");
 }
 
 // const insertParties = () => {
-// 	const parties = require("./parties_json.json").parties;
+// 	const parties = require("./parties_json_2.json").parties;
 
 // 	const execId = "Rhn2XtGM4AuSBGrwf";
 	
 // 	parties.forEach((party, i) => {
 // 		const createdAt = new Date();
+
+// 		let partyEmail = undefined;
+// 		const emailRegex = new RegExp(/^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/);
+// 		if(party.partyEmail && party.partyEmail != "" && emailRegex.test(party.partyEmail)) {
+// 			if(!Meteor.users.findOne({ "emails.address": { $in: [party.partyEmail] } })) {
+// 				partyEmail = [{
+// 					address: party.partyEmail,
+// 					verified: false
+// 				}];
+// 			}
+// 		} 
+
+// 		if(!party.partyAddress || party.partyAddress == "") {
+// 			party.partyAddress = "none";
+// 		}
 
 // 		let insertData = {
 // 			username: party.partyCode,
@@ -141,24 +156,25 @@ const runMigrationScripts = () => {
 // 					bcrypt: "$2b$10$DRS..07JMRBVWcGrQRheHOAvWr3/O1NyvaxTe6sChEb9t1eEDLhWq"
 // 				}
 // 			},
-// 			emails: (party.partyEmail && party.partyEmail != "") ? [{
-// 				address: party.partyEmail,
-// 				verified: false
-// 			}] : undefined,
+// 			emails: partyEmail,
 // 			profile: {
 // 				name: party.partyName,
 // 				phoneNumber: party.partyPhoneNo,
 // 				address: party.partyAddress,
 // 			},
-// 			availableTo: [execId],
+// 			availableTo: party.execIds,
 // 			active: true,
 // 			createdAt,
 // 			updatedAt: createdAt
 // 		};
+// 		if(!Meteor.users.findOne({ "username": party.partyCode })){
 
-// 		const newUserId = Meteor.users.insert(insertData);
-// 		Roles.addUsersToRoles(newUserId, "party", Roles.GLOBAL_GROUP);
-// 		console.log("Party Added: " + newUserId);
+// 			const newUserId = Meteor.users.insert(insertData);
+// 			Roles.addUsersToRoles(newUserId, "party", Roles.GLOBAL_GROUP);
+// 			console.log("Party Added: " + newUserId);
+// 		} else {
+// 			console.log("Party with code: " + party.partyCode + " already exists.");
+// 		}
 // 	});
 // }
 

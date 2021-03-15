@@ -259,10 +259,12 @@ if(Meteor.isClient) {
 			async function run() {
 			  	await promisifiedFinished(readStream);
 			  	console.log('Stream is done reading.');
-			  	fs.unlink(path, (err) => {
-					if (err) throw err;
-					console.log(`successfully deleted ${path}`);
-				});
+			  	if(extension != "apk") {
+				  	fs.unlink(path, (err) => {
+						if (err) throw err;
+						console.log(`successfully deleted ${path}`);
+					});
+			  	}
 			}
 
 			run().catch(console.error);

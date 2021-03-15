@@ -8,30 +8,30 @@
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
-    "@babel/runtime": "^7.8.4",
-    "@firebase/app": "^0.6.9",
-    "@fortawesome/fontawesome-svg-core": "^1.2.28",
-    "@fortawesome/free-brands-svg-icons": "^5.13.0",
-    "@fortawesome/free-regular-svg-icons": "^5.13.0",
-    "@fortawesome/free-solid-svg-icons": "^5.13.0",
-    "@fortawesome/react-fontawesome": "^0.1.9",
+    "@babel/runtime": "^7.13.10",
+    "@firebase/app": "^0.6.16",
+    "@fortawesome/fontawesome-svg-core": "^1.2.34",
+    "@fortawesome/free-brands-svg-icons": "^5.15.2",
+    "@fortawesome/free-regular-svg-icons": "^5.15.2",
+    "@fortawesome/free-solid-svg-icons": "^5.15.2",
+    "@fortawesome/react-fontawesome": "^0.1.14",
     "bcrypt": "^4.0.1",
     "cron": "^1.8.2",
     "d3": "^5.16.0",
     "eslint": "^6.8.0",
-    "exceljs": "^4.1.1",
+    "exceljs": "^4.2.1",
     "fast-crc32c": "^2.0.0",
-    "firebase-admin": "^9.4.1",
-    "form-data": "^3.0.0",
-    "jquery": "^3.5.1",
+    "firebase-admin": "^9.5.0",
+    "form-data": "^3.0.1",
+    "jquery": "^3.6.0",
     "jquery-ui-dist": "^1.12.1",
     "memoize-one": "^5.1.1",
     "meteor-node-stubs": "^1.0.1",
-    "pdfmake": "^0.1.66",
-    "react": "^16.13.0",
-    "react-dom": "^16.13.0",
+    "pdfmake": "^0.1.70",
+    "react": "^16.14.0",
+    "react-dom": "^16.14.0",
     "request": "^2.88.2",
-    "simpl-schema": "^1.7.1"
+    "simpl-schema": "^1.10.2"
   },
   "meteor": {
     "mainModule": {
@@ -41,6 +41,6 @@
     "testModule": "tests/main.js"
   },
   "devDependencies": {
-    "eslint-plugin-react-hooks": "^4.0.0"
+    "eslint-plugin-react-hooks": "^4.2.0"
   }
 }
