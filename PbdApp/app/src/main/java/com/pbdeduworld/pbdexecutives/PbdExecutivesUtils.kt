@@ -35,7 +35,7 @@ class PbdExecutivesUtils: Application() {
 
         val APP_MAJOR_VERSION = 1.toShort()
         val APP_MINOR_VERSION = 0.toShort()
-        val APP_BUILD = 232
+        val APP_BUILD = 237
 
         val PERMISSION_REQUEST_FINE_ACCESS = 1
         val REQUEST_CHECK_LOCATION_SETTINGS = 2
