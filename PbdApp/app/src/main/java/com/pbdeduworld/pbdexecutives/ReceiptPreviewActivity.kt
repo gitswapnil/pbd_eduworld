@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.*
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.util.Base64
@@ -16,6 +17,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.room.Room
 import com.android.volley.DefaultRetryPolicy
@@ -35,6 +37,7 @@ import java.io.FileOutputStream
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.concurrent.schedule
 import kotlin.properties.Delegates
 
 
@@ -402,7 +405,14 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
 
         if(whatsAppInstalled()) {
             val receiptFile = File(folderPath(), fileName)
-            val uri = Uri.fromFile(receiptFile)
+            val uri: Uri;
+            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                uri = FileProvider.getUriForFile(this, "com.pbdeduworld.pbdexecutives.fileprovider", receiptFile);
+            } else {
+                uri = Uri.fromFile(receiptFile)
+            }
+
+            Log.i("pbdLog", "file uri: $uri")
 
             val whatsappIntent: Intent = Intent().apply {
                 action = Intent.ACTION_SEND
@@ -583,7 +593,7 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
                     folder.mkdirs()
                 }
 
-                var file: File = File(folderPath())
+                var file: File
                 var cond = true
                 var index = 0
                 do {
@@ -605,7 +615,7 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
                 Log.i("pbdLog", file.name)
                 onSuccess(file.name)
             } else {
-                Log.i("pbdLog", "External Storage is Mounted")
+                Log.i("pbdLog", "External Storage is not Mounted")
                 onError("External storage is not either not present or not mounted.")
             }
         } catch (e: Exception) {
