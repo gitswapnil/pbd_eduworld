@@ -425,10 +425,10 @@ class ReceiptPreviewActivity : AppCompatActivity(), ActivityCompat.OnRequestPerm
 //                putExtra(Intent.EXTRA_TEXT, "This is my text to send.")
                 type = "application/pdf"
                 putExtra(Intent.EXTRA_STREAM, uri)
-                setPackage("com.whatsapp")
+//                setPackage("com.whatsapp")
             }
-
-            startActivity(whatsappIntent)
+            val shareIntent = Intent.createChooser(whatsappIntent, null);
+            startActivity(shareIntent)
         } else {
             val uri = Uri.parse("market://details?id=com.whatsapp")
             val goToMarket = Intent(Intent.ACTION_VIEW, uri)
